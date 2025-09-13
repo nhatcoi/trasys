@@ -2,51 +2,98 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["public", "hr"]
 }
 
 // Organization Units model
 model OrgUnit {
-  id            Int       @id @default(autoincrement())
-  parent_id     Int?      @map("parent_id")
-  type          String?   @db.VarChar(10)
-  code          String    @db.VarChar(50)
-  name          String    @db.VarChar(255)
-  created_at    DateTime  @default(now()) @map("created_at") @db.Timestamp
-  updated_at    DateTime  @updatedAt @map("updated_at") @db.Timestamp
-  description   String?   @db.Text
-  status        String?   @db.VarChar(20)
+  id             BigInt    @id @default(autoincrement())
+  parent_id      BigInt?   @map("parent_id")
+  type           String?   @db.VarChar(10)
+  code           String    @db.VarChar(50)
+  name           String    @db.VarChar(255)
+  created_at     DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updated_at     DateTime  @updatedAt @map("updated_at") @db.Timestamp
+  description    String?   @db.Text
+  status         String?   @db.VarChar(20)
   effective_from DateTime? @map("effective_from") @db.Date
-  effective_to  DateTime? @map("effective_to") @db.Date
-  
+  effective_to   DateTime? @map("effective_to") @db.Date
+
   // Relations
-  parent        OrgUnit?  @relation("OrgHierarchy", fields: [parent_id], references: [id])
-  children      OrgUnit[] @relation("OrgHierarchy")
-  employees     Employee[]
-  
+  parent    OrgUnit?   @relation("OrgHierarchy", fields: [parent_id], references: [id])
+  children  OrgUnit[]  @relation("OrgHierarchy")
+  assignments OrgAssignment[]
+
   @@map("org_units")
+  @@schema("public")
 }
 
 // Employees model
 model Employee {
-  id             BigInt    @id @default(autoincrement())
-  user_id        BigInt?   @map("user_id")
-  employee_no    String?   @db.VarChar(64) @map("employee_no")
-  employment_ty  String?   @db.VarChar(16) @map("employment_ty")
-  status         String?   @db.VarChar(16)
-  hired_at       DateTime? @map("hired_at") @db.Date
-  terminated_at  DateTime? @map("terminated_at") @db.Date
-  created_at     DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updated_at     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-  
+  id            BigInt    @id @default(autoincrement())
+  user_id       BigInt?   @map("user_id")
+  employee_no   String?   @map("employee_no") @db.VarChar(64)
+  employment_type String?   @map("employment_type") @db.VarChar(16)
+  status        String?   @db.VarChar(16)
+  hired_at      DateTime? @map("hired_at") @db.Date
+  terminated_at DateTime? @map("terminated_at") @db.Date
+  created_at    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updated_at    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
   // Relations
-  org_unit       OrgUnit?  @relation(fields: [org_unit_id], references: [id])
-  org_unit_id    Int?      @map("org_unit_id")
-  
+  user        User?    @relation(fields: [user_id], references: [id])
+  assignments OrgAssignment[]
+
   @@map("employees")
+  @@schema("hr")
+}
+
+model OrgAssignment {
+  id              BigInt    @id @default(autoincrement())
+  employee_id     BigInt    @map("employee_id")
+  org_unit_id     BigInt    @map("org_unit_id")
+  position_id     BigInt?   @map("position_id")
+  is_primary      Boolean   @default(true) @map("is_primary")
+  assignment_type String    @default("admin") @map("assignment_type") @db.VarChar(16)
+  allocation      Decimal   @default(1.00) @db.Decimal(4, 2)
+  start_date      DateTime  @map("start_date") @db.Date
+  end_date        DateTime? @map("end_date") @db.Date
+  created_at      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updated_at      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  employee Employee @relation(fields: [employee_id], references: [id])
+  org_unit OrgUnit  @relation(fields: [org_unit_id], references: [id])
+
+  @@map("org_assignment")
+  @@schema("hr")
+}
+
+model User {
+  id            BigInt    @id @default(autoincrement())
+  username      String    @unique @db.VarChar(64)
+  email         String?   @unique @db.VarChar(255)
+  password_hash String    @db.Text
+  status        String?   @default("ACTIVE") @db.VarChar(16)
+  last_login_at DateTime? @map("last_login_at") @db.Timestamptz
+  created_at    DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updated_at    DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  full_name     String    @map("full_name") @db.VarChar(255)
+  dob           DateTime? @db.Date
+  gender        String?   @db.VarChar(16)
+  phone         String?   @db.VarChar(32)
+  address       String?   @db.Text
+
+  // Relations
+  employees Employee[]
+
+  @@map("users")
+  @@schema("public")
 }

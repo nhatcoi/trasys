@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
 import {
   Box,
   Drawer,
@@ -17,6 +18,12 @@ import {
   ListItemText,
   useTheme,
   useMediaQuery,
+  Avatar,
+  Menu,
+  MenuItem,
+  Chip,
+  Popover,
+  Paper,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -24,8 +31,12 @@ import {
   Apartment as ApartmentIcon,
   Group as GroupIcon,
   Dashboard as DashboardIcon,
+  AccountCircle,
+  Edit,
+  Logout,
 } from '@mui/icons-material';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { ORG_ROUTES, HR_ROUTES } from '@/constants/routes';
 
 const drawerWidth = 240;
 
@@ -38,8 +49,10 @@ export default function OrgLayout({
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const router = useRouter();
   const pathname = usePathname();
+  const { data: session, status } = useSession();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -51,20 +64,20 @@ export default function OrgLayout({
 
   const menuItems = [
     {
-      key: '/org/dashboard',
+      key: ORG_ROUTES.DASHBOARD,
       icon: <DashboardIcon />,
       label: 'Dashboard',
     },
     {
-      key: '/org/tree',
+      key: ORG_ROUTES.TREE,
       icon: <ApartmentIcon />,
       label: 'Cây tổ chức',
     },
     {
-      key: '/org/unit',
+      key: ORG_ROUTES.UNITS,
       icon: <GroupIcon />,
       label: 'Quản lý đơn vị',
-    },  
+    },
   ];
 
   const handleMenuClick = (path: string) => {
@@ -72,6 +85,24 @@ export default function OrgLayout({
     if (isMobile) {
       setMobileOpen(false);
     }
+  };
+
+  const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleEditProfile = () => {
+    handleUserMenuClose();
+    router.push(HR_ROUTES.PROFILE);
+  };
+
+  const handleLogout = () => {
+    handleUserMenuClose();
+    signOut({ callbackUrl: '/' });
   };
 
   const drawer = (
@@ -82,7 +113,7 @@ export default function OrgLayout({
           variant="h6"
           noWrap
           component="div"
-          sx={{ 
+          sx={{
             color: 'white',
             fontWeight: 'bold',
             flexGrow: 1,
@@ -92,9 +123,9 @@ export default function OrgLayout({
           {collapsed ? 'T' : 'Trasy'}
         </Typography>
       </Toolbar>
-      
+
       <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.12)' }} />
-      
+
       {/* Menu Items */}
       <List sx={{ flexGrow: 1, pt: 1 }}>
         {menuItems.map((item) => (
@@ -141,11 +172,36 @@ export default function OrgLayout({
           >
             {isMobile ? <MenuIcon /> : (collapsed ? <ChevronLeftIcon sx={{ transform: 'rotate(180deg)' }} /> : <ChevronLeftIcon />)}
           </IconButton>
-          
+
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Trasy App
           </Typography>
-          
+
+          {/* User Info and Actions */}
+          {session && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+              <Chip
+                label={`Xin chào, ${(session.user as any)?.username || 'User'}`}
+                color="secondary"
+                size="small"
+                sx={{ color: 'white' }}
+              />
+              <IconButton
+                size="large"
+                edge="end"
+                aria-label="account of current user"
+                aria-controls="user-menu"
+                aria-haspopup="true"
+                onClick={handleUserMenuOpen}
+                color="inherit"
+              >
+                <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
+                  <AccountCircle />
+                </Avatar>
+              </IconButton>
+            </Box>
+          )}
+
           <ThemeToggle />
         </Toolbar>
       </AppBar>
@@ -173,7 +229,7 @@ export default function OrgLayout({
         >
           {drawer}
         </Drawer>
-        
+
         {/* Desktop drawer */}
         <Drawer
           variant="permanent"
@@ -205,6 +261,106 @@ export default function OrgLayout({
           {children}
         </Box>
       </Box>
+
+      {/* User Menu */}
+      <Popover
+        id="user-menu"
+        open={Boolean(anchorEl)}
+        anchorEl={anchorEl}
+        onClose={handleUserMenuClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        sx={{
+          '& .MuiPaper-root': {
+            mt: 1,
+            minWidth: 200,
+            zIndex: 9999,
+            backgroundColor: 'background.paper',
+            color: 'text.primary',
+          }
+        }}
+      >
+        <Paper sx={{
+          p: 1,
+          backgroundColor: 'background.paper',
+          color: '#000000',
+          '& .MuiListItemText-primary': {
+            color: '#000000 !important',
+            fontWeight: '500 !important',
+          }
+        }}>
+          <MenuItem
+            onClick={handleEditProfile}
+            sx={{
+              color: '#000000',
+              '&:hover': {
+                backgroundColor: 'action.hover',
+              }
+            }}
+          >
+            <ListItemIcon>
+              <Edit fontSize="small" sx={{ color: '#000000' }} />
+            </ListItemIcon>
+            <ListItemText
+              primary="Chỉnh sửa thông tin"
+              primaryTypographyProps={{
+                color: '#000000',
+                fontWeight: 500
+              }}
+            />
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              handleUserMenuClose();
+              router.push('/hr/change-password');
+            }}
+            sx={{
+              color: '#000000',
+              '&:hover': {
+                backgroundColor: 'action.hover',
+              }
+            }}
+          >
+            <ListItemIcon>
+              <AccountCircle fontSize="small" sx={{ color: '#000000' }} />
+            </ListItemIcon>
+            <ListItemText
+              primary="Đổi mật khẩu"
+              primaryTypographyProps={{
+                color: '#000000',
+                fontWeight: 500
+              }}
+            />
+          </MenuItem>
+          <Divider />
+          <MenuItem
+            onClick={handleLogout}
+            sx={{
+              color: '#000000',
+              '&:hover': {
+                backgroundColor: 'action.hover',
+              }
+            }}
+          >
+            <ListItemIcon>
+              <Logout fontSize="small" sx={{ color: '#000000' }} />
+            </ListItemIcon>
+            <ListItemText
+              primary="Đăng xuất"
+              primaryTypographyProps={{
+                color: '#000000',
+                fontWeight: 500
+              }}
+            />
+          </MenuItem>
+        </Paper>
+      </Popover>
     </Box>
   );
 }
