@@ -10,15 +10,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Organization relation types enum
+enum OrgRelationType {
+  PARENT_CHILD
+  SIBLING
+  MATRIX
+  DOTTED_LINE
+  SOLID_LINE
+
+  @@map("org_relation_type")
+}
+
 // Organization Units model
 model OrgUnit {
-  id            Int       @id @default(autoincrement())
-  parent_id     Int?      @map("parent_id")
+  id            BigInt    @id @default(autoincrement())
+  parent_id     BigInt?   @map("parent_id")
   type          String?   @db.VarChar(10)
   code          String    @db.VarChar(50)
   name          String    @db.VarChar(255)
-  created_at    DateTime  @default(now()) @map("created_at") @db.Timestamp
-  updated_at    DateTime  @updatedAt @map("updated_at") @db.Timestamp
+  created_at    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updated_at    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   description   String?   @db.Text
   status        String?   @db.VarChar(20)
   effective_from DateTime? @map("effective_from") @db.Date
@@ -28,6 +39,10 @@ model OrgUnit {
   parent        OrgUnit?  @relation("OrgHierarchy", fields: [parent_id], references: [id])
   children      OrgUnit[] @relation("OrgHierarchy")
   employees     Employee[]
+  
+  // Org unit relations
+  parentRelations OrgUnitRelation[] @relation("ParentUnit")
+  childRelations  OrgUnitRelation[] @relation("ChildUnit")
   
   @@map("org_units")
 }
@@ -46,7 +61,30 @@ model Employee {
   
   // Relations
   org_unit       OrgUnit?  @relation(fields: [org_unit_id], references: [id])
-  org_unit_id    Int?      @map("org_unit_id")
+  org_unit_id    BigInt?   @map("org_unit_id")
   
   @@map("employees")
 }
+
+// Organization Unit Relations model
+model OrgUnitRelation {
+  parent_id      BigInt          @map("parent_id")
+  child_id       BigInt          @map("child_id")
+  relation_type  OrgRelationType @map("relation_type")
+  effective_from DateTime        @default(dbgenerated("CURRENT_DATE")) @map("effective_from") @db.Date
+  effective_to   DateTime?       @map("effective_to") @db.Date
+  note           String?         @db.Text
+  created_at     DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updated_at     DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  
+  // Relations
+  parent         OrgUnit         @relation("ParentUnit", fields: [parent_id], references: [id], onDelete: Cascade)
+  child          OrgUnit         @relation("ChildUnit", fields: [child_id], references: [id], onDelete: Cascade)
+  
+  @@id([parent_id, child_id, relation_type, effective_from])
+  @@map("org_unit_relation")
+}
+
+// Add check constraint for org_unit_relation
+// Note: This constraint needs to be added manually in the database
+// ALTER TABLE org_unit_relation ADD CONSTRAINT org_unit_relation_check CHECK (parent_id <> child_id);

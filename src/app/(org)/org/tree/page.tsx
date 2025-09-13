@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -13,6 +13,8 @@ import {
   Alert,
   AlertTitle,
   Paper,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import {
   Apartment as ApartmentIcon,
@@ -21,38 +23,17 @@ import {
   ChevronRight as ChevronRightIcon,
   Business as BusinessIcon,
   People as PeopleIcon,
+  AccountTree as AccountTreeIcon,
+  ViewModule as ViewModuleIcon,
 } from '@mui/icons-material';
+import { HorizontalTreeView } from '@/components/HorizontalTreeView';
+import { TreeNodeProps } from '@/components/TreeNode';
+import { buildTree } from '@/utils/tree-utils';
+import { useOrgUnits, type OrgUnit } from '@/features/org/api/use-org-units';
 
-interface OrgUnit {
-  id: number;
-  parent_id: number | null;
-  type: string | null;
-  code: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-  description: string | null;
-  status: string | null;
-  effective_from: string | null;
-  effective_to: string | null;
-  children?: OrgUnit[];
-  employees?: Employee[];
-  parent?: OrgUnit;
-}
+// Using OrgUnit type from use-org-units hook
 
-interface Employee {
-  id: string;
-  user_id: string | null;
-  employee_no: string | null;
-  employment_ty: string | null;
-  status: string | null;
-  hired_at: string | null;
-  terminated_at: string | null;
-  created_at: string;
-  updated_at: string;
-  org_unit_id: number | null;
-  org_unit?: OrgUnit;
-}
+// Employee interface removed - using type from use-org-units hook
 
 function OrgTreeNode({ unit, level }: { unit: OrgUnit; level: number }) {
   const [expanded, setExpanded] = useState(false);
@@ -198,63 +179,37 @@ function OrgTreeNode({ unit, level }: { unit: OrgUnit; level: number }) {
 }
 
 export default function OrgTreePage() {
-  const [orgUnits, setOrgUnits] = useState<OrgUnit[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'tree' | 'chart'>('tree');
+  
+  // Use React Query hook for data fetching
+  const { data: orgUnits = [], isLoading: loading, error, refetch } = useOrgUnits();
 
-  const fetchOrgUnits = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await fetch('/api/org/units');
-      const result = await response.json();
-      
-      if (result.success) {
-        // Build tree structure from flat array
-        const buildOrgTree = (units: OrgUnit[]): OrgUnit[] => {
-          const unitMap = new Map<number, OrgUnit & { children: OrgUnit[] }>();
-          const roots: OrgUnit[] = [];
-
-          // First pass: create map of all units
-          units.forEach(unit => {
-            unitMap.set(unit.id, { ...unit, children: [] });
-          });
-
-          // Second pass: build tree structure
-          units.forEach(unit => {
-            const unitWithChildren = unitMap.get(unit.id)!;
-            
-            if (unit.parent_id === null) {
-              // Root level unit
-              roots.push(unitWithChildren);
-            } else {
-              // Child unit
-              const parent = unitMap.get(unit.parent_id);
-              if (parent) {
-                parent.children.push(unitWithChildren);
-              }
-            }
-          });
-
-          return roots;
-        };
-
-        const treeData = buildOrgTree(result.data);
-        setOrgUnits(treeData);
-      } else {
-        setError(result.error || 'Failed to fetch organization units');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error');
-    } finally {
-      setLoading(false);
+  const handleViewModeChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newViewMode: 'tree' | 'chart',
+  ) => {
+    if (newViewMode !== null) {
+      setViewMode(newViewMode);
     }
   };
 
-  useEffect(() => {
-    fetchOrgUnits();
-  }, []);
+  // Convert OrgUnit to TreeNodeProps
+  const convertToTreeNodeProps = (orgUnit: OrgUnit): TreeNodeProps => {
+    return {
+      id: orgUnit.id,
+      name: orgUnit.name,
+      code: orgUnit.code,
+      type: orgUnit.type,
+      status: orgUnit.status,
+      employeeCount: orgUnit.employees?.length || 0,
+      children: orgUnit.children?.map(convertToTreeNodeProps) || [],
+    };
+  };
+
+  // Refresh function available through refetch from useOrgUnits hook
+
+  // Build tree structure from flat array using utility function
+  const treeData = buildTree(orgUnits);
 
   return (
     <Box>
@@ -293,15 +248,35 @@ export default function OrgTreePage() {
                 Cây tổ chức
               </Typography>
             </Stack>
-            <Button
-              variant="contained"
-              startIcon={<RefreshIcon />}
-              onClick={fetchOrgUnits}
-              disabled={loading}
-              sx={{ backgroundColor: '#2e4c92' }}
-            >
-              Làm mới
-            </Button>
+            
+            <Stack direction="row" spacing={2} alignItems="center">
+              <ToggleButtonGroup
+                value={viewMode}
+                exclusive
+                onChange={handleViewModeChange}
+                aria-label="view mode"
+                size="small"
+              >
+                <ToggleButton value="tree" aria-label="tree view">
+                  <AccountTreeIcon sx={{ mr: 1 }} />
+                  Tree View
+                </ToggleButton>
+                <ToggleButton value="chart" aria-label="chart view">
+                  <ViewModuleIcon sx={{ mr: 1 }} />
+                  Biểu đồ
+                </ToggleButton>
+              </ToggleButtonGroup>
+              
+              <Button
+                variant="contained"
+                startIcon={<RefreshIcon />}
+                onClick={() => refetch()}
+                disabled={loading}
+                sx={{ backgroundColor: '#2e4c92' }}
+              >
+                Làm mới
+              </Button>
+            </Stack>
           </Stack>
 
           {loading && (
@@ -313,11 +288,11 @@ export default function OrgTreePage() {
           {error && (
             <Alert severity="error">
               <AlertTitle>Lỗi</AlertTitle>
-              {error}
+              {String(error) || 'Có lỗi xảy ra khi tải dữ liệu'}
             </Alert>
           )}
 
-          {!loading && !error && orgUnits.length === 0 && (
+          {!loading && !error && treeData.length === 0 && (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <ApartmentIcon sx={{ fontSize: 64, color: 'grey.300', mb: 2 }} />
               <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -329,11 +304,21 @@ export default function OrgTreePage() {
             </Box>
           )}
 
-          {!loading && !error && orgUnits.length > 0 && (
+          {!loading && !error && treeData.length > 0 && (
             <Box>
-              {orgUnits.map((unit) => (
-                <OrgTreeNode key={unit.id} unit={unit} level={0} />
-              ))}
+              {viewMode === 'tree' ? (
+                // Tree View - hiển thị cây hiện tại
+                treeData.map((unit) => (
+                  <OrgTreeNode key={unit.id} unit={unit} level={0} />
+                ))
+              ) : (
+                // Chart View - hiển thị biểu đồ cây ngang
+                <HorizontalTreeView
+                  data={treeData.map(convertToTreeNodeProps)}
+                  loading={loading}
+                  error={error ? String(error) : null}
+                />
+              )}
             </Box>
           )}
         </CardContent>
