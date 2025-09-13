@@ -13,7 +13,7 @@ export async function GET(
     const { id } = OrgUnitParamsSchema.parse(params);
     
     // Call service
-    const result = await orgUnitService.getUnitById(id);
+    const result = await orgUnitService.getById(id);
     
     return NextResponse.json(result, { 
       status: result.success ? 200 : (result.error?.includes('not found') ? 404 : 500)
@@ -43,7 +43,7 @@ export async function PUT(
     const validatedData = UpdateOrgUnitSchema.parse(body);
     
     // Call service
-    const result = await orgUnitService.updateUnit(id, validatedData);
+    const result = await orgUnitService.update(id, validatedData);
     
     return NextResponse.json(result, { 
       status: result.success ? 200 : 500 
@@ -69,7 +69,7 @@ export async function DELETE(
     const { id } = OrgUnitParamsSchema.parse(params);
     
     // Call service
-    const result = await orgUnitService.deleteUnit(id);
+    const result = await orgUnitService.delete(id);
     
     return NextResponse.json(result, { 
       status: result.success ? 200 : 500 

@@ -22,37 +22,13 @@ export class OrgUnitService {
     ));
   }
 
-  // Get all organization units (lazy - no relations)
-  async getAllUnits() {
-    try {
-      const units = await this.repo.findAll();
-      const serializedUnits = this.serializeBigInt(units);
-      
-      // Validate output (basic schema without relations)
-      const validatedUnits = (serializedUnits as unknown[]).map((unit: unknown) => 
-        OrgUnitSchema.parse(unit)
-      );
-
-      return ApiResponseSchema.parse({
-        success: true,
-        data: validatedUnits,
-      });
-    } catch (error) {
-      console.error('Service error:', error);
-      return ApiResponseSchema.parse({
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch organization units',
-      });
-    }
-  }
-
   // Get all organization units with options (search, filter, pagination)
-  async getAllUnitsWithOptions(options: OrgUnitQuery) {
+  async getAll(options: OrgUnitQuery) {
     try {
       // Get data and count in parallel
       const [units, total] = await Promise.all([
-        this.repo.findAllWithOptions(options),
-        this.repo.countWithOptions(options)
+        this.repo.findAll(options),
+        this.repo.count(options)
       ]);
       
       const serializedUnits = this.serializeBigInt(units);
@@ -105,7 +81,7 @@ export class OrgUnitService {
   }
 
   // Get organization unit by ID
-  async getUnitById(id: number) {
+  async getById(id: number) {
     try {
       const unit = await this.repo.findById(id);
       
@@ -132,8 +108,9 @@ export class OrgUnitService {
     }
   }
 
+
   // Create new organization unit
-  async createUnit(data: CreateOrgUnitInput) {
+  async create(data: CreateOrgUnitInput) {
     try {
       const unit = await this.repo.create(data);
       const serializedUnit = this.serializeBigInt(unit);
@@ -153,7 +130,7 @@ export class OrgUnitService {
   }
 
   // Update organization unit
-  async updateUnit(id: number, data: UpdateOrgUnitInput) {
+  async update(id: number, data: UpdateOrgUnitInput) {
     try {
       const unit = await this.repo.update(id, data);
       const serializedUnit = this.serializeBigInt(unit);
@@ -173,7 +150,7 @@ export class OrgUnitService {
   }
 
   // Delete organization unit
-  async deleteUnit(id: number) {
+  async delete(id: number) {
     try {
       await this.repo.delete(id);
       return ApiResponseSchema.parse({

@@ -37,7 +37,7 @@ export const OrgUnitQuerySchema = z.object({
   size: z.number().min(1).max(1000).optional().default(100),
   
   // Sorting
-  sort: z.string().optional().default('name'),
+  sort: z.string().optional().default('parent_id'),
   order: z.enum(['asc', 'desc']).optional().default('asc'),
   
   // Search & Filter
@@ -70,13 +70,48 @@ export const OrgUnitSchema = z.object({
   updated_at: z.string(),
 });
 
+// Schema for OrgUnitRelation
+export const OrgUnitRelationSchema = z.object({
+  parent_id: z.string(),
+  child_id: z.string(),
+  relation_type: z.enum(['direct', 'advisory', 'support', 'collab']),
+  effective_from: z.string(),
+  effective_to: z.string().nullable(),
+  note: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+// Schema for OrgUnitHistory
+export const OrgUnitHistorySchema = z.object({
+  id: z.string(),
+  org_unit_id: z.string(),
+  old_name: z.string().nullable(),
+  new_name: z.string().nullable(),
+  change_type: z.string(),
+  details: z.any().nullable(), // JSON field
+  changed_at: z.string().nullable(),
+});
+
 export const OrgUnitWithRelationsSchema = OrgUnitSchema.extend({
   children: z.array(OrgUnitSchema).optional(),
   parent: OrgUnitSchema.optional(),
   employees: z.array(z.object({
     id: z.string(), // Accept string from BigInt serialization
-    name: z.string().optional(), // Make optional since some employees might not have name
-    // Add other employee fields as needed
+    name: z.string().optional(),
+    code: z.string().optional(),
+    email: z.string().optional(),
+    phone: z.string().optional(),
+    position: z.string().optional(),
+    status: z.string().optional(),
+  })).optional(),
+  // Relations where this unit is a child
+  parentRelations: z.array(OrgUnitRelationSchema.extend({
+    parent: OrgUnitSchema,
+  })).optional(),
+  // Relations where this unit is a parent
+  childRelations: z.array(OrgUnitRelationSchema.extend({
+    child: OrgUnitSchema,
   })).optional(),
 });
 

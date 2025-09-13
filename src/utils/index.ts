@@ -14,3 +14,6 @@ export * from './array-utils';
 
 // Organization unit utilities
 export * from './org-unit-utils';
+
+// Alert utilities
+export * from './alert-utils';

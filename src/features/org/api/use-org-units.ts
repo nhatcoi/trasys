@@ -1,6 +1,42 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetcher, queryKeys } from '@/lib/fetcher';
 
+export interface Employee {
+  id: string;
+  name?: string;
+  code?: string;
+  email?: string;
+  phone?: string;
+  position?: string;
+  status?: string;
+}
+
+export interface OrgUnitRelation {
+  parent_id: string;
+  child_id: string;
+  relation_type: 'direct' | 'advisory' | 'support' | 'collab';
+  effective_from: string;
+  effective_to: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrgUnitWithRelation extends OrgUnitRelation {
+  parent?: OrgUnit;
+  child?: OrgUnit;
+}
+
+export interface OrgUnitHistory {
+  id: string;
+  org_unit_id: string;
+  old_name: string | null;
+  new_name: string | null;
+  change_type: string;
+  details: any | null;
+  changed_at: string | null;
+}
+
 export interface OrgUnit {
   id: string; // Changed to string due to BigInt serialization
   parent_id: string | null; // Changed to string due to BigInt serialization
@@ -15,7 +51,9 @@ export interface OrgUnit {
   effective_to: string | null;
   parent?: OrgUnit;
   children?: OrgUnit[];
-  employees?: unknown[];
+  employees?: Employee[];
+  parentRelations?: OrgUnitWithRelation[];
+  childRelations?: OrgUnitWithRelation[];
 }
 
 export interface OrgUnitsResponse {
@@ -156,5 +194,46 @@ export function useDeleteOrgUnit() {
       // xóa cache và lấy lại ds đơn vị
       queryClient.invalidateQueries({ queryKey: queryKeys.org.units() });
     },
+  });
+}
+
+// Lấy lịch sử thay đổi
+export interface HistoryResponse {
+  success: boolean;
+  data: {
+    items: OrgUnitHistory[];
+    pagination: {
+      page: number;
+      size: number;
+      total: number;
+      totalPages: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  };
+}
+
+export function useOrgUnitHistory(params?: {
+  org_unit_id?: string;
+  change_type?: string;
+  page?: number;
+  size?: number;
+}) {
+  return useQuery({
+    queryKey: queryKeys.org.history(params),
+    queryFn: async () => {
+      const searchParams = new URLSearchParams();
+      
+      if (params?.org_unit_id) searchParams.set('org_unit_id', params.org_unit_id);
+      if (params?.change_type) searchParams.set('change_type', params.change_type);
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.size) searchParams.set('size', params.size.toString());
+      
+      const url = `/org/history${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+      const response = await fetcher<HistoryResponse>(url);
+      return response;
+    },
+    enabled: !!params?.org_unit_id,
+    staleTime: 2 * 60 * 1000, // 2 minutes cache
   });
 }

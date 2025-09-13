@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     const validatedOptions = OrgUnitQuerySchema.parse(queryOptions);
     
     // Always use options method for consistency
-    const result = await orgUnitService.getAllUnitsWithOptions(validatedOptions);
+    const result = await orgUnitService.getAll(validatedOptions);
     
     return NextResponse.json(result, { 
       status: result.success ? 200 : 500 
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const validatedData = CreateOrgUnitSchema.parse(body);
     
     // Call service
-    const result = await orgUnitService.createUnit(validatedData);
+    const result = await orgUnitService.create(validatedData);
     
     return NextResponse.json(result, { 
       status: result.success ? 201 : 500 

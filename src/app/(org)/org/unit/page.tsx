@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Typography,
@@ -53,6 +54,7 @@ import {
   getOrgUnitTypes,
   getOrgUnitStatuses,
 } from '@/utils/org-unit-utils';
+import { ORG_UNIT_ALERTS } from '@/utils/alert-utils';
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -65,6 +67,8 @@ import {
 import { useOrgUnitsPagination } from '@/hooks/use-org-units-pagination';
 
 export default function OrgUnitManagementPage() {
+  const router = useRouter();
+  
   // Use pagination hook
   const {
     orgUnits,
@@ -95,6 +99,7 @@ export default function OrgUnitManagementPage() {
   const deleteMutation = useDeleteOrgUnit();
   
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
   // Dialog states
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
@@ -106,13 +111,27 @@ export default function OrgUnitManagementPage() {
   // Form data
   const [formData, setFormData] = useState<CreateUnitData>(getInitialFormData());
 
+  // Auto-dismiss success message after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
   const handleCreateUnit = async () => {
     try {
       await createMutation.mutateAsync(formData);
       setOpenCreateDialog(false);
       setFormData(getInitialFormData());
+      setSuccessMessage(ORG_UNIT_ALERTS.UNIT_CREATED(formData.name).message);
+      setError(null); // Clear any previous errors
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create unit');
+      setError(ORG_UNIT_ALERTS.UNIT_CREATE_FAILED(formData.name).message);
+      setSuccessMessage(null); // Clear any previous success messages
     }
   };
 
@@ -123,20 +142,30 @@ export default function OrgUnitManagementPage() {
       await updateMutation.mutateAsync({ id: selectedUnit.id, data: formData });
       setOpenEditDialog(false);
       setSelectedUnit(null);
+      setSuccessMessage(ORG_UNIT_ALERTS.UNIT_UPDATED(selectedUnit.name).message);
+      setError(null); // Clear any previous errors
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update unit');
+      setError(ORG_UNIT_ALERTS.UNIT_UPDATE_FAILED(selectedUnit.name).message);
+      setSuccessMessage(null); // Clear any previous success messages
     }
   };
 
   const handleDeleteUnit = async () => {
-    if (!selectedUnit) return;
+    console.log("handleDeleteUnit called - selectedUnit:", selectedUnit);
+    if (!selectedUnit) {
+      console.log("selectedUnit is null/undefined, returning");
+      return;
+    }
     
     try {
       await deleteMutation.mutateAsync(selectedUnit.id);
       setOpenDeleteDialog(false);
       setSelectedUnit(null);
+      setSuccessMessage(ORG_UNIT_ALERTS.UNIT_DISABLED(selectedUnit.name).message);
+      setError(null); // Clear any previous errors
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete unit');
+      setError(ORG_UNIT_ALERTS.UNIT_DELETE_FAILED(selectedUnit.name).message);
+      setSuccessMessage(null); // Clear any previous success messages
     }
   };
 
@@ -154,18 +183,18 @@ export default function OrgUnitManagementPage() {
     if (selectedUnit) {
       setFormData(mapUnitToFormData(selectedUnit));
       setOpenEditDialog(true);
+      setAnchorEl(null); // Only close menu, keep selectedUnit
     }
-    handleMenuClose();
   };
 
   const handleDeleteClick = () => {
-    if (!canDeleteOrgUnit(selectedUnit?.status ?? null)) {
-      setError(getDeleteErrorMessage());
-      handleMenuClose();
-      return;
-    }
+    console.log('handleDeleteClick - selectedUnit:', selectedUnit);
     setOpenDeleteDialog(true);
-    handleMenuClose();
+    setAnchorEl(null); // Only close menu, keep selectedUnit
+  };
+
+  const handleRowClick = (unit: OrgUnit) => {
+    router.push(`/org/unit/${unit.id}`);
   };
 
 
@@ -210,6 +239,17 @@ export default function OrgUnitManagementPage() {
         <Alert severity="error" sx={{ mb: 3 }}>
           <AlertTitle>Lỗi</AlertTitle>
           {error || (queryError instanceof Error ? queryError.message : 'Unknown error')}
+        </Alert>
+      )}
+
+      {successMessage && (
+        <Alert 
+          severity="success" 
+          sx={{ mb: 3 }}
+          onClose={() => setSuccessMessage(null)}
+        >
+          <AlertTitle>Thành công</AlertTitle>
+          {successMessage}
         </Alert>
       )}
 
@@ -367,7 +407,17 @@ export default function OrgUnitManagementPage() {
             </TableHead>
             <TableBody>
               {orgUnits.map((unit) => (
-                <TableRow key={unit.id} hover>
+                <TableRow 
+                  key={unit.id} 
+                  hover 
+                  onClick={() => handleRowClick(unit)}
+                  sx={{ 
+                    cursor: 'pointer',
+                    '&:hover': {
+                      backgroundColor: 'rgba(46, 76, 146, 0.04)',
+                    }
+                  }}
+                >
                   <TableCell>
                     <Stack direction="row" alignItems="center" spacing={2}>
                       <Avatar sx={{ backgroundColor: getTypeColor(unit.type) }}>
@@ -438,7 +488,10 @@ export default function OrgUnitManagementPage() {
                   </TableCell>
                   <TableCell align="right">
                     <IconButton
-                      onClick={(e) => handleMenuClick(e, unit)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMenuClick(e, unit);
+                      }}
                       size="small"
                     >
                       <MoreVertIcon />
@@ -490,28 +543,17 @@ export default function OrgUnitManagementPage() {
           </ListItemIcon>
           <ListItemText primary="Chỉnh sửa" />
         </MenuItem>
-        <Tooltip 
-          title={selectedUnit?.status === 'active' ? 'Không thể xóa đơn vị đang hoạt động' : ''}
-          placement="left"
+        <MenuItem 
+          onClick={handleDeleteClick}
+          sx={{
+            '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' },
+          }}
         >
-          <span>
-            <MenuItem 
-              onClick={handleDeleteClick}
-              disabled={selectedUnit?.status === 'active'}
-              sx={{
-                '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' },
-                '&.Mui-disabled': {
-                  opacity: 0.5,
-                },
-              }}
-            >
-              <ListItemIcon>
-                <DeleteIcon fontSize="small" sx={{ color: selectedUnit?.status === 'active' ? '#ccc' : '#f44336' }} />
-              </ListItemIcon>
-              <ListItemText primary="Xóa" />
-            </MenuItem>
-          </span>
-        </Tooltip>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" sx={{ color: '#f44336' }} />
+          </ListItemIcon>
+          <ListItemText primary="Vô hiệu hóa" />
+        </MenuItem>
       </Menu>
 
       {/* Create Dialog */}
@@ -611,7 +653,10 @@ export default function OrgUnitManagementPage() {
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} maxWidth="md" fullWidth>
+      <Dialog open={openEditDialog} onClose={() => {
+        setOpenEditDialog(false);
+        setSelectedUnit(null);
+      }} maxWidth="md" fullWidth>
         <DialogTitle>Chỉnh sửa đơn vị</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
@@ -699,7 +744,10 @@ export default function OrgUnitManagementPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenEditDialog(false)}>Hủy</Button>
+          <Button onClick={() => {
+            setOpenEditDialog(false);
+            setSelectedUnit(null);
+          }}>Hủy</Button>
           <Button onClick={handleEditUnit} variant="contained" sx={{ backgroundColor: '#2e4c92' }}>
             Cập nhật
           </Button>
@@ -707,18 +755,30 @@ export default function OrgUnitManagementPage() {
       </Dialog>
 
       {/* Delete Dialog */}
-      <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)}>
-        <DialogTitle>Xác nhận xóa</DialogTitle>
+      <Dialog open={openDeleteDialog} onClose={() => {
+        setOpenDeleteDialog(false);
+        setSelectedUnit(null);
+      }}>
+        <DialogTitle>Xác nhận vô hiệu hóa</DialogTitle>
         <DialogContent>
           <Typography>
-            Bạn có chắc chắn muốn xóa đơn vị &quot;{selectedUnit?.name}&quot;? 
-            Hành động này không thể hoàn tác.
+            Bạn có chắc chắn muốn vô hiệu hóa đơn vị &quot;{selectedUnit?.name}&quot;? 
+            Đơn vị sẽ bị xóa khỏi hệ thống và không thể khôi phục.
           </Typography>
+          {selectedUnit?.status === 'active' && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              <AlertTitle>Cảnh báo</AlertTitle>
+              Đây là đơn vị đang hoạt động. Việc vô hiệu hóa có thể ảnh hưởng đến các chức năng liên quan.
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)}>Hủy</Button>
+          <Button onClick={() => {
+            setOpenDeleteDialog(false);
+            setSelectedUnit(null);
+          }}>Hủy</Button>
           <Button onClick={handleDeleteUnit} variant="contained" color="error">
-            Xóa
+            Vô hiệu hóa
           </Button>
         </DialogActions>
       </Dialog>

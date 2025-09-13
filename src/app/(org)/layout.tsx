@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   Box,
@@ -17,13 +17,25 @@ import {
   ListItemText,
   useTheme,
   useMediaQuery,
+  Collapse,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
   Apartment as ApartmentIcon,
   Group as GroupIcon,
   Dashboard as DashboardIcon,
+  Assignment as AssignmentIcon,
+  History as HistoryIcon,
+  Assessment as AssessmentIcon,
+  Settings as SettingsIcon,
+  ListAlt as ListAltIcon,
+  Visibility as VisibilityIcon,
+  Add as AddIcon,
+  Approval as ApprovalIcon,
+  Publish as PublishIcon,
+  Storage as StorageIcon,
 } from '@mui/icons-material';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -38,6 +50,7 @@ export default function OrgLayout({
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [unitManagementOpen, setUnitManagementOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -47,6 +60,10 @@ export default function OrgLayout({
 
   const handleCollapseToggle = () => {
     setCollapsed(!collapsed);
+  };
+
+  const handleUnitManagementToggle = () => {
+    setUnitManagementOpen(!unitManagementOpen);
   };
 
   const menuItems = [
@@ -61,16 +78,57 @@ export default function OrgLayout({
       label: 'Cây tổ chức',
     },
     {
-      key: '/org/unit',
+      key: 'unit-management',
       icon: <GroupIcon />,
       label: 'Quản lý đơn vị',
-    },  
+      hasSubmenu: true,
+      submenu: [
+        {
+          key: '/org/unit',
+          icon: <ListAltIcon />,
+          label: 'Danh sách đơn vị',
+        },
+        {
+          key: '/org/unit/create',
+          icon: <AddIcon />,
+          label: 'Tạo đơn vị mới',
+        },
+        {
+          key: '/org/unit/workflow',
+          icon: <ApprovalIcon />,
+          label: 'Yêu cầu phê duyệt',
+        },
+      ],
+    },
+    {
+      key: '/org/audit',
+      icon: <HistoryIcon />,
+      label: 'Lịch sử thay đổi',
+    },
+    {
+      key: '/org/reports',
+      icon: <AssessmentIcon />,
+      label: 'Báo cáo tổ chức',
+    },
+    {
+      key: '/org/config',
+      icon: <SettingsIcon />,
+      label: 'Cấu hình hệ thống',
+    },
   ];
 
   const handleMenuClick = (path: string) => {
     router.push(path);
     if (isMobile) {
       setMobileOpen(false);
+    }
+  };
+
+  const handleMenuItemClick = (item: any) => {
+    if (item.hasSubmenu) {
+      handleUnitManagementToggle();
+    } else {
+      handleMenuClick(item.key);
     }
   };
 
@@ -98,24 +156,62 @@ export default function OrgLayout({
       {/* Menu Items */}
       <List sx={{ flexGrow: 1, pt: 1 }}>
         {menuItems.map((item) => (
-          <ListItem key={item.key} disablePadding>
-            <ListItemButton
-              selected={pathname === item.key}
-              onClick={() => handleMenuClick(item.key)}
-              sx={{
-                mx: 1,
-                borderRadius: 1,
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                },
-              }}
-            >
-              <ListItemIcon>
-                {item.icon}
-              </ListItemIcon>
-              {!collapsed && <ListItemText primary={item.label} />}
-            </ListItemButton>
-          </ListItem>
+          <React.Fragment key={item.key}>
+            <ListItem disablePadding>
+              <ListItemButton
+                selected={pathname === item.key}
+                onClick={() => handleMenuItemClick(item)}
+                sx={{
+                  mx: 1,
+                  borderRadius: 1,
+                  '&.Mui-selected': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  },
+                }}
+              >
+                <ListItemIcon>
+                  {item.icon}
+                </ListItemIcon>
+                {!collapsed && (
+                  <>
+                    <ListItemText primary={item.label} />
+                    {item.hasSubmenu && (
+                      unitManagementOpen ? <ChevronRightIcon /> : <ChevronLeftIcon />
+                    )}
+                  </>
+                )}
+              </ListItemButton>
+            </ListItem>
+            
+            {/* Submenu */}
+            {item.hasSubmenu && item.submenu && !collapsed && (
+              <Collapse in={unitManagementOpen} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  {item.submenu.map((subItem) => (
+                    <ListItem key={subItem.key} disablePadding>
+                      <ListItemButton
+                        selected={pathname === subItem.key}
+                        onClick={() => handleMenuClick(subItem.key)}
+                        sx={{
+                          mx: 1,
+                          ml: 3,
+                          borderRadius: 1,
+                          '&.Mui-selected': {
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          },
+                        }}
+                      >
+                        <ListItemIcon>
+                          {subItem.icon}
+                        </ListItemIcon>
+                        <ListItemText primary={subItem.label} />
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                </List>
+              </Collapse>
+            )}
+          </React.Fragment>
         ))}
       </List>
     </Box>

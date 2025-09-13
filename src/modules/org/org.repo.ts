@@ -3,12 +3,12 @@ import { CreateOrgUnitInput, UpdateOrgUnitInput, OrgUnitQuery } from './org.sche
 
 export class OrgUnitRepository {
   // Get all organization units without relations (lazy)
-  async findAll() {
-    return await db.orgUnit.findMany();
-  }
+  // async findAll() {
+  //   return await db.orgUnit.findMany();
+  // }
 
   // Search and filter with pagination, sorting, and relations
-  async findAllWithOptions(options: OrgUnitQuery) {
+  async findAll(options: OrgUnitQuery) {
     // Build where clause
     const where: any = {};
     
@@ -67,7 +67,7 @@ export class OrgUnitRepository {
   }
 
   // Count total records for pagination
-  async countWithOptions(options: OrgUnitQuery) {
+  async count(options: OrgUnitQuery) {
     const where: any = {};
     
     if (options.search) {
@@ -106,6 +106,24 @@ export class OrgUnitRepository {
       include: {
         children: true,
         employees: true,
+        // Include relations where this unit is a child
+        parentRelations: {
+          include: {
+            parent: true,
+          },
+          where: {
+            effective_to: null, // Only active relations
+          },
+        },
+        // Include relations where this unit is a parent
+        childRelations: {
+          include: {
+            child: true,
+          },
+          where: {
+            effective_to: null, // Only active relations
+          },
+        },
       },
     });
   }
@@ -138,10 +156,11 @@ export class OrgUnitRepository {
     });
   }
 
-  // Delete organization unit
+  // "Delete" organization unit: update status to 'deleted'
   async delete(id: number) {
-    return await db.orgUnit.delete({
+    return await db.orgUnit.update({
       where: { id },
+      data: { status: 'deleted' },
     });
   }
 
@@ -155,4 +174,5 @@ export class OrgUnitRepository {
       },
     });
   }
+
 }
