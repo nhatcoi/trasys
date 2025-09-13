@@ -24,7 +24,9 @@ import {
     Edit as EditIcon,
     Delete as DeleteIcon,
     Visibility as ViewIcon,
-    Work as WorkIcon
+    Work as WorkIcon,
+    Assessment as AssessmentIcon,
+    School as SchoolIcon,
 } from '@mui/icons-material';
 import { HR_ROUTES, API_ROUTES } from '@/constants/routes';
 
@@ -109,6 +111,31 @@ export default function EmployeesPage() {
             setError('Lỗi khi tải danh sách nhân viên');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDeleteEmployee = async (employeeId: string, employeeName: string) => {
+        if (confirm(`Bạn có chắc chắn muốn xóa nhân viên ${employeeName}?`)) {
+            try {
+                setActionLoading(`delete-${employeeId}`);
+                const response = await fetch(API_ROUTES.HR.EMPLOYEES_BY_ID(employeeId), {
+                    method: 'DELETE',
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Refresh the list
+                    await fetchEmployees();
+                } else {
+                    setError(result.error || 'Không thể xóa nhân viên');
+                }
+            } catch (error) {
+                console.error('Error deleting employee:', error);
+                setError('Lỗi khi xóa nhân viên');
+            } finally {
+                setActionLoading(null);
+            }
         }
     };
 
@@ -289,6 +316,30 @@ export default function EmployeesPage() {
                                                     ) : (
                                                         <EditIcon />
                                                     )}
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    color="info"
+                                                    onClick={() => router.push(`${HR_ROUTES.PERFORMANCE_REVIEWS}?employee_id=${employee.id}`)}
+                                                    title="Xem đánh giá"
+                                                >
+                                                    <AssessmentIcon />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    color="secondary"
+                                                    onClick={() => router.push(`${HR_ROUTES.EMPLOYEE_ACADEMIC_TITLES}?employee_id=${employee.id}`)}
+                                                    title="Xem học hàm học vị"
+                                                >
+                                                    <SchoolIcon />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    color="success"
+                                                    onClick={() => router.push(`${HR_ROUTES.EMPLOYEE_TRAININGS}?employee_id=${employee.id}`)}
+                                                    title="Xem đào tạo"
+                                                >
+                                                    <SchoolIcon />
                                                 </IconButton>
                                             </Box>
                                         </TableCell>

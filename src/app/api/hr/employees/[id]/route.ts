@@ -13,6 +13,17 @@ export async function GET(
       where: { id: employeeId as any },
       include: {
         user: true,
+        assignments: {
+          include: {
+            org_unit: true,
+            job_positions: true
+          }
+        },
+        employments: {
+          orderBy: {
+            start_date: 'desc'
+          }
+        }
       },
     });
 
@@ -34,12 +45,37 @@ export async function GET(
       user: employee.user ? {
         ...employee.user,
         id: employee.user.id.toString()
-      } : null
+      } : null,
+      assignments: employee.assignments?.map((assignment: any) => ({
+        ...assignment,
+        id: assignment.id.toString(),
+        employee_id: assignment.employee_id.toString(),
+        org_unit_id: assignment.org_unit_id.toString(),
+        position_id: assignment.position_id?.toString() || null,
+        allocation: assignment.allocation?.toString() || null,
+        org_unit: assignment.org_unit ? {
+          ...assignment.org_unit,
+          id: assignment.org_unit.id.toString()
+        } : null,
+        job_positions: assignment.job_positions ? {
+          ...assignment.job_positions,
+          id: assignment.job_positions.id.toString()
+        } : null
+      })) || [],
+      employments: employee.employments?.map((employment: any) => ({
+        ...employment,
+        id: employment.id.toString(),
+        employee_id: employment.employee_id.toString()
+      })) || []
     };
 
-    return NextResponse.json({
-      success: true,
-      data: serializedEmployee
+    // Use JSON.stringify with replacer to handle BigInt
+    const jsonString = JSON.stringify({ success: true, data: serializedEmployee }, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    );
+
+    return new Response(jsonString, {
+      headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
     console.error('Database error:', error);
