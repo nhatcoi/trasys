@@ -24,6 +24,7 @@ import {
     Edit as EditIcon,
     Delete as DeleteIcon,
     Visibility as ViewIcon,
+    Work as WorkIcon
 } from '@mui/icons-material';
 import { HR_ROUTES, API_ROUTES } from '@/constants/routes';
 
@@ -37,7 +38,40 @@ interface Employee {
         username: string
         email: string | null
         full_name: string
+        phone: string | null
+        address: string | null
     } | null
+    assignments: {
+        id: string
+        org_unit_id: string
+        position_id: string | null
+        is_primary: boolean
+        assignment_type: string
+        start_date: string
+        end_date: string | null
+        allocation: string | null
+        org_unit: {
+            id: string
+            name: string
+            type: string
+            description: string | null
+        } | null
+        job_positions: {
+            id: string
+            title: string
+            code: string
+            grade: string | null
+        } | null
+    }[]
+    employments?: {
+        id: string
+        contract_no: string
+        contract_type: string
+        start_date: string
+        end_date: string | null
+        fte: number
+        salary_band: string
+    }[]
 }
 
 export default function EmployeesPage() {
@@ -62,7 +96,7 @@ export default function EmployeesPage() {
     const fetchEmployees = async () => {
         try {
             setLoading(true);
-            const response = await fetch(API_ROUTES.EMPLOYEES);
+            const response = await fetch(API_ROUTES.HR.EMPLOYEES);
             const result = await response.json();
 
             if (result.success) {
@@ -137,80 +171,130 @@ export default function EmployeesPage() {
                                 <TableCell><strong>Họ tên</strong></TableCell>
                                 <TableCell><strong>Username</strong></TableCell>
                                 <TableCell><strong>Email</strong></TableCell>
+                                <TableCell><strong>Số điện thoại</strong></TableCell>
                                 <TableCell><strong>Loại NV</strong></TableCell>
+                                <TableCell><strong>Đơn vị</strong></TableCell>
+                                <TableCell><strong>Chức vụ</strong></TableCell>
+                                <TableCell><strong>Hợp đồng</strong></TableCell>
                                 <TableCell><strong>Trạng thái</strong></TableCell>
                                 <TableCell><strong>Ngày tuyển</strong></TableCell>
                                 <TableCell><strong>Hành động</strong></TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {employees.map((employee) => (
-                                <TableRow key={employee.id} hover>
-                                    <TableCell>{employee.employee_no || 'N/A'}</TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" fontWeight="medium">
-                                            {employee.user?.full_name || 'N/A'}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>{employee.user?.username || 'N/A'}</TableCell>
-                                    <TableCell>{employee.user?.email || 'N/A'}</TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={employee.employment_type || 'N/A'}
-                                            size="small"
-                                            color="primary"
-                                            variant="outlined"
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={employee.status || 'N/A'}
-                                            size="small"
-                                            color={employee.status === 'active' ? 'success' : 'default'}
-                                            variant="filled"
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        {employee.hired_at ? new Date(employee.hired_at).toLocaleDateString('vi-VN') : 'N/A'}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', gap: 1 }}>
-                                            <IconButton
+                            {employees.map((employee) => {
+                                const primaryAssignment = employee.assignments?.find(a => a.is_primary);
+                                return (
+                                    <TableRow key={employee.id} hover>
+                                        <TableCell>{employee.employee_no || 'N/A'}</TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" fontWeight="medium">
+                                                {employee.user?.full_name || 'N/A'}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell>{employee.user?.username || 'N/A'}</TableCell>
+                                        <TableCell>{employee.user?.email || 'N/A'}</TableCell>
+                                        <TableCell>{employee.user?.phone || 'N/A'}</TableCell>
+                                        <TableCell>
+                                            <Chip
+                                                label={employee.employment_type || 'N/A'}
                                                 size="small"
                                                 color="primary"
-                                                onClick={() => {
-                                                    setActionLoading(`view-${employee.id}`);
-                                                    router.push(`${HR_ROUTES.EMPLOYEES}/${employee.id}`);
-                                                }}
-                                                disabled={actionLoading === `view-${employee.id}`}
-                                                title="Xem chi tiết"
-                                            >
-                                                {actionLoading === `view-${employee.id}` ? (
-                                                    <CircularProgress size={16} />
-                                                ) : (
-                                                    <ViewIcon />
-                                                )}
-                                            </IconButton>
-                                            <IconButton
+                                                variant="outlined"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {primaryAssignment?.org_unit?.name || 'N/A'}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {primaryAssignment?.job_positions?.title || 'N/A'}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            {employee.employments && employee.employments.length > 0 ? (
+                                                <Box>
+                                                    <Typography variant="body2" fontWeight="medium">
+                                                        {employee.employments[0].contract_no}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {employee.employments[0].contract_type} - {employee.employments[0].salary_band}
+                                                    </Typography>
+                                                </Box>
+                                            ) : (
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Chưa có hợp đồng
+                                                </Typography>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip
+                                                label={employee.status || 'N/A'}
                                                 size="small"
-                                                color="secondary"
-                                                onClick={() => {
-                                                    setActionLoading(`edit-${employee.id}`);
-                                                    router.push(`${HR_ROUTES.EMPLOYEES}/${employee.id}/edit`);
-                                                }}
-                                                disabled={actionLoading === `edit-${employee.id}`}
-                                                title="Chỉnh sửa"
-                                            >
-                                                {actionLoading === `edit-${employee.id}` ? (
-                                                    <CircularProgress size={16} />
-                                                ) : (
-                                                    <EditIcon />
-                                                )}
-                                            </IconButton>
-                                        </Box>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                                                color={employee.status === 'ACTIVE' ? 'success' : 'default'}
+                                                variant="filled"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            {employee.hired_at ? new Date(employee.hired_at).toLocaleDateString('vi-VN') : 'N/A'}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                                <IconButton
+                                                    size="small"
+                                                    color="primary"
+                                                    onClick={() => {
+                                                        setActionLoading(`view-${employee.id}`);
+                                                        router.push(`${HR_ROUTES.EMPLOYEES}/${employee.id}`);
+                                                    }}
+                                                    disabled={actionLoading === `view-${employee.id}`}
+                                                    title="Xem chi tiết"
+                                                >
+                                                    {actionLoading === `view-${employee.id}` ? (
+                                                        <CircularProgress size={16} />
+                                                    ) : (
+                                                        <ViewIcon />
+                                                    )}
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    color="secondary"
+                                                    onClick={() => {
+                                                        setActionLoading(`employment-${employee.id}`);
+                                                        router.push(`${HR_ROUTES.EMPLOYMENTS}?employee_id=${employee.id}`);
+                                                    }}
+                                                    disabled={actionLoading === `employment-${employee.id}`}
+                                                    title="Xem lịch sử hợp đồng"
+                                                >
+                                                    {actionLoading === `employment-${employee.id}` ? (
+                                                        <CircularProgress size={16} />
+                                                    ) : (
+                                                        <WorkIcon />
+                                                    )}
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    color="secondary"
+                                                    onClick={() => {
+                                                        setActionLoading(`edit-${employee.id}`);
+                                                        router.push(`${HR_ROUTES.EMPLOYEES}/${employee.id}/edit`);
+                                                    }}
+                                                    disabled={actionLoading === `edit-${employee.id}`}
+                                                    title="Chỉnh sửa"
+                                                >
+                                                    {actionLoading === `edit-${employee.id}` ? (
+                                                        <CircularProgress size={16} />
+                                                    ) : (
+                                                        <EditIcon />
+                                                    )}
+                                                </IconButton>
+                                            </Box>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </TableContainer>

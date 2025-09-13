@@ -177,8 +177,8 @@ export default function ProfilePage() {
                 )}
 
                 <form onSubmit={handleSubmit}>
-                    <Grid container spacing={3}>
-                        <Grid item xs={12} sm={6}>
+                    <Box display="flex" flexDirection="column" gap={3}>
+                        <Box display="flex" flexDirection="column" gap={3}>
                             <TextField
                                 fullWidth
                                 label="Họ và tên"
@@ -186,9 +186,7 @@ export default function ProfilePage() {
                                 onChange={(e) => handleInputChange('full_name', e.target.value)}
                                 required
                             />
-                        </Grid>
 
-                        <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth
                                 label="Email"
@@ -197,18 +195,14 @@ export default function ProfilePage() {
                                 onChange={(e) => handleInputChange('email', e.target.value)}
                                 required
                             />
-                        </Grid>
 
-                        <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth
                                 label="Số điện thoại"
                                 value={formData.phone}
                                 onChange={(e) => handleInputChange('phone', e.target.value)}
                             />
-                        </Grid>
 
-                        <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth
                                 label="Ngày sinh"
@@ -217,9 +211,7 @@ export default function ProfilePage() {
                                 onChange={(e) => handleInputChange('dob', e.target.value)}
                                 InputLabelProps={{ shrink: true }}
                             />
-                        </Grid>
 
-                        <Grid item xs={12} sm={6}>
                             <FormControl fullWidth>
                                 <InputLabel>Giới tính</InputLabel>
                                 <Select
@@ -232,9 +224,7 @@ export default function ProfilePage() {
                                     <MenuItem value="other">Khác</MenuItem>
                                 </Select>
                             </FormControl>
-                        </Grid>
 
-                        <Grid item xs={12}>
                             <TextField
                                 fullWidth
                                 label="Địa chỉ"
@@ -243,25 +233,18 @@ export default function ProfilePage() {
                                 value={formData.address}
                                 onChange={(e) => handleInputChange('address', e.target.value)}
                             />
-                        </Grid>
-                    </Grid>
+                        </Box>
 
-                    <Box mt={3} display="flex" gap={2}>
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            disabled={saving}
-                            startIcon={saving ? <CircularProgress size={20} /> : null}
-                        >
-                            {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-                        </Button>
-
-                        <Button
-                            variant="outlined"
-                            onClick={() => router.push(HR_ROUTES.CHANGE_PASSWORD)}
-                        >
-                            Đổi mật khẩu
-                        </Button>
+                        <Box display="flex" gap={2}>
+                            <Button
+                                type="submit"
+                                variant="contained"
+                                disabled={saving}
+                                startIcon={saving ? <CircularProgress size={20} /> : null}
+                            >
+                                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                            </Button>
+                        </Box>
                     </Box>
                 </form>
             </Paper>

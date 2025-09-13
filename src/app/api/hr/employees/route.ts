@@ -6,6 +6,17 @@ export async function GET() {
     const employees = await db.employee.findMany({
       include: {
         user: true,
+        assignments: {
+          include: {
+            org_unit: true,
+            job_positions: true
+          }
+        },
+        employments: {
+          orderBy: {
+            start_date: 'desc'
+          }
+        }
       },
     });
 
@@ -14,13 +25,47 @@ export async function GET() {
       ...employee,
       id: employee.id.toString(),
       user_id: employee.user_id?.toString() || null,
+      created_at: employee.created_at?.toString() || null,
+      updated_at: employee.updated_at?.toString() || null,
       user: employee.user ? {
         ...employee.user,
-        id: employee.user.id.toString()
-      } : null
+        id: employee.user.id.toString(),
+        created_at: employee.user.created_at?.toString() || null,
+        updated_at: employee.user.updated_at?.toString() || null
+      } : null,
+      assignments: employee.assignments?.map((assignment: any) => ({
+        ...assignment,
+        id: assignment.id.toString(),
+        employee_id: assignment.employee_id.toString(),
+        org_unit_id: assignment.org_unit_id.toString(),
+        position_id: assignment.position_id?.toString() || null,
+        allocation: assignment.allocation?.toString() || null,
+        created_at: assignment.created_at?.toString() || null,
+        updated_at: assignment.updated_at?.toString() || null,
+        org_unit: assignment.org_unit ? {
+          ...assignment.org_unit,
+          id: assignment.org_unit.id.toString()
+        } : null,
+        job_positions: assignment.job_positions ? {
+          ...assignment.job_positions,
+          id: assignment.job_positions.id.toString()
+        } : null
+      })) || [],
+      employments: employee.employments?.map((employment: any) => ({
+        ...employment,
+        id: employment.id.toString(),
+        employee_id: employment.employee_id.toString()
+      })) || []
     }));
 
-    return NextResponse.json({ success: true, data: serializedEmployees });
+    // Use JSON.stringify with replacer to handle BigInt
+    const jsonString = JSON.stringify({ success: true, data: serializedEmployees }, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    );
+
+    return new Response(jsonString, {
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
     console.error('Database error:', error);
     return NextResponse.json(
