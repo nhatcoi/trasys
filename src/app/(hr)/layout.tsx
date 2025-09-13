@@ -24,6 +24,7 @@ import {
     Chip,
     Popover,
     Paper,
+    Collapse,
 } from '@mui/material';
 import {
     Menu as MenuIcon,
@@ -38,8 +39,13 @@ import {
     School as SchoolIcon,
     AccountTree as AccountTreeIcon,
     Person as PersonIcon,
+    ExpandLess,
+    ExpandMore,
+    Assessment as AssessmentIcon,
+    Business as BusinessIcon,
 } from '@mui/icons-material';
 import { ThemeToggle } from '@/components/theme-toggle';
+import Sidebar from '@/components/nav/sidebar-simple';
 
 import { HR_ROUTES } from '@/constants/routes';
 
@@ -55,6 +61,14 @@ export default function HrLayout({
     const [mobileOpen, setMobileOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [openItems, setOpenItems] = useState<{ [key: string]: boolean }>({
+        'overview': true,
+        'hr-management': true,
+        'org-management': false,
+        'assignments': false,
+        'reports': false,
+        'profile': false,
+    });
     const router = useRouter();
     const pathname = usePathname();
     const { data: session, status } = useSession();
@@ -67,7 +81,7 @@ export default function HrLayout({
         setCollapsed(!collapsed);
     };
 
-    // Menu items cho HR
+    // Menu items cho HR với nested structure
     const menuItems = [
         {
             key: HR_ROUTES.DASHBOARD,
@@ -75,35 +89,95 @@ export default function HrLayout({
             label: 'Dashboard',
         },
         {
-            key: HR_ROUTES.UNIVERSITY_OVERVIEW,
+            key: 'overview',
             icon: <SchoolIcon />,
-            label: 'Tổng quan Đại học',
+            label: 'Tổng quan',
+            children: [
+                {
+                    key: HR_ROUTES.UNIVERSITY_OVERVIEW,
+                    icon: <SchoolIcon />,
+                    label: 'Tổng quan Đại học',
+                },
+                {
+                    key: HR_ROUTES.ORG_STRUCTURE,
+                    icon: <AccountTreeIcon />,
+                    label: 'Cơ cấu Tổ chức',
+                },
+                {
+                    key: HR_ROUTES.ORG_TREE,
+                    icon: <AccountTreeIcon />,
+                    label: 'Sơ đồ Tổ chức',
+                },
+            ],
         },
         {
-            key: HR_ROUTES.ORG_STRUCTURE,
-            icon: <AccountTreeIcon />,
-            label: 'Cơ cấu Tổ chức',
-        },
-        {
-            key: HR_ROUTES.FACULTY,
-            icon: <PersonIcon />,
-            label: 'Giảng viên',
-        },
-        {
-            key: HR_ROUTES.EMPLOYEES,
+            key: 'hr-management',
             icon: <PeopleIcon />,
-            label: 'Quản lý nhân viên',
+            label: 'Quản lý Nhân sự',
+            children: [
+                {
+                    key: HR_ROUTES.EMPLOYEES,
+                    icon: <PersonIcon />,
+                    label: 'Danh sách Nhân viên',
+                },
+                {
+                    key: HR_ROUTES.EMPLOYEES_NEW,
+                    icon: <PersonAddIcon />,
+                    label: 'Thêm Nhân viên',
+                },
+                {
+                    key: HR_ROUTES.FACULTY,
+                    icon: <PeopleIcon />,
+                    label: 'Giảng viên',
+                },
+            ],
         },
         {
-            key: HR_ROUTES.EMPLOYEES_NEW,
-            icon: <PersonAddIcon />,
-            label: 'Thêm nhân viên',
+            key: 'org-management',
+            icon: <BusinessIcon />,
+            label: 'Quản lý Đơn vị',
+            children: [
+                {
+                    key: HR_ROUTES.ORG_UNITS,
+                    icon: <BusinessIcon />,
+                    label: 'Danh sách Đơn vị',
+                },
+                {
+                    key: HR_ROUTES.ORG_UNITS_NEW,
+                    icon: <PersonAddIcon />,
+                    label: 'Thêm Đơn vị',
+                },
+            ],
         },
         {
-            key: HR_ROUTES.ASSIGNMENTS,
+            key: 'assignments',
             icon: <WorkIcon />,
-            label: 'Quản lý phân công',
+            label: 'Phân công',
+            children: [
+                {
+                    key: HR_ROUTES.ASSIGNMENTS,
+                    icon: <WorkIcon />,
+                    label: 'Danh sách Phân công',
+                },
+                {
+                    key: HR_ROUTES.ASSIGNMENTS_NEW,
+                    icon: <PersonAddIcon />,
+                    label: 'Thêm Phân công',
+                },
+            ],
         },
+        {
+            key: 'reports',
+            icon: <AssessmentIcon />,
+            label: 'Báo cáo',
+            children: [
+                {
+                    key: HR_ROUTES.REPORTS,
+                    icon: <AssessmentIcon />,
+                    label: 'Báo cáo Thống kê',
+                },
+            ],
+        }
     ];
 
     const handleMenuClick = (path: string) => {
@@ -111,6 +185,68 @@ export default function HrLayout({
         if (isMobile) {
             setMobileOpen(false);
         }
+    };
+
+    const handleToggle = (key: string) => {
+        setOpenItems(prev => ({
+            ...prev,
+            [key]: !prev[key]
+        }));
+    };
+
+    const renderMenuItem = (item: any, level: number = 0) => {
+        const hasChildren = item.children && item.children.length > 0;
+        const isOpen = openItems[item.key];
+        const isSelected = pathname === item.key || (hasChildren && item.children.some((child: any) => pathname === child.key));
+
+        return (
+            <div key={item.key}>
+                <ListItem disablePadding>
+                    <ListItemButton
+                        selected={isSelected && !hasChildren}
+                        onClick={() => {
+                            if (hasChildren) {
+                                handleToggle(item.key);
+                            } else {
+                                handleMenuClick(item.key);
+                            }
+                        }}
+                        sx={{
+                            mx: 1,
+                            borderRadius: 1,
+                            pl: level === 0 ? 2 : 4,
+                            '&.Mui-selected': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            },
+                        }}
+                    >
+                        <ListItemIcon>
+                            {item.icon}
+                        </ListItemIcon>
+                        {!collapsed && <ListItemText primary={item.label} />}
+                        {hasChildren && !collapsed && (
+                            <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggle(item.key);
+                                }}
+                                sx={{ ml: 1 }}
+                            >
+                                {isOpen ? <ExpandLess /> : <ExpandMore />}
+                            </IconButton>
+                        )}
+                    </ListItemButton>
+                </ListItem>
+                {hasChildren && !collapsed && (
+                    <Collapse in={isOpen} timeout="auto" unmountOnExit>
+                        <List component="div" disablePadding>
+                            {item.children.map((child: any) => renderMenuItem(child, level + 1))}
+                        </List>
+                    </Collapse>
+                )}
+            </div>
+        );
     };
 
     const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -155,26 +291,7 @@ export default function HrLayout({
 
             {/* Menu Items */}
             <List sx={{ flexGrow: 1, pt: 1 }}>
-                {menuItems.map((item) => (
-                    <ListItem key={item.key} disablePadding>
-                        <ListItemButton
-                            selected={pathname === item.key}
-                            onClick={() => handleMenuClick(item.key)}
-                            sx={{
-                                mx: 1,
-                                borderRadius: 1,
-                                '&.Mui-selected': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                },
-                            }}
-                        >
-                            <ListItemIcon>
-                                {item.icon}
-                            </ListItemIcon>
-                            {!collapsed && <ListItemText primary={item.label} />}
-                        </ListItemButton>
-                    </ListItem>
-                ))}
+                {menuItems.map((item) => renderMenuItem(item))}
             </List>
         </Box>
     );
@@ -239,23 +356,10 @@ export default function HrLayout({
                 sx={{ width: { md: collapsed ? 80 : drawerWidth }, flexShrink: { md: 0 } }}
             >
                 {/* Mobile drawer */}
-                <Drawer
-                    variant="temporary"
+                <Sidebar
                     open={mobileOpen}
                     onClose={handleDrawerToggle}
-                    ModalProps={{
-                        keepMounted: true,
-                    }}
-                    sx={{
-                        display: { xs: 'block', md: 'none' },
-                        '& .MuiDrawer-paper': {
-                            boxSizing: 'border-box',
-                            width: drawerWidth,
-                        },
-                    }}
-                >
-                    {drawer}
-                </Drawer>
+                />
 
                 {/* Desktop drawer */}
                 <Drawer

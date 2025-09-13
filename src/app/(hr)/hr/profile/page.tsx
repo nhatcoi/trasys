@@ -18,6 +18,7 @@ import {
     MenuItem,
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { HR_ROUTES } from '@/constants/routes';
 
 interface UserProfile {
     id: string;
@@ -67,7 +68,7 @@ export default function ProfilePage() {
 
             if (result.success && result.data) {
                 const user = result.data.user;
-                setProfile(result.data);
+                setProfile(user);
                 setFormData({
                     full_name: user.full_name || '',
                     email: user.email || '',
@@ -77,7 +78,7 @@ export default function ProfilePage() {
                     gender: user.gender || '',
                 });
             } else {
-                setError('Không thể tải thông tin cá nhân');
+                setError(result.error || 'Không thể tải thông tin cá nhân');
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -101,12 +102,12 @@ export default function ProfilePage() {
         setSuccess('');
 
         try {
-            if (!profile?.user?.id) {
+            if (!session?.user?.id) {
                 setError('Không tìm thấy thông tin người dùng');
                 return;
             }
 
-            const response = await fetch(`/api/hr/users/${profile.user.id}`, {
+            const response = await fetch(`/api/hr/users/${(session.user as any).id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -257,7 +258,7 @@ export default function ProfilePage() {
 
                         <Button
                             variant="outlined"
-                            onClick={() => router.push('/hr/change-password')}
+                            onClick={() => router.push(HR_ROUTES.CHANGE_PASSWORD)}
                         >
                             Đổi mật khẩu
                         </Button>
