@@ -24,6 +24,11 @@ export const HR_ROUTES = {
     QUALIFICATIONS: '/hr/qualifications',
     EMPLOYEE_QUALIFICATIONS: '/hr/employee-qualifications',
     EMPLOYMENTS: '/hr/employments',
+    PERFORMANCE_REVIEWS: '/hr/performance-reviews',
+    ACADEMIC_TITLES: '/hr/academic-titles',
+    EMPLOYEE_ACADEMIC_TITLES: '/hr/employee-academic-titles',
+    TRAININGS: '/hr/trainings',
+    EMPLOYEE_TRAININGS: '/hr/employee-trainings',
     REPORTS: '/hr/reports',
 };
 
@@ -42,6 +47,16 @@ export const API_ROUTES = {
         EMPLOYEE_QUALIFICATIONS_BY_ID: (id: string) => `/api/hr/employee-qualifications/${id}`,
         EMPLOYMENTS: '/api/hr/employments',
         EMPLOYMENTS_BY_ID: (id: string) => `/api/hr/employments/${id}`,
+        PERFORMANCE_REVIEWS: '/api/hr/performance-reviews',
+        PERFORMANCE_REVIEWS_BY_ID: (id: string) => `/api/hr/performance-reviews/${id}`,
+        ACADEMIC_TITLES: '/api/hr/academic-titles',
+        ACADEMIC_TITLES_BY_ID: (id: string) => `/api/hr/academic-titles/${id}`,
+        EMPLOYEE_ACADEMIC_TITLES: '/api/hr/employee-academic-titles',
+        EMPLOYEE_ACADEMIC_TITLES_BY_ID: (id: string) => `/api/hr/employee-academic-titles/${id}`,
+        TRAININGS: '/api/hr/trainings',
+        TRAININGS_BY_ID: (id: string) => `/api/hr/trainings/${id}`,
+        EMPLOYEE_TRAININGS: '/api/hr/employee-trainings',
+        EMPLOYEE_TRAININGS_BY_ID: (id: string) => `/api/hr/employee-trainings/${id}`,
         ME: '/api/hr/me',
     },
     ORG: {

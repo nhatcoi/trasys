@@ -34,7 +34,8 @@ import {
     Edit as EditIcon,
     Delete as DeleteIcon,
     Work as WorkIcon,
-    Person as PersonIcon
+    Person as PersonIcon,
+    Visibility as ViewIcon
 } from '@mui/icons-material';
 import { HR_ROUTES, API_ROUTES } from '@/constants/routes';
 
@@ -75,6 +76,8 @@ export default function EmploymentsPage() {
     const [error, setError] = useState<string | null>(null);
     const [openDialog, setOpenDialog] = useState(false);
     const [editingEmployment, setEditingEmployment] = useState<Employment | null>(null);
+    const [viewingEmployment, setViewingEmployment] = useState<Employment | null>(null);
+    const [openViewDialog, setOpenViewDialog] = useState(false);
     const [formData, setFormData] = useState({
         employee_id: '',
         contract_no: '',
@@ -121,28 +124,55 @@ export default function EmploymentsPage() {
     const fetchData = async () => {
         try {
             setLoading(true);
+            console.log('Starting fetchData...');
 
             // Check for employee_id in URL params
             const urlParams = new URLSearchParams(window.location.search);
             const employeeId = urlParams.get('employee_id');
+            console.log('Employee ID from URL:', employeeId);
+
+            const employeesUrl = API_ROUTES.HR.EMPLOYEES;
+            const employmentsUrl = employeeId ? `${API_ROUTES.HR.EMPLOYMENTS}?employee_id=${employeeId}` : API_ROUTES.HR.EMPLOYMENTS;
+
+            console.log('Fetching from URLs:', { employeesUrl, employmentsUrl });
 
             const [employeesRes, employmentsRes] = await Promise.all([
-                fetch(API_ROUTES.HR.EMPLOYEES),
-                fetch(employeeId ? `${API_ROUTES.HR.EMPLOYMENTS}?employee_id=${employeeId}` : API_ROUTES.HR.EMPLOYMENTS)
+                fetch(employeesUrl, {
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                }),
+                fetch(employmentsUrl, {
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
             ]);
+
+            console.log('Response statuses:', {
+                employeesStatus: employeesRes.status,
+                employmentsStatus: employmentsRes.status
+            });
 
             const [employeesResult, employmentsResult] = await Promise.all([
                 employeesRes.json(),
                 employmentsRes.json()
             ]);
 
+            console.log('API Results:', { employeesResult, employmentsResult });
+
             if (employeesResult.success) {
                 setEmployees(employeesResult.data);
+                console.log('Employees set:', employeesResult.data.length);
             }
             if (employmentsResult.success) {
                 setEmployments(employmentsResult.data);
+                console.log('Employments set:', employmentsResult.data.length);
             }
         } catch (error) {
+            console.error('Fetch error:', error);
             setError('Lỗi kết nối đến server');
         } finally {
             setLoading(false);
@@ -174,6 +204,11 @@ export default function EmploymentsPage() {
             });
         }
         setOpenDialog(true);
+    };
+
+    const handleViewEmployment = (employment: Employment) => {
+        setViewingEmployment(employment);
+        setOpenViewDialog(true);
     };
 
     const handleCloseDialog = () => {
@@ -386,8 +421,17 @@ export default function EmploymentsPage() {
                                         <Box sx={{ display: 'flex', gap: 1 }}>
                                             <IconButton
                                                 size="small"
+                                                color="info"
+                                                onClick={() => handleViewEmployment(employment)}
+                                                title="Xem chi tiết"
+                                            >
+                                                <ViewIcon />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
                                                 color="primary"
                                                 onClick={() => handleOpenDialog(employment)}
+                                                title="Sửa hợp đồng"
                                             >
                                                 <EditIcon />
                                             </IconButton>
@@ -395,6 +439,7 @@ export default function EmploymentsPage() {
                                                 size="small"
                                                 color="error"
                                                 onClick={() => handleDelete(employment.id)}
+                                                title="Xóa hợp đồng"
                                             >
                                                 <DeleteIcon />
                                             </IconButton>
@@ -529,6 +574,116 @@ export default function EmploymentsPage() {
                         </Button>
                     </DialogActions>
                 </form>
+            </Dialog>
+
+            {/* Dialog xem chi tiết hợp đồng */}
+            <Dialog open={openViewDialog} onClose={() => setOpenViewDialog(false)} maxWidth="md" fullWidth>
+                <DialogTitle>
+                    Chi tiết hợp đồng lao động
+                </DialogTitle>
+                <DialogContent>
+                    {viewingEmployment && (
+                        <Grid container spacing={2} sx={{ mt: 1 }}>
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant="subtitle2" color="text.secondary">
+                                    Nhân viên
+                                </Typography>
+                                <Typography variant="body1" fontWeight="medium">
+                                    {viewingEmployment.employees?.user?.full_name || 'N/A'}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {viewingEmployment.employees?.employee_no || 'N/A'}
+                                </Typography>
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant="subtitle2" color="text.secondary">
+                                    Số hợp đồng
+                                </Typography>
+                                <Typography variant="body1" fontWeight="medium">
+                                    {viewingEmployment.contract_no}
+                                </Typography>
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant="subtitle2" color="text.secondary">
+                                    Loại hợp đồng
+                                </Typography>
+                                <Chip
+                                    label={getContractTypeLabel(viewingEmployment.contract_type)}
+                                    color={getContractTypeColor(viewingEmployment.contract_type) as any}
+                                    size="small"
+                                    variant="outlined"
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant="subtitle2" color="text.secondary">
+                                    Bậc lương
+                                </Typography>
+                                <Chip
+                                    label={viewingEmployment.salary_band}
+                                    color="primary"
+                                    size="small"
+                                    variant="outlined"
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant="subtitle2" color="text.secondary">
+                                    Ngày bắt đầu
+                                </Typography>
+                                <Typography variant="body1">
+                                    {new Date(viewingEmployment.start_date).toLocaleDateString('vi-VN')}
+                                </Typography>
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant="subtitle2" color="text.secondary">
+                                    Ngày kết thúc
+                                </Typography>
+                                <Typography variant="body1">
+                                    {viewingEmployment.end_date ? new Date(viewingEmployment.end_date).toLocaleDateString('vi-VN') : 'Không xác định'}
+                                </Typography>
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant="subtitle2" color="text.secondary">
+                                    FTE (Full-time Equivalent)
+                                </Typography>
+                                <Typography variant="body1">
+                                    {viewingEmployment.fte} ({Math.round(viewingEmployment.fte * 100)}%)
+                                </Typography>
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant="subtitle2" color="text.secondary">
+                                    Trạng thái hợp đồng
+                                </Typography>
+                                <Chip
+                                    label={viewingEmployment.end_date && new Date(viewingEmployment.end_date) < new Date() ? 'Đã hết hạn' : 'Đang hiệu lực'}
+                                    color={viewingEmployment.end_date && new Date(viewingEmployment.end_date) < new Date() ? 'error' : 'success'}
+                                    size="small"
+                                    variant="filled"
+                                />
+                            </Grid>
+                        </Grid>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenViewDialog(false)}>
+                        Đóng
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => {
+                            setOpenViewDialog(false);
+                            handleOpenDialog(viewingEmployment!);
+                        }}
+                    >
+                        Chỉnh sửa
+                    </Button>
+                </DialogActions>
             </Dialog>
         </Box>
     );

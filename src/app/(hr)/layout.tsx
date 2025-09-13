@@ -135,6 +135,31 @@ export default function HrLayout({
                     icon: <WorkIcon />,
                     label: 'Hợp đồng Lao động',
                 },
+                {
+                    key: HR_ROUTES.PERFORMANCE_REVIEWS,
+                    icon: <AssessmentIcon />,
+                    label: 'Đánh giá Nhân viên',
+                },
+                {
+                    key: HR_ROUTES.ACADEMIC_TITLES,
+                    icon: <SchoolIcon />,
+                    label: 'Học hàm Học vị',
+                },
+                {
+                    key: HR_ROUTES.EMPLOYEE_ACADEMIC_TITLES,
+                    icon: <PersonIcon />,
+                    label: 'Học hàm NV',
+                },
+                {
+                    key: HR_ROUTES.TRAININGS,
+                    icon: <SchoolIcon />,
+                    label: 'Khóa Đào tạo',
+                },
+                {
+                    key: HR_ROUTES.EMPLOYEE_TRAININGS,
+                    icon: <PersonIcon />,
+                    label: 'Đào tạo NV',
+                },
             ],
         },
         {

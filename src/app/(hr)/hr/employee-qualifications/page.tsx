@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Box,
     Typography,
@@ -78,6 +78,7 @@ interface EmployeeQualification {
 export default function EmployeeQualificationsPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [employeeQualifications, setEmployeeQualifications] = useState<EmployeeQualification[]>([]);
     const [qualifications, setQualifications] = useState<Qualification[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
@@ -101,15 +102,30 @@ export default function EmployeeQualificationsPage() {
             return;
         }
         fetchData();
-    }, [session, status, router]);
+    }, [session, status, router, searchParams]);
+
+    useEffect(() => {
+        // Check for employee_id in URL params and pre-fill form data
+        const employeeId = searchParams.get('employee_id');
+        if (employeeId) {
+            setFormData(prev => ({
+                ...prev,
+                employee_id: employeeId
+            }));
+        }
+    }, [searchParams]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
+
+            // Check for employee_id in URL params
+            const employeeId = searchParams.get('employee_id');
+
             const [qualificationsRes, employeesRes, employeeQualificationsRes] = await Promise.all([
                 fetch(API_ROUTES.HR.QUALIFICATIONS),
                 fetch(API_ROUTES.HR.EMPLOYEES),
-                fetch(API_ROUTES.HR.EMPLOYEE_QUALIFICATIONS)
+                fetch(employeeId ? `${API_ROUTES.HR.EMPLOYEE_QUALIFICATIONS}?employee_id=${employeeId}` : API_ROUTES.HR.EMPLOYEE_QUALIFICATIONS)
             ]);
 
             const [qualificationsResult, employeesResult, employeeQualificationsResult] = await Promise.all([
@@ -247,9 +263,23 @@ export default function EmployeeQualificationsPage() {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <PersonIcon sx={{ mr: 2, fontSize: 32, color: 'primary.main' }} />
-                    <Typography variant="h4" component="h1">
-                        Bằng cấp Nhân viên
-                    </Typography>
+                    <Box>
+                        <Typography variant="h4" component="h1">
+                            Bằng cấp Nhân viên
+                        </Typography>
+                        {(() => {
+                            const employeeId = searchParams.get('employee_id');
+                            if (employeeId) {
+                                const employee = employees.find(emp => emp.id === employeeId);
+                                return (
+                                    <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+                                        Lịch sử bằng cấp của: <strong>{employee?.user?.full_name || 'N/A'}</strong>
+                                    </Typography>
+                                );
+                            }
+                            return null;
+                        })()}
+                    </Box>
                 </Box>
                 <Button
                     variant="contained"
