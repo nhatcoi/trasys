@@ -29,6 +29,7 @@ export const HR_ROUTES = {
     EMPLOYEE_ACADEMIC_TITLES: '/hr/employee-academic-titles',
     TRAININGS: '/hr/trainings',
     EMPLOYEE_TRAININGS: '/hr/employee-trainings',
+    EMPLOYEE_LOGS: '/hr/employee-logs',
     REPORTS: '/hr/reports',
 };
 
@@ -57,6 +58,7 @@ export const API_ROUTES = {
         TRAININGS_BY_ID: (id: string) => `/api/hr/trainings/${id}`,
         EMPLOYEE_TRAININGS: '/api/hr/employee-trainings',
         EMPLOYEE_TRAININGS_BY_ID: (id: string) => `/api/hr/employee-trainings/${id}`,
+        EMPLOYEE_LOGS: '/api/hr/employee-logs',
         ME: '/api/hr/me',
     },
     ORG: {

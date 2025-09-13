@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { logEmployeeActivity, getActorInfo } from '@/lib/audit-logger';
 
 export async function GET(
     request: NextRequest,
@@ -66,6 +67,11 @@ export async function PUT(
             comments,
         } = body;
 
+        // Get old data for logging
+        const oldReview = await db.performance_reviews.findUnique({
+            where: { id: reviewId as any },
+        });
+
         const performanceReview = await db.performance_reviews.update({
             where: { id: reviewId as any },
             data: {
@@ -99,6 +105,23 @@ export async function PUT(
             } : null
         };
 
+        // Log the update activity
+        const actorInfo = getActorInfo(request);
+        await logEmployeeActivity({
+            employee_id: performanceReview.employee_id,
+            action: 'UPDATE',
+            entity_type: 'performance_reviews',
+            entity_id: performanceReview.id,
+            old_value: oldReview ? JSON.stringify({
+                ...oldReview,
+                id: oldReview.id.toString(),
+                employee_id: oldReview.employee_id.toString(),
+                score: oldReview.score?.toString() || null,
+            }) : undefined,
+            new_value: JSON.stringify(serializedReview),
+            ...actorInfo,
+        });
+
         return NextResponse.json({ success: true, data: serializedReview });
     } catch (error) {
         console.error('Database error:', error);
@@ -119,9 +142,32 @@ export async function DELETE(
     try {
         const reviewId = params.id;
 
+        // Get old data for logging
+        const oldReview = await db.performance_reviews.findUnique({
+            where: { id: reviewId as any },
+        });
+
         await db.performance_reviews.delete({
             where: { id: reviewId as any }
         });
+
+        // Log the deletion activity
+        const actorInfo = getActorInfo(request);
+        if (oldReview) {
+            await logEmployeeActivity({
+                employee_id: oldReview.employee_id,
+                action: 'DELETE',
+                entity_type: 'performance_reviews',
+                entity_id: oldReview.id,
+                old_value: JSON.stringify({
+                    ...oldReview,
+                    id: oldReview.id.toString(),
+                    employee_id: oldReview.employee_id.toString(),
+                    score: oldReview.score?.toString() || null,
+                }),
+                ...actorInfo,
+            });
+        }
 
         return NextResponse.json({ success: true, message: 'Performance review deleted successfully' });
     } catch (error) {

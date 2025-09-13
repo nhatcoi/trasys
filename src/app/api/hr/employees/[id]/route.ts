@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { logEmployeeActivity, getActorInfo } from '@/lib/audit-logger';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { getToken } from 'next-auth/jwt';
 
 export async function GET(
   request: NextRequest,
@@ -106,16 +110,34 @@ export async function PUT(
       terminated_at,
     } = body;
 
+    // Get current user from token
+    const token = await getToken({ req: request });
+    const currentUserId = token?.sub ? BigInt(token.sub) : undefined;
+    
+    console.log('Token:', token);
+    console.log('Current User ID:', currentUserId);
+
+    // Get old data for logging
+    const oldEmployee = await db.employee.findUnique({
+      where: { id: employeeId as any },
+    });
+
+    const updateData: any = {
+      employee_no,
+      employment_type,
+      status,
+      hired_at: hired_at ? new Date(hired_at) : null,
+      terminated_at: terminated_at ? new Date(terminated_at) : null,
+    };
+
+    // Only update user relation if user_id is provided
+    if (user_id) {
+      updateData.user = { connect: { id: BigInt(user_id) } };
+    }
+
     const employee = await db.employee.update({
       where: { id: employeeId as any },
-      data: {
-        user_id: user_id ? BigInt(user_id) : null,
-        employee_no,
-        employment_type,
-        status,
-        hired_at: hired_at ? new Date(hired_at) : null,
-        terminated_at: terminated_at ? new Date(terminated_at) : null,
-      },
+      data: updateData,
     });
 
     // Convert BigInt to string for JSON serialization
@@ -124,6 +146,23 @@ export async function PUT(
       id: employee.id.toString(),
       user_id: employee.user_id?.toString() || null,
     };
+
+    // Log the update activity
+    const actorInfo = getActorInfo(request);
+    await logEmployeeActivity({
+      employee_id: employee.id,
+      action: 'UPDATE',
+      entity_type: 'employees',
+      entity_id: employee.id,
+      old_value: oldEmployee ? JSON.stringify({
+        ...oldEmployee,
+        id: oldEmployee.id.toString(),
+        user_id: oldEmployee.user_id?.toString() || null,
+      }) : undefined,
+      new_value: JSON.stringify(serializedEmployee),
+      actor_id: currentUserId,
+      ...actorInfo,
+    });
 
     return NextResponse.json({
       success: true,
@@ -149,8 +188,33 @@ export async function DELETE(
     const { id } = await params;
     const employeeId = BigInt(id);
 
+    // Get current user from token
+    const token = await getToken({ req: request });
+    const currentUserId = token?.sub ? BigInt(token.sub) : undefined;
+
+    // Get old data for logging
+    const oldEmployee = await db.employee.findUnique({
+      where: { id: employeeId as any },
+    });
+
     await db.employee.delete({
       where: { id: employeeId as any },
+    });
+
+    // Log the deletion activity
+    const actorInfo = getActorInfo(request);
+    await logEmployeeActivity({
+      employee_id: employeeId,
+      action: 'DELETE',
+      entity_type: 'employees',
+      entity_id: employeeId,
+      old_value: oldEmployee ? JSON.stringify({
+        ...oldEmployee,
+        id: oldEmployee.id.toString(),
+        user_id: oldEmployee.user_id?.toString() || null,
+      }) : undefined,
+      actor_id: currentUserId,
+      ...actorInfo,
     });
 
     return NextResponse.json({
