@@ -43,6 +43,7 @@ import {
     ExpandMore,
     Assessment as AssessmentIcon,
     Business as BusinessIcon,
+    History as HistoryIcon,
 } from '@mui/icons-material';
 import { ThemeToggle } from '@/components/theme-toggle';
 import Sidebar from '@/components/nav/sidebar-simple';
@@ -159,6 +160,11 @@ export default function HrLayout({
                     key: HR_ROUTES.EMPLOYEE_TRAININGS,
                     icon: <PersonIcon />,
                     label: 'Đào tạo NV',
+                },
+                {
+                    key: HR_ROUTES.EMPLOYEE_LOGS,
+                    icon: <HistoryIcon />,
+                    label: 'Nhật ký NV',
                 },
             ],
         },

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { logEmployeeActivity, getActorInfo } from '@/lib/audit-logger';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { getToken } from 'next-auth/jwt';
 
 export async function GET() {
   try {
@@ -9,12 +13,7 @@ export async function GET() {
         assignments: {
           include: {
             org_unit: true,
-            job_positions: true
-          }
-        },
-        employments: {
-          orderBy: {
-            start_date: 'desc'
+            position: true
           }
         }
       },
@@ -46,15 +45,10 @@ export async function GET() {
           ...assignment.org_unit,
           id: assignment.org_unit.id.toString()
         } : null,
-        job_positions: assignment.job_positions ? {
-          ...assignment.job_positions,
-          id: assignment.job_positions.id.toString()
+        position: assignment.position ? {
+          ...assignment.position,
+          id: assignment.position.id.toString()
         } : null
-      })) || [],
-      employments: employee.employments?.map((employment: any) => ({
-        ...employment,
-        id: employment.id.toString(),
-        employee_id: employment.employee_id.toString()
       })) || []
     }));
 
@@ -90,9 +84,13 @@ export async function POST(request: NextRequest) {
       hired_at,
     } = body;
 
+    // Get current user from session
+    const session = await getServerSession(authOptions);
+    const currentUserId = session?.user?.id ? BigInt(session.user.id) : undefined;
+
     const employee = await db.employee.create({
       data: {
-        user_id: user_id ? BigInt(user_id) : null,
+        user: user_id ? { connect: { id: BigInt(user_id) } } : undefined,
         employee_no,
         employment_type,
         status,
@@ -106,6 +104,18 @@ export async function POST(request: NextRequest) {
       id: employee.id.toString(),
       user_id: employee.user_id?.toString() || null,
     };
+
+    // Log the creation activity
+    const actorInfo = getActorInfo(request);
+    await logEmployeeActivity({
+      employee_id: employee.id,
+      action: 'CREATE',
+      entity_type: 'employees',
+      entity_id: employee.id,
+      new_value: JSON.stringify(serializedEmployee),
+      actor_id: currentUserId,
+      ...actorInfo,
+    });
 
     return NextResponse.json({ success: true, data: serializedEmployee });
   } catch (error) {

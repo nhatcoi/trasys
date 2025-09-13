@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { logEmployeeActivity, getActorInfo } from '@/lib/audit-logger';
 
 export async function GET(request: NextRequest) {
     try {
@@ -89,6 +90,17 @@ export async function POST(request: NextRequest) {
             created_at: newEmployeeTraining.created_at.toISOString(),
             updated_at: newEmployeeTraining.updated_at.toISOString(),
         };
+
+        // Log the creation activity
+        const actorInfo = getActorInfo(request);
+        await logEmployeeActivity({
+            employee_id: BigInt(employee_id),
+            action: 'CREATE',
+            entity_type: 'employee_training',
+            entity_id: newEmployeeTraining.id,
+            new_value: JSON.stringify(serializedTraining),
+            ...actorInfo,
+        });
 
         return NextResponse.json({ success: true, data: serializedTraining }, { status: 201 });
     } catch (error) {
