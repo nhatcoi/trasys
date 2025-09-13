@@ -1,8 +1,8 @@
 // Tree utility functions for building hierarchical structures
 
 export interface TreeNode {
-  id: number;
-  parent_id: number | null;
+  id: string | number;
+  parent_id: string | number | null;
   children?: TreeNode[];
   [key: string]: any;
 }
@@ -13,7 +13,7 @@ export interface TreeNode {
  * @returns Array of root nodes with nested children
  */
 export function buildTree<T extends TreeNode>(nodes: T[]): T[] {
-  const nodeMap = new Map<number, T & { children: T[] }>();
+  const nodeMap = new Map<string | number, T & { children: T[] }>();
   const roots: T[] = [];
 
   // First pass: create map of all nodes

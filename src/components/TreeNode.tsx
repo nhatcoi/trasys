@@ -15,7 +15,7 @@ import {
 } from '@mui/icons-material';
 
 export interface TreeNodeProps {
-  id: number;
+  id: string | number;
   name: string;
   code: string;
   type?: string | null;

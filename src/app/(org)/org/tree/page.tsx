@@ -182,7 +182,8 @@ export default function OrgTreePage() {
   const [viewMode, setViewMode] = useState<'tree' | 'chart'>('tree');
   
   // Use React Query hook for data fetching
-  const { data: orgUnits = [], isLoading: loading, error, refetch } = useOrgUnits();
+  const { data: orgUnitsResponse, isLoading: loading, error, refetch } = useOrgUnits();
+  const orgUnits = (orgUnitsResponse as { items?: OrgUnit[] })?.items || [];
 
   const handleViewModeChange = (
     event: React.MouseEvent<HTMLElement>,

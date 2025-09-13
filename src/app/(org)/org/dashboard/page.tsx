@@ -53,7 +53,7 @@ interface RecentActivity {
 }
 
 interface TopUnit {
-  id: number;
+  id: string | number;
   name: string;
   code: string;
   employeeCount: number;
@@ -64,7 +64,8 @@ export default function OrgDashboardPage() {
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   
   // Use React Query hook for data fetching
-  const { data: orgUnits = [], isLoading: loading, error, refetch } = useOrgUnits();
+  const { data: orgUnitsResponse, isLoading: loading, error, refetch } = useOrgUnits();
+  const orgUnits = (orgUnitsResponse as { items?: OrgUnit[] })?.items || [];
 
   // Calculate stats from orgUnits data
   const stats: OrgStats = {

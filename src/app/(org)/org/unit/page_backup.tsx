@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -36,6 +36,7 @@ import {
   ListItemText,
 } from '@mui/material';
 import { 
+  useOrgUnits, 
   useCreateOrgUnit, 
   useUpdateOrgUnit, 
   useDeleteOrgUnit,
@@ -62,39 +63,347 @@ import {
   Refresh as RefreshIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
-import { useOrgUnitsPagination } from '@/hooks/use-org-units-pagination';
+
+// Memoized Filter Bar Component
+const FilterBar = memo(({ 
+  searchTerm, 
+  filterType, 
+  filterStatus, 
+  onSearchChange, 
+  onFilterChange,
+  isFetching 
+}: {
+  searchTerm: string;
+  filterType: string;
+  filterStatus: string;
+  onSearchChange: (value: string) => void;
+  onFilterChange: (type: string, status: string) => void;
+  isFetching: boolean;
+}) => {
+  return (
+    <Card sx={{ mb: 3 }}>
+      <CardContent>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+          {/* Loading indicator */}
+          {isFetching && (
+            <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
+              <CircularProgress size={20} />
+            </Box>
+          )}
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
+            <TextField
+              placeholder="Tìm kiếm đơn vị..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              size="small"
+              sx={{ minWidth: 250 }}
+              InputProps={{
+                startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+              }}
+            />
+            
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>Loại</InputLabel>
+              <Select
+                value={filterType}
+                label="Loại"
+                onChange={(e) => onFilterChange(e.target.value, filterStatus)}
+              >
+                <MenuItem value="all">Tất cả</MenuItem>
+                {getOrgUnitTypes().map((type) => (
+                  <MenuItem key={type.value} value={type.value}>
+                    {type.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>Trạng thái</InputLabel>
+              <Select
+                value={filterStatus}
+                label="Trạng thái"
+                onChange={(e) => onFilterChange(filterType, e.target.value)}
+              >
+                <MenuItem value="all">Tất cả</MenuItem>
+                {getOrgUnitStatuses().map((status) => (
+                  <MenuItem key={status.value} value={status.value}>
+                    {status.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
+
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={() => window.location.reload()}
+            >
+              Làm mới
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {/* handleCreateClick() */}}
+            >
+              Thêm đơn vị
+            </Button>
+          </Stack>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+});
+
+FilterBar.displayName = 'FilterBar';
+
+// Memoized Pagination Info Component
+const PaginationInfo = memo(({ pagination }: { pagination: any }) => {
+  if (!pagination) return null;
+  
+  return (
+    <Card sx={{ mb: 2 }}>
+      <CardContent>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="body2" color="text.secondary">
+            Hiển thị {((pagination.page - 1) * pagination.size) + 1}-{Math.min(pagination.page * pagination.size, pagination.total)} của {pagination.total} đơn vị
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            <Chip 
+              label={`Trang ${pagination.page}/${pagination.totalPages}`} 
+              size="small" 
+              color="primary" 
+              variant="outlined" 
+            />
+            {pagination.hasNextPage && (
+              <Chip 
+                label="Có trang tiếp" 
+                size="small" 
+                color="success" 
+                variant="outlined" 
+              />
+            )}
+          </Stack>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+});
+
+PaginationInfo.displayName = 'PaginationInfo';
+
+// Memoized Table Component
+const OrgUnitsTable = memo(({ 
+  orgUnits, 
+  pagination, 
+  sortBy, 
+  sortOrder, 
+  onSortChange, 
+  onPageChange, 
+  onRowsPerPageChange, 
+  page, 
+  rowsPerPage 
+}: {
+  orgUnits: any[];
+  pagination: any;
+  sortBy: string;
+  sortOrder: string;
+  onSortChange: (field: string) => void;
+  onPageChange: (event: unknown, newPage: number) => void;
+  onRowsPerPageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  page: number;
+  rowsPerPage: number;
+}) => {
+  return (
+    <Card>
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell 
+                sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
+                onClick={() => onSortChange('name')}
+              >
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Đơn vị</span>
+                  {sortBy === 'name' && (
+                    <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </Stack>
+              </TableCell>
+              <TableCell 
+                sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
+                onClick={() => onSortChange('code')}
+              >
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Mã</span>
+                  {sortBy === 'code' && (
+                    <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </Stack>
+              </TableCell>
+              <TableCell>Loại</TableCell>
+              <TableCell>Trạng thái</TableCell>
+              <TableCell>Đơn vị cha</TableCell>
+              <TableCell>Nhân viên</TableCell>
+              <TableCell 
+                sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
+                onClick={() => onSortChange('created_at')}
+              >
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <span>Ngày tạo</span>
+                  {sortBy === 'created_at' && (
+                    <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </Stack>
+              </TableCell>
+              <TableCell align="right">Thao tác</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {orgUnits.map((unit) => (
+              <TableRow key={unit.id} hover>
+                <TableCell>
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <Avatar sx={{ backgroundColor: getTypeColor(unit.type) }}>
+                      {React.createElement(getTypeIcon(unit.type))}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight="medium">
+                        {unit.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {unit.description || 'Không có mô tả'}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontFamily="monospace">
+                    {unit.code}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Chip 
+                    label={unit.type} 
+                    size="small" 
+                    sx={{ backgroundColor: getTypeColor(unit.type), color: 'white' }}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Chip 
+                    label={unit.status} 
+                    size="small" 
+                    color={getStatusColor(unit.status)}
+                    variant="outlined"
+                  />
+                </TableCell>
+                <TableCell>
+                  {unit.parent ? (
+                    <Typography variant="body2">
+                      {unit.parent.name}
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Không có
+                    </Typography>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">
+                    {unit.employees?.length || 0}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2">
+                    {new Date(unit.created_at).toLocaleDateString('vi-VN')}
+                  </Typography>
+                </TableCell>
+                <TableCell align="right">
+                  <IconButton
+                    onClick={(e) => {/* handleMenuClick(e, unit) */}}
+                    size="small"
+                  >
+                    <MoreVertIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25]}
+        component="div"
+        count={pagination?.total || 0}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={onPageChange}
+        onRowsPerPageChange={onRowsPerPageChange}
+        labelRowsPerPage="Số dòng mỗi trang:"
+        labelDisplayedRows={({ from, to, count }) => 
+          `${from}-${to} của ${count !== -1 ? count : `nhiều hơn ${to}`}`
+        }
+      />
+    </Card>
+  );
+});
+
+OrgUnitsTable.displayName = 'OrgUnitsTable';
 
 export default function OrgUnitManagementPage() {
-  // Use pagination hook
-  const {
-    orgUnits,
-    pagination,
-    isLoading,
-    isFetching,
-    error: queryError,
-    paginationState,
-    handlers,
-    getFilterValue,
-    updateFilter,
-  } = useOrgUnitsPagination({
-    initialPage: 0,
-    initialSize: 10,
-    initialSort: 'name',
-    initialOrder: 'asc',
-    initialSearch: '',
-    initialFilters: {
-      type: 'all',
-      status: 'all',
-    },
-    searchDebounceMs: 500,
-  });
-
+  // Pagination and filtering state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms delay
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+  
+  // API query parameters - memoized to prevent unnecessary re-renders
+  const queryParams = useMemo(() => ({
+    page: page + 1, // API uses 1-based pagination
+    size: rowsPerPage,
+    sort: sortBy,
+    order: sortOrder,
+    search: debouncedSearchTerm || undefined,
+    status: filterStatus !== 'all' ? filterStatus : undefined,
+    type: filterType !== 'all' ? filterType : undefined,
+  }), [page, rowsPerPage, sortBy, sortOrder, debouncedSearchTerm, filterStatus, filterType]);
+  
   // Custom hooks for API operations
+  const { data: orgUnitsResponse, isLoading, isFetching, error: queryError } = useOrgUnits(queryParams);
   const createMutation = useCreateOrgUnit();
   const updateMutation = useUpdateOrgUnit();
   const deleteMutation = useDeleteOrgUnit();
   
   const [error, setError] = useState<string | null>(null);
+  
+  // Extract data from response
+  const orgUnits = orgUnitsResponse?.items || [];
+  const pagination = orgUnitsResponse?.pagination;
+
+  // Debug logging
+  console.log('Query params:', queryParams);
+  console.log('API response:', orgUnitsResponse);
+  console.log('Org units:', orgUnits);
+  console.log('Pagination:', pagination);
+  console.log('Loading:', isLoading);
+  console.log('Error:', queryError);
   
   // Dialog states
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
@@ -169,7 +478,36 @@ export default function OrgUnitManagementPage() {
   };
 
 
-  // Handlers are now provided by the pagination hook
+  // Memoized handlers to prevent unnecessary re-renders
+  const handleChangePage = useCallback((event: unknown, newPage: number) => {
+    setPage(newPage);
+  }, []);
+
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  }, []);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+    setPage(0); // Reset to first page when searching
+  }, []);
+
+  const handleFilterChange = useCallback((type: string, status: string) => {
+    setFilterType(type);
+    setFilterStatus(status);
+    setPage(0); // Reset to first page when filtering
+  }, []);
+
+  const handleSortChange = useCallback((field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+    setPage(0); // Reset to first page when sorting
+  }, [sortBy, sortOrder]);
 
   // if (isLoading) {
   //   return (
@@ -213,137 +551,52 @@ export default function OrgUnitManagementPage() {
         </Alert>
       )}
 
-      {/* Action Bar */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
-            {/* Loading indicator */}
-            {isFetching && (
-              <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
-                <CircularProgress size={20} />
-              </Box>
-            )}
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
-               <TextField
-                 placeholder="Tìm kiếm đơn vị..."
-                 value={paginationState.search}
-                 onChange={(e) => handlers.handleSearchChange(e.target.value)}
-                 size="small"
-                 sx={{ minWidth: 250 }}
-                 InputProps={{
-                   startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                 }}
-               />
-               
-               <FormControl size="small" sx={{ minWidth: 120 }}>
-                 <InputLabel>Loại</InputLabel>
-                 <Select
-                   value={getFilterValue('type')}
-                   label="Loại"
-                   onChange={(e) => updateFilter('type', e.target.value)}
-                 >
-                   <MenuItem value="all">Tất cả</MenuItem>
-                   {getOrgUnitTypes().map((type) => (
-                     <MenuItem key={type.value} value={type.value}>
-                       {type.label}
-                     </MenuItem>
-                   ))}
-                 </Select>
-               </FormControl>
+      {/* Filter Bar - Memoized */}
+      <FilterBar
+        searchTerm={searchTerm}
+        filterType={filterType}
+        filterStatus={filterStatus}
+        onSearchChange={handleSearchChange}
+        onFilterChange={handleFilterChange}
+        isFetching={isFetching}
+      />
 
-               <FormControl size="small" sx={{ minWidth: 120 }}>
-                 <InputLabel>Trạng thái</InputLabel>
-                 <Select
-                   value={getFilterValue('status')}
-                   label="Trạng thái"
-                   onChange={(e) => updateFilter('status', e.target.value)}
-                 >
-                   <MenuItem value="all">Tất cả</MenuItem>
-                   {getOrgUnitStatuses().map((status) => (
-                     <MenuItem key={status.value} value={status.value}>
-                       {status.label}
-                     </MenuItem>
-                   ))}
-                 </Select>
-               </FormControl>
-            </Stack>
+      {/* Pagination Info - Memoized */}
+      <PaginationInfo pagination={pagination} />
 
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={() => window.location.reload()}
-                disabled={isLoading}
-              >
-                Làm mới
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setOpenCreateDialog(true)}
-                sx={{ backgroundColor: '#2e4c92' }}
-              >
-                Thêm đơn vị
-              </Button>
-            </Stack>
-          </Stack>
-        </CardContent>
-      </Card>
-
-      {/* Pagination Info */}
-      {pagination && (
-        <Card sx={{ mb: 2 }}>
-          <CardContent>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="body2" color="text.secondary">
-                Hiển thị {((pagination.page - 1) * pagination.size) + 1}-{Math.min(pagination.page * pagination.size, pagination.total)} của {pagination.total} đơn vị
-              </Typography>
-              <Stack direction="row" spacing={1}>
-                <Chip 
-                  label={`Trang ${pagination.page}/${pagination.totalPages}`} 
-                  size="small" 
-                  color="primary" 
-                  variant="outlined" 
-                />
-                {pagination.hasNextPage && (
-                  <Chip 
-                    label="Có trang tiếp" 
-                    size="small" 
-                    color="success" 
-                    variant="outlined" 
-                  />
-                )}
-              </Stack>
-            </Stack>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Units Table */}
-      <Card>
-        <TableContainer>
-          <Table>
+      {/* Units Table - Memoized */}
+      <OrgUnitsTable
+        orgUnits={orgUnits}
+        pagination={pagination}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        page={page}
+        rowsPerPage={rowsPerPage}
+      />
             <TableHead>
               <TableRow>
                 <TableCell 
                   sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
-                  onClick={() => handlers.handleSortChange('name')}
+                  onClick={() => handleSortChange('name')}
                 >
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <span>Đơn vị</span>
-                    {paginationState.sort === 'name' && (
-                      <span>{paginationState.order === 'asc' ? '↑' : '↓'}</span>
+                    {sortBy === 'name' && (
+                      <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </Stack>
                 </TableCell>
                 <TableCell 
                   sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
-                  onClick={() => handlers.handleSortChange('code')}
+                  onClick={() => handleSortChange('code')}
                 >
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <span>Mã</span>
-                    {paginationState.sort === 'code' && (
-                      <span>{paginationState.order === 'asc' ? '↑' : '↓'}</span>
+                    {sortBy === 'code' && (
+                      <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </Stack>
                 </TableCell>
@@ -353,12 +606,12 @@ export default function OrgUnitManagementPage() {
                 <TableCell>Nhân viên</TableCell>
                 <TableCell 
                   sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
-                  onClick={() => handlers.handleSortChange('created_at')}
+                  onClick={() => handleSortChange('created_at')}
                 >
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <span>Ngày tạo</span>
-                    {paginationState.sort === 'created_at' && (
-                      <span>{paginationState.order === 'asc' ? '↑' : '↓'}</span>
+                    {sortBy === 'created_at' && (
+                      <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </Stack>
                 </TableCell>
@@ -450,19 +703,19 @@ export default function OrgUnitManagementPage() {
           </Table>
         </TableContainer>
         
-         <TablePagination
-           rowsPerPageOptions={[5, 10, 25]}
-           component="div"
-           count={pagination?.total || 0}
-           rowsPerPage={paginationState.size}
-           page={paginationState.page}
-           onPageChange={handlers.handleChangePage}
-           onRowsPerPageChange={handlers.handleChangeRowsPerPage}
-           labelRowsPerPage="Số dòng mỗi trang:"
-           labelDisplayedRows={({ from, to, count }) => 
-             `${from}-${to} của ${count !== -1 ? count : `nhiều hơn ${to}`}`
-           }
-         />
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={pagination?.total || 0}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          labelRowsPerPage="Số dòng mỗi trang:"
+          labelDisplayedRows={({ from, to, count }) => 
+            `${from}-${to} của ${count !== -1 ? count : `nhiều hơn ${to}`}`
+          }
+        />
       </Card>
 
       {/* Action Menu */}
@@ -711,7 +964,7 @@ export default function OrgUnitManagementPage() {
         <DialogTitle>Xác nhận xóa</DialogTitle>
         <DialogContent>
           <Typography>
-            Bạn có chắc chắn muốn xóa đơn vị &quot;{selectedUnit?.name}&quot;? 
+            Bạn có chắc chắn muốn xóa đơn vị "{selectedUnit?.name}"? 
             Hành động này không thể hoàn tác.
           </Typography>
         </DialogContent>

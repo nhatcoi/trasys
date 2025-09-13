@@ -129,9 +129,15 @@ export const filterOrgUnits = (
   filterType: string,
   filterStatus: string
 ) => {
+  // Ensure units is an array
+  if (!Array.isArray(units)) {
+    console.warn('filterOrgUnits: units is not an array', units);
+    return [];
+  }
+  
   return units.filter(unit => {
-    const matchesSearch = unit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         unit.code.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = unit.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         unit.code?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'all' || unit.type === filterType;
     const matchesStatus = filterStatus === 'all' || unit.status === filterStatus;
     

@@ -1,29 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { OrgUnitService } from '@/modules/org/org.service';
+import { CreateOrgUnitSchema, OrgUnitQuerySchema } from '@/modules/org/org.schema';
 
-export async function GET() {
+const orgUnitService = new OrgUnitService();
+
+export async function GET(request: NextRequest) {
   try {
-    const units = await db.orgUnit.findMany({
-      include: {
-        children: true,
-        employees: true,
-      },
+    const { searchParams } = new URL(request.url);
+    
+    // Parse all query parameters
+    const queryOptions = {
+      // Pagination
+      page: searchParams.get('page') ? parseInt(searchParams.get('page')!) : undefined,
+      size: searchParams.get('size') ? parseInt(searchParams.get('size')!) : undefined,
+      
+      // Sorting
+      sort: searchParams.get('sort') || undefined,
+      order: searchParams.get('order') as 'asc' | 'desc' || undefined,
+      
+      // Search & Filter
+      search: searchParams.get('search') || undefined,
+      status: searchParams.get('status') || undefined,
+      type: searchParams.get('type') || undefined,
+      
+      // Date range
+      fromDate: searchParams.get('fromDate') || undefined,
+      toDate: searchParams.get('toDate') || undefined,
+      
+      // Fetch options
+      include_children: searchParams.get('include_children') === 'true',
+      include_employees: searchParams.get('include_employees') === 'true',
+      include_parent: searchParams.get('include_parent') === 'true',
+    };
+    
+    // Validate query options
+    const validatedOptions = OrgUnitQuerySchema.parse(queryOptions);
+    
+    // Always use options method for consistency
+    const result = await orgUnitService.getAllUnitsWithOptions(validatedOptions);
+    
+    return NextResponse.json(result, { 
+      status: result.success ? 200 : 500 
     });
-    
-    // Convert BigInt to string for JSON serialization
-    const serializedUnits = JSON.parse(JSON.stringify(units, (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    ));
-    
-    return NextResponse.json({ success: true, data: serializedUnits });
   } catch (error) {
-    console.error('Database error:', error);
+    console.error('Route error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Database connection failed'
+        error: error instanceof Error ? error.message : 'Invalid query parameters' 
       },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }
@@ -31,35 +57,24 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, code, parent_id, type, description, status, effective_from, effective_to } = body;
     
-    const unit = await db.orgUnit.create({
-      data: {
-        name,
-        code,
-        parent_id,
-        type,
-        description,
-        status,
-        effective_from: effective_from ? new Date(effective_from) : null,
-        effective_to: effective_to ? new Date(effective_to) : null,
-      },
+    // Validate input
+    const validatedData = CreateOrgUnitSchema.parse(body);
+    
+    // Call service
+    const result = await orgUnitService.createUnit(validatedData);
+    
+    return NextResponse.json(result, { 
+      status: result.success ? 201 : 500 
     });
-    
-    // Convert BigInt to string for JSON serialization
-    const serializedUnit = JSON.parse(JSON.stringify(unit, (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    ));
-    
-    return NextResponse.json({ success: true, data: serializedUnit });
   } catch (error) {
-    console.error('Database error:', error);
+    console.error('Route error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Failed to create organization unit' 
+        error: error instanceof Error ? error.message : 'Invalid request data' 
       },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }
