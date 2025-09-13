@@ -6,19 +6,42 @@ export const HR_ROUTES = {
     EMPLOYEES_DETAIL: (id: string) => `/hr/employees/${id}`,
     EMPLOYEES_EDIT: (id: string) => `/hr/employees/${id}/edit`,
     ASSIGNMENTS: '/hr/assignments',
+    ASSIGNMENTS_NEW: '/hr/assignments/new',
+    ASSIGNMENTS_DETAIL: (id: string) => `/hr/assignments/${id}`,
+    ASSIGNMENTS_EDIT: (id: string) => `/hr/assignments/${id}/edit`,
     PROFILE: '/hr/profile',
     CHANGE_PASSWORD: '/hr/change-password',
     UNIVERSITY_OVERVIEW: '/hr/university-overview',
     ORG_STRUCTURE: '/hr/org-structure',
+    ORG_TREE: '/hr/org-tree',
+    ORG_TREE_DETAIL: (id: string) => `/hr/org-tree/${id}`,
+    ORG_TREE_EMPLOYEES: (id: string) => `/hr/org-tree/${id}/employees`,
+    ORG_UNITS: '/hr/org-units',
+    ORG_UNITS_NEW: '/hr/org-units/new',
+    ORG_UNITS_DETAIL: (id: string) => `/hr/org-units/${id}`,
+    ORG_UNITS_EDIT: (id: string) => `/hr/org-units/${id}/edit`,
     FACULTY: '/hr/faculty',
+    REPORTS: '/hr/reports',
 };
 
 // API Routes constants
 export const API_ROUTES = {
-    EMPLOYEES: '/api/hr/employees',
-    USERS: '/api/hr/users',
-    ORG_UNITS: '/api/org/units',
-    ASSIGNMENTS: '/api/hr/assignments',
+    HR: {
+        EMPLOYEES: '/api/hr/employees',
+        EMPLOYEES_BY_ID: (id: string) => `/api/hr/employees/${id}`,
+        USERS: '/api/hr/users',
+        USERS_BY_ID: (id: string) => `/api/hr/users/${id}`,
+        ASSIGNMENTS: '/api/hr/assignments',
+        ASSIGNMENTS_BY_ID: (id: string) => `/api/hr/assignments/${id}`,
+        ME: '/api/hr/me',
+    },
+    ORG: {
+        UNITS: '/api/org/units',
+        UNITS_BY_ID: (id: string) => `/api/org/units/${id}`,
+        KPI: {
+            HEADCOUNT: '/api/org/kpi/headcount',
+        },
+    },
 };
 
 // Org Routes constants
