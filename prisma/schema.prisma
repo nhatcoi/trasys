@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Organization Units model
+model OrgUnit {
+  id            Int       @id @default(autoincrement())
+  parent_id     Int?      @map("parent_id")
+  type          String?   @db.VarChar(10)
+  code          String    @db.VarChar(50)
+  name          String    @db.VarChar(255)
+  created_at    DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updated_at    DateTime  @updatedAt @map("updated_at") @db.Timestamp
+  description   String?   @db.Text
+  status        String?   @db.VarChar(20)
+  effective_from DateTime? @map("effective_from") @db.Date
+  effective_to  DateTime? @map("effective_to") @db.Date
+  
+  // Relations
+  parent        OrgUnit?  @relation("OrgHierarchy", fields: [parent_id], references: [id])
+  children      OrgUnit[] @relation("OrgHierarchy")
+  employees     Employee[]
+  
+  @@map("org_units")
+}
+
+// Employees model
+model Employee {
+  id             BigInt    @id @default(autoincrement())
+  user_id        BigInt?   @map("user_id")
+  employee_no    String?   @db.VarChar(64) @map("employee_no")
+  employment_ty  String?   @db.VarChar(16) @map("employment_ty")
+  status         String?   @db.VarChar(16)
+  hired_at       DateTime? @map("hired_at") @db.Date
+  terminated_at  DateTime? @map("terminated_at") @db.Date
+  created_at     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updated_at     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  
+  // Relations
+  org_unit       OrgUnit?  @relation(fields: [org_unit_id], references: [id])
+  org_unit_id    Int?      @map("org_unit_id")
+  
+  @@map("employees")
+}
