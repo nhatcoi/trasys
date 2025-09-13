@@ -21,6 +21,9 @@ export const HR_ROUTES = {
     ORG_UNITS_DETAIL: (id: string) => `/hr/org-units/${id}`,
     ORG_UNITS_EDIT: (id: string) => `/hr/org-units/${id}/edit`,
     FACULTY: '/hr/faculty',
+    QUALIFICATIONS: '/hr/qualifications',
+    EMPLOYEE_QUALIFICATIONS: '/hr/employee-qualifications',
+    EMPLOYMENTS: '/hr/employments',
     REPORTS: '/hr/reports',
 };
 
@@ -33,6 +36,12 @@ export const API_ROUTES = {
         USERS_BY_ID: (id: string) => `/api/hr/users/${id}`,
         ASSIGNMENTS: '/api/hr/assignments',
         ASSIGNMENTS_BY_ID: (id: string) => `/api/hr/assignments/${id}`,
+        QUALIFICATIONS: '/api/hr/qualifications',
+        QUALIFICATIONS_BY_ID: (id: string) => `/api/hr/qualifications/${id}`,
+        EMPLOYEE_QUALIFICATIONS: '/api/hr/employee-qualifications',
+        EMPLOYEE_QUALIFICATIONS_BY_ID: (id: string) => `/api/hr/employee-qualifications/${id}`,
+        EMPLOYMENTS: '/api/hr/employments',
+        EMPLOYMENTS_BY_ID: (id: string) => `/api/hr/employments/${id}`,
         ME: '/api/hr/me',
     },
     ORG: {

@@ -23,7 +23,7 @@ export async function PUT(
 
         // Check if user exists
         const existingUser = await db.user.findUnique({
-            where: { id: params.id }
+            where: { id: BigInt(params.id) }
         });
 
         if (!existingUser) {
@@ -45,12 +45,12 @@ export async function PUT(
 
         // Hash new password if provided
         if (new_password && new_password.trim() !== '') {
-            updateData.password = await bcrypt.hash(new_password, 12);
+            updateData.password_hash = await bcrypt.hash(new_password, 12);
         }
 
         // Update user
         const updatedUser = await db.user.update({
-            where: { id: params.id },
+            where: { id: BigInt(params.id) },
             data: updateData,
             select: {
                 id: true,
@@ -66,7 +66,10 @@ export async function PUT(
 
         return NextResponse.json({
             success: true,
-            data: updatedUser
+            data: {
+                ...updatedUser,
+                id: updatedUser.id.toString()
+            }
         });
 
     } catch (error) {
