@@ -5,8 +5,10 @@ import { db } from './db'
 import bcrypt from 'bcryptjs'
 
 export const authOptions: NextAuthOptions = {
+    secret: process.env.NEXTAUTH_SECRET,
     session: {
-        strategy: 'jwt'
+        strategy: 'jwt',
+        maxAge: 30 * 24 * 60 * 60, // 30 days
     },
     providers: [
         CredentialsProvider({
@@ -21,7 +23,7 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 // Tìm user bằng email hoặc username
-                const user = await db.user.findFirst({
+                const user = await db.users.findFirst({
                     where: {
                         OR: [
                             { email: credentials.identifier },
@@ -62,8 +64,9 @@ export const authOptions: NextAuthOptions = {
 
                 // Flatten permissions từ tất cả roles
                 const permissions = userRoles.flatMap(ur =>
-                    ur.roles.role_permission.map(rp => rp.permissions.code)
+                    ur.roles.role_permission.map(rp => rp.permissions.name)
                 );
+
 
                 return {
                     id: user.id.toString(),

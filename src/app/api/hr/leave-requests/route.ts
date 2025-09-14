@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { serializeBigIntArray } from '@/utils/serialize';
 
 // GET /api/hr/leave-requests - Lấy danh sách đơn xin nghỉ
 export async function GET(request: NextRequest) {
@@ -14,12 +15,15 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const employeeId = searchParams.get('employee_id');
         const status = searchParams.get('status');
+        const leaveType = searchParams.get('leave_type');
+        const startDate = searchParams.get('start_date');
+        const endDate = searchParams.get('end_date');
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '10');
         const offset = (page - 1) * limit;
 
         // Lấy thông tin user hiện tại
-        const currentUser = await db.user.findUnique({
+        const currentUser = await db.users.findUnique({
             where: { id: BigInt(session.user.id) },
             include: {
                 employees: {
@@ -31,11 +35,6 @@ export async function GET(request: NextRequest) {
                             }
                         }
                     }
-                },
-                user_role: {
-                    include: {
-                        roles: true
-                    }
                 }
             }
         });
@@ -45,8 +44,10 @@ export async function GET(request: NextRequest) {
         }
 
         const currentEmployee = currentUser.employees[0];
-        const userRoles = currentUser.user_role.map(ur => ur.roles.code);
-        const isAdmin = userRoles.includes('ADMIN');
+
+        // Kiểm tra quyền admin dựa trên permissions
+        const isAdmin = session.user.permissions?.includes('leave_request.update') ||
+            session.user.permissions?.includes('employee.update');
 
         let whereClause: any = {};
 
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
         if (!isAdmin) {
             if (employeeId) {
                 // Kiểm tra quyền xem đơn của nhân viên khác
-                const targetEmployee = await db.employee.findUnique({
+                const targetEmployee = await db.Employee.findUnique({
                     where: { id: BigInt(employeeId) },
                     include: {
                         assignments: {
@@ -94,6 +95,17 @@ export async function GET(request: NextRequest) {
             whereClause.status = status;
         }
 
+        if (leaveType) {
+            whereClause.leave_type = leaveType;
+        }
+
+        if (startDate && endDate) {
+            whereClause.start_date = {
+                gte: new Date(startDate),
+                lte: new Date(endDate)
+            };
+        }
+
         const [leaveRequests, total] = await Promise.all([
             db.leave_requests.findMany({
                 where: whereClause,
@@ -105,6 +117,12 @@ export async function GET(request: NextRequest) {
                                     id: true,
                                     full_name: true,
                                     email: true
+                                }
+                            },
+                            assignments: {
+                                include: {
+                                    org_unit: true,
+                                    job_positions: true
                                 }
                             }
                         }
@@ -120,28 +138,15 @@ export async function GET(request: NextRequest) {
         ]);
 
         // Serialize BigInt fields
-        const serializedLeaveRequests = leaveRequests.map(request => ({
-            ...request,
-            id: request.id.toString(),
-            employee_id: request.employee_id.toString(),
-            employees: {
-                ...request.employees,
-                id: request.employees.id.toString(),
-                user_id: request.employees.user_id.toString(),
-                user: {
-                    ...request.employees.user,
-                    id: request.employees.user.id.toString()
-                }
-            }
-        }));
+        const serializedLeaveRequests = serializeBigIntArray(leaveRequests);
 
         return NextResponse.json({
             data: serializedLeaveRequests,
             pagination: {
                 page,
                 limit,
-                total,
-                totalPages: Math.ceil(total / limit)
+                total: Number(total),
+                totalPages: Math.ceil(Number(total) / limit)
             }
         });
 
@@ -175,7 +180,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Lấy thông tin employee
-        const employee = await db.employee.findFirst({
+        const employee = await db.Employee.findFirst({
             where: { user_id: BigInt(session.user.id) }
         });
 

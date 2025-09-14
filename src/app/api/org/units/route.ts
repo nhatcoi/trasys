@@ -3,9 +3,8 @@ import { db } from '@/lib/db';
 
 export async function GET() {
   try {
-    const units = await db.orgUnit.findMany({
+    const units = await db.org_units.findMany({
       include: {
-        children: true,
         assignments: {
           include: {
             employee: {
@@ -41,11 +40,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, code, parent_id, type, description, status, effective_from, effective_to } = body;
 
-    const unit = await db.orgUnit.create({
+    const unit = await db.org_units.create({
       data: {
         name,
         code,
-        parent_id,
+        parent_id: parent_id ? BigInt(parent_id) : null,
         type,
         description,
         status,

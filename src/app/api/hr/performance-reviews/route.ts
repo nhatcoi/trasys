@@ -5,7 +5,7 @@ import { logEmployeeActivity, getActorInfo } from '@/lib/audit-logger';
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
-        const employeeId = searchParams.get('employee_id');
+        const employeeId = searchParams.get('employeeId') || searchParams.get('employee_id');
 
         let whereClause = {};
         if (employeeId) {

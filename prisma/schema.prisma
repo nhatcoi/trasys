@@ -247,21 +247,25 @@ model trainings {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model users {
-  id            BigInt         @id(map: "user_pkey") @default(autoincrement())
-  username      String         @unique(map: "user_username_key") @db.VarChar(64)
-  email         String?        @unique(map: "user_email_key") @db.VarChar(255)
-  password_hash String
-  status        String?        @default("ACTIVE") @db.VarChar(16)
-  last_login_at DateTime?      @db.Timestamptz(6)
-  created_at    DateTime?      @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime?      @default(now()) @db.Timestamptz(6)
-  full_name     String         @db.VarChar(255)
-  dob           DateTime?      @db.Date
-  gender        String?        @db.VarChar(16)
-  phone         String?        @db.VarChar(32)
-  address       String?
-  employee_log  employee_log[]
-  employees     Employee[]
+  id                                     BigInt            @id(map: "user_pkey") @default(autoincrement())
+  username                               String            @unique(map: "user_username_key") @db.VarChar(64)
+  email                                  String?           @unique(map: "user_email_key") @db.VarChar(255)
+  password_hash                          String
+  status                                 String?           @default("ACTIVE") @db.VarChar(16)
+  last_login_at                          DateTime?         @db.Timestamptz(6)
+  created_at                             DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at                             DateTime?         @default(now()) @db.Timestamptz(6)
+  full_name                              String            @db.VarChar(255)
+  dob                                    DateTime?         @db.Date
+  gender                                 String?           @db.VarChar(16)
+  phone                                  String?           @db.VarChar(32)
+  address                                String?
+  audit_logs                             audit_logs[]
+  role_permission                        role_permission[]
+  user_role_user_role_assigned_byTousers user_role[]       @relation("user_role_assigned_byTousers")
+  user_role_user_role_user_idTousers     user_role[]       @relation("user_role_user_idTousers")
+  employee_log                           employee_log[]
+  employees                              Employee[]
 
   @@index([full_name], map: "idx_user_full_name")
   @@index([phone], map: "idx_user_phone")
@@ -976,6 +980,78 @@ model regrade_requests {
   grade_items   grade_items @relation(fields: [grade_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "regrade_request_grade_item_id_fkey")
 
   @@schema("student")
+}
+
+model audit_logs {
+  id         BigInt    @id @default(autoincrement())
+  user_id    BigInt?
+  action     String    @db.VarChar(50)
+  table_name String    @db.VarChar(100)
+  record_id  BigInt?
+  old_values Json?
+  new_values Json?
+  ip_address String?   @db.Inet
+  user_agent String?
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  users      users?    @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+
+  @@schema("auth")
+}
+
+model permissions {
+  id              BigInt            @id @default(autoincrement())
+  name            String            @unique @db.VarChar(100)
+  description     String?
+  resource        String            @db.VarChar(100)
+  action          String            @db.VarChar(50)
+  created_at      DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?         @default(now()) @db.Timestamptz(6)
+  role_permission role_permission[]
+
+  @@schema("auth")
+}
+
+model role_permission {
+  id            BigInt      @id @default(autoincrement())
+  role_id       BigInt
+  permission_id BigInt
+  granted_at    DateTime?   @default(now()) @db.Timestamptz(6)
+  granted_by    BigInt?
+  users         users?      @relation(fields: [granted_by], references: [id], onUpdate: NoAction)
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  roles         roles       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([role_id, permission_id])
+  @@schema("auth")
+}
+
+model roles {
+  id              BigInt            @id @default(autoincrement())
+  name            String            @unique @db.VarChar(100)
+  description     String?
+  is_system_role  Boolean?          @default(false)
+  created_at      DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?         @default(now()) @db.Timestamptz(6)
+  role_permission role_permission[]
+  user_role       user_role[]
+
+  @@schema("auth")
+}
+
+model user_role {
+  id                                 BigInt    @id @default(autoincrement())
+  user_id                            BigInt
+  role_id                            BigInt
+  assigned_at                        DateTime? @default(now()) @db.Timestamptz(6)
+  assigned_by                        BigInt?
+  expires_at                         DateTime? @db.Timestamptz(6)
+  is_active                          Boolean?  @default(true)
+  users_user_role_assigned_byTousers users?    @relation("user_role_assigned_byTousers", fields: [assigned_by], references: [id], onUpdate: NoAction)
+  roles                              roles     @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_user_role_user_idTousers     users     @relation("user_role_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, role_id])
+  @@schema("auth")
 }
 
 /// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

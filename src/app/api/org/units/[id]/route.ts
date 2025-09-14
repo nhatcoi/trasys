@@ -8,12 +8,18 @@ export async function GET(
   try {
     const unitId = BigInt(params.id);
 
-    const unit = await db.orgUnit.findUnique({
+    const unit = await db.org_units.findUnique({
       where: { id: unitId as any },
       include: {
-        children: true,
-        employees: true,
-        parent: true,
+        assignments: {
+          include: {
+            employee: {
+              include: {
+                user: true
+              }
+            }
+          }
+        }
       },
     });
 
@@ -51,12 +57,12 @@ export async function PUT(
     const body = await request.json();
     const { name, code, parent_id, type, description, status, effective_from, effective_to } = body;
 
-    const unit = await db.orgUnit.update({
+    const unit = await db.org_units.update({
       where: { id: unitId as any },
       data: {
         name,
         code,
-        parent_id,
+        parent_id: parent_id ? BigInt(parent_id) : null,
         type,
         description,
         status,
@@ -90,7 +96,7 @@ export async function DELETE(
   try {
     const unitId = BigInt(params.id);
 
-    await db.orgUnit.delete({
+    await db.org_units.delete({
       where: { id: unitId as any },
     });
 

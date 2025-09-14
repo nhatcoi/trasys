@@ -13,16 +13,22 @@ export async function GET() {
     const userPermissions = session?.user?.permissions || [];
 
     // Check if user has admin permissions (can see all employees)
-    const isAdmin = userPermissions.includes('hr.employees.view') &&
+    // Rector should see all employees, Dean/Manager should see employees in their org
+    const isRector = userPermissions.includes('employee.delete'); // Only rector has delete permission
+    const isDeanOrManager = userPermissions.includes('employee.update') && !userPermissions.includes('employee.delete');
+    const isAdmin = isRector || (userPermissions.includes('hr.employees.view') &&
       (userPermissions.includes('hr.employees.create') ||
         userPermissions.includes('hr.employees.update') ||
-        userPermissions.includes('hr.employees.delete'));
+        userPermissions.includes('hr.employees.delete')));
 
     let whereClause = {};
 
-    if (!isAdmin && currentUserId) {
-      // Get current user's organizational assignments
-      const currentUserEmployee = await db.employee.findFirst({
+    if (isRector) {
+      // Rector can see all employees - no filtering needed
+      whereClause = {};
+    } else if (isDeanOrManager && currentUserId) {
+      // Dean/Manager should see employees in their organizational scope
+      const currentUserEmployee = await db.Employee.findFirst({
         where: { user_id: currentUserId },
         include: {
           assignments: {
@@ -38,7 +44,7 @@ export async function GET() {
         const userOrgUnitIds = currentUserEmployee.assignments.map(a => a.org_unit_id);
 
         // Find all sub-units of user's org units
-        const subOrgUnits = await db.orgUnit.findMany({
+        const subOrgUnits = await db.org_units.findMany({
           where: {
             parent_id: { in: userOrgUnitIds }
           }
@@ -58,12 +64,15 @@ export async function GET() {
           }
         };
       } else {
-        // If user has no org assignments, they can only see themselves
+        // If Dean/Manager has no org assignments, they can only see themselves
         whereClause = { user_id: currentUserId };
       }
+    } else if (!isAdmin && currentUserId) {
+      // Regular users can only see themselves
+      whereClause = { user_id: currentUserId };
     }
 
-    const employees = await db.employee.findMany({
+    const employees = await db.Employee.findMany({
       where: whereClause,
       include: {
         user: true,
@@ -145,7 +154,7 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     const currentUserId = session?.user?.id ? BigInt(session.user.id) : undefined;
 
-    const employee = await db.employee.create({
+    const employee = await db.Employee.create({
       data: {
         user: user_id ? { connect: { id: BigInt(user_id) } } : undefined,
         employee_no,

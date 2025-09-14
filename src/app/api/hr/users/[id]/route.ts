@@ -22,7 +22,7 @@ export async function PUT(
         const { full_name, email, phone, address, dob, gender, new_password } = body;
 
         // Check if user exists
-        const existingUser = await db.user.findUnique({
+        const existingUser = await db.users.findUnique({
             where: { id: BigInt(params.id) }
         });
 
@@ -49,7 +49,7 @@ export async function PUT(
         }
 
         // Update user
-        const updatedUser = await db.user.update({
+        const updatedUser = await db.users.update({
             where: { id: BigInt(params.id) },
             data: updateData,
             select: {

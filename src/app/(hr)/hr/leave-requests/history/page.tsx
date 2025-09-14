@@ -22,7 +22,8 @@ import {
     Select,
     MenuItem,
     TextField,
-    Button
+    Button,
+    CircularProgress
 } from '@mui/material';
 import { useSession } from 'next-auth/react';
 
@@ -108,7 +109,7 @@ export default function LeaveRequestHistoryPage() {
                 if (value) params.append(key, value);
             });
 
-            const response = await fetch(`/api/hr/leave-requests/history?${params}`);
+            const response = await fetch(`/api/hr/leave-requests?${params}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch leave request history');
             }
@@ -157,7 +158,7 @@ export default function LeaveRequestHistoryPage() {
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-                <Typography>Đang tải...</Typography>
+                <CircularProgress />
             </Box>
         );
     }

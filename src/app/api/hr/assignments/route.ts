@@ -16,7 +16,7 @@ const serializeAssignment = (assignment: any) => {
 
 export async function GET() {
     try {
-        const assignments = await db.orgAssignment.findMany({
+        const assignments = await db.OrgAssignment.findMany({
             include: {
                 employee: {
                     include: {
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const assignment = await db.orgAssignment.create({
+        const assignment = await db.OrgAssignment.create({
             data: {
                 employee_id: BigInt(employee_id),
                 org_unit_id: BigInt(org_unit_id),

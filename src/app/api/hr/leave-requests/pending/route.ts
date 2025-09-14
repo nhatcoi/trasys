@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { serializeBigIntArray } from '@/utils/serialize';
 
 // GET /api/hr/leave-requests/pending - Lấy danh sách đơn xin nghỉ chờ duyệt
 export async function GET(request: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
         const offset = (page - 1) * limit;
 
         // Lấy thông tin user hiện tại
-        const currentUser = await db.user.findUnique({
+        const currentUser = await db.users.findUnique({
             where: { id: BigInt(session.user.id) },
             include: {
                 employees: {
@@ -30,11 +31,6 @@ export async function GET(request: NextRequest) {
                         }
                     }
                 },
-                user_role: {
-                    include: {
-                        roles: true
-                    }
-                }
             }
         });
 
@@ -43,8 +39,10 @@ export async function GET(request: NextRequest) {
         }
 
         const currentEmployee = currentUser.employees[0];
-        const userRoles = currentUser.user_role.map(ur => ur.roles.code);
-        const isAdmin = userRoles.includes('ADMIN');
+
+        // Kiểm tra quyền admin dựa trên permissions
+        const isAdmin = session.user.permissions?.includes('leave_request.update') ||
+            session.user.permissions?.includes('employee.update');
 
         let whereClause: any = {
             status: 'PENDING'
@@ -52,9 +50,8 @@ export async function GET(request: NextRequest) {
 
         // Nếu không phải admin, chỉ xem được đơn của nhân viên trong đơn vị
         if (!isAdmin) {
-            // TODO: Implement logic để lấy danh sách employee_id mà user có quyền duyệt
-            // Tạm thời lấy tất cả đơn PENDING
-            // whereClause.employee_id = { in: [list of employee IDs] }
+            // Lecturer chỉ xem được đơn của mình
+            whereClause.employee_id = currentEmployee.id;
         }
 
         const [leaveRequests, total] = await Promise.all([
@@ -88,13 +85,16 @@ export async function GET(request: NextRequest) {
             db.leave_requests.count({ where: whereClause })
         ]);
 
+        // Serialize BigInt fields
+        const serializedLeaveRequests = serializeBigIntArray(leaveRequests);
+
         return NextResponse.json({
-            data: leaveRequests,
+            data: serializedLeaveRequests,
             pagination: {
                 page,
                 limit,
-                total,
-                totalPages: Math.ceil(total / limit)
+                total: Number(total),
+                totalPages: Math.ceil(Number(total) / limit)
             }
         });
 

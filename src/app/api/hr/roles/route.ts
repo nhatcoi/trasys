@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { logEmployeeActivity, getActorInfo } from '@/lib/audit-logger';
-import { getToken } from 'next-auth/jwt';
 
 export async function GET() {
     try {
@@ -14,7 +12,7 @@ export async function GET() {
                 },
                 user_role: {
                     include: {
-                        users: true
+                        users_user_role_user_idTousers: true
                     }
                 }
             },
@@ -32,6 +30,7 @@ export async function GET() {
                 id: rp.id.toString(),
                 role_id: rp.role_id.toString(),
                 permission_id: rp.permission_id.toString(),
+                granted_by: rp.granted_by?.toString() || null,
                 permissions: rp.permissions ? {
                     ...rp.permissions,
                     id: rp.permissions.id.toString()
@@ -42,9 +41,10 @@ export async function GET() {
                 id: ur.id.toString(),
                 user_id: ur.user_id.toString(),
                 role_id: ur.role_id.toString(),
-                users: ur.users ? {
-                    ...ur.users,
-                    id: ur.users.id.toString()
+                assigned_by: ur.assigned_by?.toString() || null,
+                users_user_role_user_idTousers: ur.users_user_role_user_idTousers ? {
+                    ...ur.users_user_role_user_idTousers,
+                    id: ur.users_user_role_user_idTousers.id.toString()
                 } : null
             })) || []
         }));
@@ -55,7 +55,7 @@ export async function GET() {
         return NextResponse.json(
             {
                 success: false,
-                error: error instanceof Error ? error.message : 'Failed to fetch roles'
+                error: error instanceof Error ? error.message : 'Database connection failed'
             },
             { status: 500 }
         );
@@ -65,38 +65,30 @@ export async function GET() {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { code, name } = body;
+        const { name, description, is_system_role } = body;
 
-        // Get current user from token
-        const token = await getToken({ req: request });
-        const currentUserId = token?.sub ? BigInt(token.sub) : undefined;
+        if (!name) {
+            return NextResponse.json(
+                { success: false, error: 'Name is required' },
+                { status: 400 }
+            );
+        }
 
         const role = await db.roles.create({
             data: {
-                code,
-                name
+                name,
+                description,
+                is_system_role: is_system_role || false
             }
         });
 
-        // Convert BigInt to string for JSON serialization
-        const serializedRole = {
-            ...role,
-            id: role.id.toString()
-        };
-
-        // Log the creation activity
-        const actorInfo = getActorInfo(request);
-        await logEmployeeActivity({
-            employee_id: currentUserId || BigInt(1), // Use current user or system user
-            action: 'CREATE',
-            entity_type: 'roles',
-            entity_id: role.id,
-            new_value: JSON.stringify(serializedRole),
-            actor_id: currentUserId,
-            ...actorInfo,
+        return NextResponse.json({
+            success: true,
+            data: {
+                ...role,
+                id: role.id.toString()
+            }
         });
-
-        return NextResponse.json({ success: true, data: serializedRole });
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json(
