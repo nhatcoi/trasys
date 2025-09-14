@@ -196,6 +196,11 @@ export default function HrLayout({
                     icon: <PersonIcon />,
                     label: 'Phân quyền Người dùng',
                 },
+                {
+                    key: HR_ROUTES.RBAC_TEST,
+                    icon: <SecurityIcon />,
+                    label: 'Test RBAC',
+                },
             ],
         },
         {
