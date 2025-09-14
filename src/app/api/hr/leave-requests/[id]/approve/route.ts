@@ -1,0 +1,165 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { db } from '@/lib/db';
+
+// POST /api/hr/leave-requests/[id]/approve - Duyệt đơn xin nghỉ
+export async function POST(
+    request: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const leaveRequestId = BigInt(params.id);
+        const body = await request.json();
+        const { action, comment } = body; // action: 'APPROVED' hoặc 'REJECTED'
+
+        if (!action || !['APPROVED', 'REJECTED'].includes(action)) {
+            return NextResponse.json({ error: 'Invalid action. Must be APPROVED or REJECTED' }, { status: 400 });
+        }
+
+        // Lấy đơn xin nghỉ hiện tại
+        const currentRequest = await db.leave_requests.findUnique({
+            where: { id: leaveRequestId },
+            include: {
+                employees: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                full_name: true,
+                                email: true
+                            }
+                        },
+                        assignments: {
+                            include: {
+                                org_unit: true,
+                                job_positions: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!currentRequest) {
+            return NextResponse.json({ error: 'Leave request not found' }, { status: 404 });
+        }
+
+        if (currentRequest.status !== 'PENDING') {
+            return NextResponse.json({ error: 'Request has already been processed' }, { status: 400 });
+        }
+
+        // Kiểm tra quyền duyệt
+        const currentUser = await db.user.findUnique({
+            where: { id: BigInt(session.user.id) },
+            include: {
+                employees: {
+                    include: {
+                        assignments: {
+                            include: {
+                                org_unit: true,
+                                job_positions: true
+                            }
+                        }
+                    }
+                },
+                user_role: {
+                    include: {
+                        roles: true
+                    }
+                }
+            }
+        });
+
+        if (!currentUser?.employees?.[0]) {
+            return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+        }
+
+        const currentEmployee = currentUser.employees[0];
+        const userRoles = currentUser.user_role.map(ur => ur.roles.code);
+        const isAdmin = userRoles.includes('ADMIN');
+
+        // Kiểm tra quyền duyệt
+        if (!isAdmin) {
+            const canApprove = await checkApprovalPermission(currentEmployee, currentRequest.employees);
+            if (!canApprove) {
+                return NextResponse.json({ error: 'No permission to approve this request' }, { status: 403 });
+            }
+        }
+
+        // Cập nhật trạng thái đơn xin nghỉ
+        const updatedRequest = await db.leave_requests.update({
+            where: { id: leaveRequestId },
+            data: {
+                status: action,
+                updated_at: new Date()
+            },
+            include: {
+                employees: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                full_name: true,
+                                email: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Tạo lịch sử duyệt trong employee_log
+        await db.employee_log.create({
+            data: {
+                employee_id: currentRequest.employee_id,
+                action: 'UPDATE',
+                entity_type: 'leave_request',
+                entity_id: leaveRequestId,
+                reason: `${action}: ${comment || (action === 'APPROVED' ? 'Đơn xin nghỉ được duyệt' : 'Đơn xin nghỉ bị từ chối')}`,
+                actor_id: BigInt(session.user.id),
+                actor_role: isAdmin ? 'ADMIN' : 'SUPERVISOR'
+            }
+        });
+
+        // Serialize BigInt fields
+        const serializedUpdatedRequest = {
+            ...updatedRequest,
+            id: updatedRequest.id.toString(),
+            employee_id: updatedRequest.employee_id.toString(),
+            employees: {
+                ...updatedRequest.employees,
+                id: updatedRequest.employees.id.toString(),
+                user_id: updatedRequest.employees.user_id.toString(),
+                user: {
+                    ...updatedRequest.employees.user,
+                    id: updatedRequest.employees.user.id.toString()
+                }
+            }
+        };
+
+        return NextResponse.json(serializedUpdatedRequest);
+
+    } catch (error) {
+        console.error('Error approving leave request:', error);
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+}
+
+// Helper function để kiểm tra quyền duyệt
+async function checkApprovalPermission(supervisor: any, employee: any): Promise<boolean> {
+    // Logic kiểm tra quyền duyệt
+    // Có thể dựa vào:
+    // 1. Org unit hierarchy (supervisor ở cấp cao hơn)
+    // 2. Role-based permission (RECTOR, DEAN, HEAD_DEPARTMENT có quyền duyệt)
+    // 3. Direct supervisor relationship
+
+    // Tạm thời return true để test
+    // TODO: Implement proper approval permission logic
+    return true;
+}

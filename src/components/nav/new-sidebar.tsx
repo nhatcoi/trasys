@@ -34,6 +34,8 @@ import {
     Business as BusinessIcon,
     AccountTree as AccountTreeIcon,
     SupervisorAccount as SupervisorAccountIcon,
+    EventNote as EventNoteIcon,
+    Edit as EditIcon,
 } from '@mui/icons-material';
 
 interface MenuItem {
@@ -52,27 +54,6 @@ const menuItems: MenuItem[] = [
         icon: <DashboardIcon />,
         href: '/hr/dashboard',
         permission: 'hr.dashboard.view',
-    },
-    {
-        key: 'overview',
-        label: 'Tổng quan Đại học',
-        icon: <BusinessIcon />,
-        href: '/hr/university-overview',
-        permission: 'hr.university_overview.view',
-    },
-    {
-        key: 'org-structure',
-        label: 'Cơ cấu Tổ chức',
-        icon: <AccountTreeIcon />,
-        href: '/hr/org-structure',
-        permission: 'hr.org_structure.view',
-    },
-    {
-        key: 'faculty',
-        label: 'Giảng viên',
-        icon: <SupervisorAccountIcon />,
-        href: '/hr/faculty',
-        permission: 'hr.faculty.view',
     },
     {
         key: 'hr-management',
@@ -114,6 +95,27 @@ const menuItems: MenuItem[] = [
                 icon: <HistoryIcon />,
                 href: '/hr/employee-logs',
                 permission: 'hr.employee_logs.view',
+            },
+            {
+                key: 'leave-requests',
+                label: 'Đơn xin nghỉ',
+                icon: <EventNoteIcon />,
+                href: '/hr/leave-requests',
+                permission: 'hr.leave_requests.view',
+            },
+            {
+                key: 'leave-requests-history',
+                label: 'Lịch sử đơn xin nghỉ',
+                icon: <HistoryIcon />,
+                href: '/hr/leave-requests/history',
+                permission: 'hr.leave_requests.history',
+            },
+            {
+                key: 'employee-changes-history',
+                label: 'Lịch sử sửa đổi',
+                icon: <EditIcon />,
+                href: '/hr/employee-changes/history',
+                permission: 'hr.employee_changes.history',
             }
         ],
     },
@@ -152,13 +154,6 @@ const menuItems: MenuItem[] = [
                 permission: 'hr.user_roles.view',
             },
         ],
-    },
-    {
-        key: 'reports',
-        label: 'Báo cáo',
-        icon: <AssessmentIcon />,
-        href: '/hr/reports',
-        permission: 'hr.reports.view',
     },
     {
         key: 'profile',
