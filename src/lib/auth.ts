@@ -44,11 +44,33 @@ export const authOptions: NextAuthOptions = {
                     return null
                 }
 
+                // Lấy permissions của user thông qua roles
+                const userRoles = await db.user_role.findMany({
+                    where: { user_id: user.id },
+                    include: {
+                        roles: {
+                            include: {
+                                role_permission: {
+                                    include: {
+                                        permissions: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Flatten permissions từ tất cả roles
+                const permissions = userRoles.flatMap(ur =>
+                    ur.roles.role_permission.map(rp => rp.permissions.code)
+                );
+
                 return {
                     id: user.id.toString(),
                     username: user.username,
                     email: user.email,
-                    full_name: user.full_name
+                    full_name: user.full_name,
+                    permissions: permissions
                 }
             },
 
@@ -62,6 +84,7 @@ export const authOptions: NextAuthOptions = {
             if (user) {
                 token.id = user.id
                 token.username = user.username
+                token.permissions = (user as any).permissions
             }
             return token
         },
@@ -69,6 +92,7 @@ export const authOptions: NextAuthOptions = {
             if (token && session.user) {
                 session.user.id = token.id as string
                 session.user.username = token.username as string
+                session.user.permissions = token.permissions as string[]
             }
             return session
         }

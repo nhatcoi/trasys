@@ -34,6 +34,7 @@ export const HR_ROUTES = {
     PERMISSIONS: '/hr/permissions',
     ROLE_PERMISSIONS: '/hr/role-permissions',
     USER_ROLES: '/hr/user-roles',
+    RBAC_TEST: '/hr/rbac-test',
     REPORTS: '/hr/reports',
 };
 
