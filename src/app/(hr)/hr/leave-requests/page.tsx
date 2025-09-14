@@ -93,6 +93,8 @@ export default function LeaveRequestsPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [statusFilter, setStatusFilter] = useState('');
     const [leaveTypeFilter, setLeaveTypeFilter] = useState('');
+    const [startDateFilter, setStartDateFilter] = useState('');
+    const [endDateFilter, setEndDateFilter] = useState('');
 
     // Dialog states
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -115,7 +117,7 @@ export default function LeaveRequestsPage() {
 
     useEffect(() => {
         fetchLeaveRequests();
-    }, [page, statusFilter, leaveTypeFilter]);
+    }, [page, statusFilter, leaveTypeFilter, startDateFilter, endDateFilter]);
 
     const fetchLeaveRequests = async () => {
         try {
@@ -127,6 +129,8 @@ export default function LeaveRequestsPage() {
 
             if (statusFilter) params.append('status', statusFilter);
             if (leaveTypeFilter) params.append('leave_type', leaveTypeFilter);
+            if (startDateFilter) params.append('start_date', startDateFilter);
+            if (endDateFilter) params.append('end_date', endDateFilter);
 
             const response = await fetch(`/api/hr/leave-requests?${params}`);
             if (!response.ok) {
@@ -302,6 +306,26 @@ export default function LeaveRequestsPage() {
                                 </Select>
                             </FormControl>
                         </Grid>
+                        <Grid item xs={12} sm={2}>
+                            <TextField
+                                fullWidth
+                                label="Từ ngày"
+                                type="date"
+                                value={startDateFilter}
+                                onChange={(e) => setStartDateFilter(e.target.value)}
+                                InputLabelProps={{ shrink: true }}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={2}>
+                            <TextField
+                                fullWidth
+                                label="Đến ngày"
+                                type="date"
+                                value={endDateFilter}
+                                onChange={(e) => setEndDateFilter(e.target.value)}
+                                InputLabelProps={{ shrink: true }}
+                            />
+                        </Grid>
                     </Grid>
                 </CardContent>
             </Card>
@@ -448,48 +472,48 @@ export default function LeaveRequestsPage() {
                 <DialogTitle>Chi tiết đơn xin nghỉ</DialogTitle>
                 <DialogContent>
                     {selectedRequest && (
-                        <Grid container spacing={2} sx={{ mt: 1 }}>
-                            <Grid item xs={6}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                            <Box>
                                 <Typography variant="subtitle2">Nhân viên:</Typography>
                                 <Typography>{selectedRequest.employees.user.full_name}</Typography>
-                            </Grid>
-                            <Grid item xs={6}>
+                            </Box>
+                            <Box>
                                 <Typography variant="subtitle2">Loại nghỉ:</Typography>
                                 <Typography>{getLeaveTypeLabel(selectedRequest.leave_type)}</Typography>
-                            </Grid>
-                            <Grid item xs={6}>
+                            </Box>
+                            <Box>
                                 <Typography variant="subtitle2">Ngày bắt đầu:</Typography>
                                 <Typography>{formatDate(selectedRequest.start_date)}</Typography>
-                            </Grid>
-                            <Grid item xs={6}>
+                            </Box>
+                            <Box>
                                 <Typography variant="subtitle2">Ngày kết thúc:</Typography>
                                 <Typography>{formatDate(selectedRequest.end_date)}</Typography>
-                            </Grid>
-                            <Grid item xs={6}>
+                            </Box>
+                            <Box>
                                 <Typography variant="subtitle2">Trạng thái:</Typography>
                                 <Chip
                                     label={STATUS_LABELS[selectedRequest.status as keyof typeof STATUS_LABELS]}
                                     color={STATUS_COLORS[selectedRequest.status as keyof typeof STATUS_COLORS]}
                                     size="small"
                                 />
-                            </Grid>
-                            <Grid item xs={6}>
+                            </Box>
+                            <Box>
                                 <Typography variant="subtitle2">Ngày tạo:</Typography>
                                 <Typography>{formatDate(selectedRequest.created_at)}</Typography>
-                            </Grid>
+                            </Box>
                             {selectedRequest.reason && (
-                                <Grid item xs={12}>
+                                <Box>
                                     <Typography variant="subtitle2">Lý do:</Typography>
                                     <Typography>{selectedRequest.reason}</Typography>
-                                </Grid>
+                                </Box>
                             )}
-                            <Grid item xs={12}>
+                            <Box>
                                 <Typography variant="subtitle2">Lịch sử:</Typography>
                                 <Typography variant="body2" color="text.secondary">
                                     Lịch sử chi tiết có thể xem trong trang "Lịch sử sửa đổi"
                                 </Typography>
-                            </Grid>
-                        </Grid>
+                            </Box>
+                        </Box>
                     )}
                 </DialogContent>
                 <DialogActions>

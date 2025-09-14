@@ -91,8 +91,8 @@ export async function GET(request: NextRequest) {
             pagination: {
                 page,
                 limit,
-                total: totalCount,
-                totalPages: Math.ceil(totalCount / limit),
+                total: Number(totalCount),
+                totalPages: Math.ceil(Number(totalCount) / limit),
             }
         });
     } catch (error) {

@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Get user with password
-        const user = await db.user.findUnique({
+        const user = await db.users.findUnique({
             where: { id: session.user.id },
             select: { password_hash: true }
         });

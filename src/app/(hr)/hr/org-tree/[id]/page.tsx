@@ -58,7 +58,12 @@ interface OrgUnitStats {
     children: OrgUnitStats[];
 }
 
-export default function OrgTreeDetailPage({ params }: { params: { id: string } }) {
+export default async function OrgTreeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const resolvedParams = await params;
+    return <OrgTreeDetailPageClient params={resolvedParams} />;
+}
+
+function OrgTreeDetailPageClient({ params }: { params: { id: string } }) {
     const [orgUnitStats, setOrgUnitStats] = useState<OrgUnitStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

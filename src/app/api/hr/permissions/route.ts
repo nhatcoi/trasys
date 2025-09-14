@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { logEmployeeActivity, getActorInfo } from '@/lib/audit-logger';
-import { getToken } from 'next-auth/jwt';
 
 export async function GET() {
     try {
@@ -27,6 +25,7 @@ export async function GET() {
                 id: rp.id.toString(),
                 role_id: rp.role_id.toString(),
                 permission_id: rp.permission_id.toString(),
+                granted_by: rp.granted_by?.toString() || null,
                 roles: rp.roles ? {
                     ...rp.roles,
                     id: rp.roles.id.toString()
@@ -40,7 +39,7 @@ export async function GET() {
         return NextResponse.json(
             {
                 success: false,
-                error: error instanceof Error ? error.message : 'Failed to fetch permissions'
+                error: error instanceof Error ? error.message : 'Database connection failed'
             },
             { status: 500 }
         );
@@ -50,38 +49,31 @@ export async function GET() {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { code, name } = body;
+        const { name, description, resource, action } = body;
 
-        // Get current user from token
-        const token = await getToken({ req: request });
-        const currentUserId = token?.sub ? BigInt(token.sub) : undefined;
+        if (!name || !resource || !action) {
+            return NextResponse.json(
+                { success: false, error: 'Name, resource, and action are required' },
+                { status: 400 }
+            );
+        }
 
         const permission = await db.permissions.create({
             data: {
-                code,
-                name
+                name,
+                description,
+                resource,
+                action
             }
         });
 
-        // Convert BigInt to string for JSON serialization
-        const serializedPermission = {
-            ...permission,
-            id: permission.id.toString()
-        };
-
-        // Log the creation activity
-        const actorInfo = getActorInfo(request);
-        await logEmployeeActivity({
-            employee_id: currentUserId || BigInt(1),
-            action: 'CREATE',
-            entity_type: 'permissions',
-            entity_id: permission.id,
-            new_value: JSON.stringify(serializedPermission),
-            actor_id: currentUserId,
-            ...actorInfo,
+        return NextResponse.json({
+            success: true,
+            data: {
+                ...permission,
+                id: permission.id.toString()
+            }
         });
-
-        return NextResponse.json({ success: true, data: serializedPermission });
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json(

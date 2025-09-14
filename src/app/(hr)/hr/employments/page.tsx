@@ -459,106 +459,92 @@ export default function EmploymentsPage() {
                         {editingEmployment ? 'Sửa hợp đồng lao động' : 'Thêm hợp đồng lao động mới'}
                     </DialogTitle>
                     <DialogContent>
-                        <Grid container spacing={2} sx={{ mt: 1 }}>
-                            <Grid item xs={12}>
-                                <FormControl fullWidth required>
-                                    <InputLabel>Nhân viên</InputLabel>
-                                    <Select
-                                        value={formData.employee_id}
-                                        onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-                                        label="Nhân viên"
-                                    >
-                                        {employees.map((employee) => (
-                                            <MenuItem key={employee.id} value={employee.id}>
-                                                {employee.user?.full_name} ({employee.employee_no})
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
+                            <FormControl fullWidth required>
+                                <InputLabel>Nhân viên</InputLabel>
+                                <Select
+                                    value={formData.employee_id}
+                                    onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+                                    label="Nhân viên"
+                                >
+                                    {employees.map((employee) => (
+                                        <MenuItem key={employee.id} value={employee.id}>
+                                            {employee.user?.full_name} ({employee.employee_no})
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
 
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    fullWidth
-                                    label="Số hợp đồng"
-                                    value={formData.contract_no}
-                                    onChange={(e) => setFormData({ ...formData, contract_no: e.target.value })}
-                                    required
-                                    placeholder="VD: HD2024001"
-                                />
-                            </Grid>
+                            <TextField
+                                fullWidth
+                                label="Số hợp đồng"
+                                value={formData.contract_no}
+                                onChange={(e) => setFormData({ ...formData, contract_no: e.target.value })}
+                                required
+                                placeholder="VD: HD2024001"
+                            />
 
-                            <Grid item xs={12} sm={6}>
-                                <FormControl fullWidth required>
-                                    <InputLabel>Loại hợp đồng</InputLabel>
-                                    <Select
-                                        value={formData.contract_type}
-                                        onChange={(e) => setFormData({ ...formData, contract_type: e.target.value })}
-                                        label="Loại hợp đồng"
-                                    >
-                                        {contractTypes.map((type) => (
-                                            <MenuItem key={type.value} value={type.value}>
-                                                {type.label}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
+                            <FormControl fullWidth required>
+                                <InputLabel>Loại hợp đồng</InputLabel>
+                                <Select
+                                    value={formData.contract_type}
+                                    onChange={(e) => setFormData({ ...formData, contract_type: e.target.value })}
+                                    label="Loại hợp đồng"
+                                >
+                                    {contractTypes.map((type) => (
+                                        <MenuItem key={type.value} value={type.value}>
+                                            {type.label}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
 
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    fullWidth
-                                    label="Ngày bắt đầu"
-                                    type="date"
-                                    value={formData.start_date}
-                                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                                    required
-                                    InputLabelProps={{ shrink: true }}
-                                />
-                            </Grid>
+                            <TextField
+                                fullWidth
+                                label="Ngày bắt đầu"
+                                type="date"
+                                value={formData.start_date}
+                                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                                required
+                                InputLabelProps={{ shrink: true }}
+                            />
 
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    fullWidth
-                                    label="Ngày kết thúc"
-                                    type="date"
-                                    value={formData.end_date}
-                                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                                    InputLabelProps={{ shrink: true }}
-                                    helperText="Để trống nếu hợp đồng không xác định thời hạn"
-                                />
-                            </Grid>
+                            <TextField
+                                fullWidth
+                                label="Ngày kết thúc"
+                                type="date"
+                                value={formData.end_date}
+                                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                                InputLabelProps={{ shrink: true }}
+                                helperText="Để trống nếu hợp đồng không xác định thời hạn"
+                            />
 
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    fullWidth
-                                    label="FTE (Full-time Equivalent)"
-                                    type="number"
-                                    value={formData.fte}
-                                    onChange={(e) => setFormData({ ...formData, fte: e.target.value })}
-                                    required
-                                    inputProps={{ min: 0, max: 1, step: 0.1 }}
-                                    helperText="1.0 = 100%, 0.5 = 50%"
-                                />
-                            </Grid>
+                            <TextField
+                                fullWidth
+                                label="FTE (Full-time Equivalent)"
+                                type="number"
+                                value={formData.fte}
+                                onChange={(e) => setFormData({ ...formData, fte: e.target.value })}
+                                required
+                                inputProps={{ min: 0, max: 1, step: 0.1 }}
+                                helperText="1.0 = 100%, 0.5 = 50%"
+                            />
 
-                            <Grid item xs={12} sm={6}>
-                                <FormControl fullWidth required>
-                                    <InputLabel>Bậc lương</InputLabel>
-                                    <Select
-                                        value={formData.salary_band}
-                                        onChange={(e) => setFormData({ ...formData, salary_band: e.target.value })}
-                                        label="Bậc lương"
-                                    >
-                                        {salaryBands.map((band) => (
-                                            <MenuItem key={band} value={band}>
-                                                {band}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                        </Grid>
+                            <FormControl fullWidth>
+                                <InputLabel>Bậc lương</InputLabel>
+                                <Select
+                                    value={formData.salary_band}
+                                    onChange={(e) => setFormData({ ...formData, salary_band: e.target.value })}
+                                    label="Bậc lương"
+                                >
+                                    {salaryBands.map((band) => (
+                                        <MenuItem key={band} value={band}>
+                                            {band}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Box>
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleCloseDialog} disabled={saving}>

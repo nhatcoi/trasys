@@ -53,69 +53,76 @@ const menuItems: MenuItem[] = [
         label: 'Dashboard',
         icon: <DashboardIcon />,
         href: '/hr/dashboard',
-        permission: 'hr.dashboard.view',
+        permission: 'user.read', // Tất cả roles đều có user.read
+    },
+    {
+        key: 'leave-requests',
+        label: 'Đơn xin nghỉ',
+        icon: <EventNoteIcon />,
+        href: '/hr/leave-requests',
+        permission: 'leave_request.read', // Cần quyền đọc đơn xin nghỉ
+    },
+    {
+        key: 'my-evaluations',
+        label: 'Đánh giá của tôi',
+        icon: <AssessmentIcon />,
+        href: '/hr/my-evaluations',
+        permission: 'performance_review.read', // Giảng viên có thể xem đánh giá của mình
     },
     {
         key: 'hr-management',
         label: 'Quản lý Nhân sự',
         icon: <GroupIcon />,
-        permission: 'hr.employees.view',
+        permission: 'employee.read', // Cần quyền đọc nhân viên
         children: [
             {
                 key: 'employees',
                 label: 'Nhân viên',
                 icon: <PeopleIcon />,
                 href: '/hr/employees',
-                permission: 'hr.employees.view',
+                permission: 'employee.read',
             },
             {
                 key: 'qualifications',
                 label: 'Bằng cấp',
                 icon: <SchoolIcon />,
                 href: '/hr/qualifications',
-                permission: 'hr.qualifications.view',
+                permission: 'employee.read',
             },
             {
                 key: 'employments',
                 label: 'Hợp đồng',
                 icon: <WorkIcon />,
                 href: '/hr/employments',
-                permission: 'hr.employments.view',
+                permission: 'employee.read',
             },
             {
                 key: 'performance-reviews',
                 label: 'Đánh giá hiệu suất',
                 icon: <AssessmentIcon />,
                 href: '/hr/performance-reviews',
-                permission: 'hr.performance_reviews.view',
+                permission: 'performance_review.read',
+            },
+            {
+                key: 'evaluation-periods',
+                label: 'Quản lý kỳ đánh giá',
+                icon: <AssessmentIcon />,
+                href: '/hr/evaluation-periods',
+                permission: 'performance_review.create',
             },
             {
                 key: 'employee-logs',
                 label: 'Log nhân viên',
                 icon: <HistoryIcon />,
                 href: '/hr/employee-logs',
-                permission: 'hr.employee_logs.view',
-            },
-            {
-                key: 'leave-requests',
-                label: 'Đơn xin nghỉ',
-                icon: <EventNoteIcon />,
-                href: '/hr/leave-requests',
-                permission: 'hr.leave_requests.view',
-            },
-            {
-                key: 'leave-requests-history',
-                label: 'Lịch sử đơn xin nghỉ',
-                icon: <HistoryIcon />,
-                href: '/hr/leave-requests/history',
-                permission: 'hr.leave_requests.history',
+                permission: 'employee.read',
             },
             {
                 key: 'employee-changes-history',
                 label: 'Lịch sử sửa đổi',
                 icon: <EditIcon />,
                 href: '/hr/employee-changes/history',
-                permission: 'hr.employee_changes.history',
+                permission: 'employee.read',
             }
         ],
     },
@@ -123,60 +130,66 @@ const menuItems: MenuItem[] = [
         key: 'rbac',
         label: 'Phân quyền',
         icon: <SecurityIcon />,
-        permission: 'hr.roles.view',
+        permission: 'role.read', // Admin có quyền đọc role
         children: [
             {
                 key: 'roles',
                 label: 'Vai trò',
                 icon: <AdminPanelSettingsIcon />,
                 href: '/hr/roles',
-                permission: 'hr.roles.view',
+                permission: 'role.read',
             },
             {
                 key: 'permissions',
                 label: 'Quyền hạn',
                 icon: <VpnKeyIcon />,
                 href: '/hr/permissions',
-                permission: 'hr.permissions.view',
+                permission: 'role.read', // Sử dụng role.read vì permissions liên quan đến roles
             },
             {
                 key: 'role-permissions',
                 label: 'Vai trò - Quyền hạn',
                 icon: <AssignmentIcon />,
                 href: '/hr/role-permissions',
-                permission: 'hr.role_permissions.view',
+                permission: 'role.read',
             },
             {
                 key: 'user-roles',
                 label: 'Người dùng - Vai trò',
                 icon: <PersonIcon />,
                 href: '/hr/user-roles',
-                permission: 'hr.user_roles.view',
+                permission: 'user.read', // Liên quan đến user
             },
         ],
-    },
-    {
-        key: 'profile',
-        label: 'Hồ sơ',
-        icon: <PersonIcon />,
-        href: '/hr/profile',
-        permission: 'hr.profile.view',
-    },
+    }
 ];
 
 export function NewSidebar() {
     const pathname = usePathname();
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const permissions = session?.user?.permissions || [];
+
+    // Debug logging for development
+    if (process.env.NODE_ENV === 'development' && session?.user) {
+        console.log('🔐 User permissions:', permissions);
+        console.log('👤 User:', session.user.username, session.user.email);
+    }
+
 
     const [openSections, setOpenSections] = useState<Record<string, boolean>>({
         'hr-management': true,
         'rbac': false,
+        'org-management': false,
     });
 
     // Function to check if user has permission
     const hasPermission = (requiredPermission: string) => {
-        return permissions.includes(requiredPermission);
+        const hasAccess = permissions.includes(requiredPermission);
+        // Debug logging (remove in production)
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`Permission check: ${requiredPermission} - ${hasAccess ? '✅' : '❌'}`);
+        }
+        return hasAccess;
     };
 
     const handleToggleSection = (key: string) => {
@@ -190,6 +203,16 @@ export function NewSidebar() {
         // Check permission first
         if (item.permission && !hasPermission(item.permission)) {
             return null;
+        }
+
+        // For parent items with children, check if any child is accessible
+        if (item.children && item.children.length > 0) {
+            const hasAccessibleChildren = item.children.some(child =>
+                !child.permission || hasPermission(child.permission)
+            );
+            if (!hasAccessibleChildren) {
+                return null;
+            }
         }
 
         const isActive = item.href ? pathname === item.href : false;

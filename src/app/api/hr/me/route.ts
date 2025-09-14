@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
         try {
             console.log('Session user ID:', session.user.id, 'Type:', typeof session.user.id);
 
-            const user = await db.user.findUnique({
+            const user = await db.users.findUnique({
                 where: { id: BigInt(session.user.id) },
                 include: {
                     employees: true
@@ -48,8 +48,7 @@ export async function GET(request: NextRequest) {
                     employees: user.employees?.map(emp => ({
                         ...emp,
                         id: emp.id.toString(),
-                        user_id: emp.user_id?.toString(),
-                        org_unit_id: emp.org_unit_id?.toString(),
+                        user_id: emp.user_id.toString(),
                     })) || []
                 }
             });

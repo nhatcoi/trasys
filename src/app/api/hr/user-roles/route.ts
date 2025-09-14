@@ -1,42 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { logEmployeeActivity, getActorInfo } from '@/lib/audit-logger';
-import { getToken } from 'next-auth/jwt';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
-        const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('user_id');
-
-        let whereClause = {};
-        if (userId) {
-            whereClause = { user_id: BigInt(userId) };
-        }
-
         const userRoles = await db.user_role.findMany({
-            where: whereClause,
             include: {
-                users: true,
-                roles: true
+                roles: true,
+                users_user_role_user_idTousers: true,
+                users_user_role_assigned_byTousers: true
             },
             orderBy: {
-                id: 'asc'
+                assigned_at: 'desc'
             }
         });
 
         // Convert BigInt to string for JSON serialization
-        const serializedUserRoles = userRoles.map((ur: any) => ({
-            ...ur,
-            id: ur.id.toString(),
-            user_id: ur.user_id.toString(),
-            role_id: ur.role_id.toString(),
-            users: ur.users ? {
-                ...ur.users,
-                id: ur.users.id.toString()
+        const serializedUserRoles = userRoles.map((userRole: any) => ({
+            ...userRole,
+            id: userRole.id.toString(),
+            user_id: userRole.user_id.toString(),
+            role_id: userRole.role_id.toString(),
+            assigned_by: userRole.assigned_by?.toString() || null,
+            roles: userRole.roles ? {
+                ...userRole.roles,
+                id: userRole.roles.id.toString()
             } : null,
-            roles: ur.roles ? {
-                ...ur.roles,
-                id: ur.roles.id.toString()
+            users_user_role_user_idTousers: userRole.users_user_role_user_idTousers ? {
+                ...userRole.users_user_role_user_idTousers,
+                id: userRole.users_user_role_user_idTousers.id.toString()
+            } : null,
+            users_user_role_assigned_byTousers: userRole.users_user_role_assigned_byTousers ? {
+                ...userRole.users_user_role_assigned_byTousers,
+                id: userRole.users_user_role_assigned_byTousers.id.toString()
             } : null
         }));
 
@@ -46,7 +41,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(
             {
                 success: false,
-                error: error instanceof Error ? error.message : 'Failed to fetch user roles'
+                error: error instanceof Error ? error.message : 'Database connection failed'
             },
             { status: 500 }
         );
@@ -56,52 +51,35 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { user_id, role_id } = body;
+        const { user_id, role_id, assigned_by, expires_at, is_active } = body;
 
-        // Get current user from token
-        const token = await getToken({ req: request });
-        const currentUserId = token?.sub ? BigInt(token.sub) : undefined;
+        if (!user_id || !role_id) {
+            return NextResponse.json(
+                { success: false, error: 'user_id and role_id are required' },
+                { status: 400 }
+            );
+        }
 
         const userRole = await db.user_role.create({
             data: {
                 user_id: BigInt(user_id),
-                role_id: BigInt(role_id)
-            },
-            include: {
-                users: true,
-                roles: true
+                role_id: BigInt(role_id),
+                assigned_by: assigned_by ? BigInt(assigned_by) : null,
+                expires_at: expires_at ? new Date(expires_at) : null,
+                is_active: is_active !== undefined ? is_active : true
             }
         });
 
-        // Convert BigInt to string for JSON serialization
-        const serializedUserRole = {
-            ...userRole,
-            id: userRole.id.toString(),
-            user_id: userRole.user_id.toString(),
-            role_id: userRole.role_id.toString(),
-            users: userRole.users ? {
-                ...userRole.users,
-                id: userRole.users.id.toString()
-            } : null,
-            roles: userRole.roles ? {
-                ...userRole.roles,
-                id: userRole.roles.id.toString()
-            } : null
-        };
-
-        // Log the creation activity
-        const actorInfo = getActorInfo(request);
-        await logEmployeeActivity({
-            employee_id: currentUserId || BigInt(1),
-            action: 'CREATE',
-            entity_type: 'user_role',
-            entity_id: userRole.id,
-            new_value: JSON.stringify(serializedUserRole),
-            actor_id: currentUserId,
-            ...actorInfo,
+        return NextResponse.json({
+            success: true,
+            data: {
+                ...userRole,
+                id: userRole.id.toString(),
+                user_id: userRole.user_id.toString(),
+                role_id: userRole.role_id.toString(),
+                assigned_by: userRole.assigned_by?.toString() || null
+            }
         });
-
-        return NextResponse.json({ success: true, data: serializedUserRole });
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json(

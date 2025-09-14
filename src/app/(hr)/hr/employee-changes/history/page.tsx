@@ -25,7 +25,8 @@ import {
     Button,
     Accordion,
     AccordionSummary,
-    AccordionDetails
+    AccordionDetails,
+    CircularProgress
 } from '@mui/material';
 import {
     ExpandMore as ExpandMoreIcon,
@@ -202,7 +203,7 @@ export default function EmployeeChangesHistoryPage() {
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-                <Typography>Đang tải...</Typography>
+                <CircularProgress />
             </Box>
         );
     }

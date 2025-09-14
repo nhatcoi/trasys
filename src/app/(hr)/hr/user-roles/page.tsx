@@ -55,8 +55,12 @@ interface UserRole {
     id: string;
     user_id: string;
     role_id: string;
-    users: User;
+    users_user_role_user_idTousers: User | null;
+    users_user_role_assigned_byTousers: User | null;
     roles: Role;
+    assigned_at: string;
+    expires_at: string | null;
+    is_active: boolean;
 }
 
 export default function UserRolesPage() {
@@ -153,7 +157,7 @@ export default function UserRolesPage() {
     };
 
     const handleDelete = async (userRole: UserRole) => {
-        if (!confirm(`Bạn có chắc chắn muốn xóa phân quyền "${userRole.users.full_name}" - "${userRole.roles.name}"?`)) {
+        if (!confirm(`Bạn có chắc chắn muốn xóa phân quyền "${userRole.users_user_role_user_idTousers?.full_name || 'N/A'}" - "${userRole.roles.name}"?`)) {
             return;
         }
 
@@ -244,10 +248,10 @@ export default function UserRolesPage() {
                                 <TableCell>
                                     <Box>
                                         <Typography variant="body2" fontWeight="medium">
-                                            {userRole.users.full_name}
+                                            {userRole.users_user_role_user_idTousers?.full_name || 'N/A'}
                                         </Typography>
                                         <Typography variant="caption" color="text.secondary">
-                                            {userRole.users.email}
+                                            {userRole.users_user_role_user_idTousers?.email || 'N/A'}
                                         </Typography>
                                     </Box>
                                 </TableCell>
