@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { HistoryService } from '@/modules/history/history.service';
-import { HistoryQuerySchema } from '@/modules/history/history.schema';
+import { HistoryRepository } from '@/modules/history/history.repo';
 
-const historyService = new HistoryService();
+const historyRepo = new HistoryRepository();
 
 // GET /api/org/history
 export async function GET(request: NextRequest) {
@@ -10,34 +9,43 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     
     // Parse query parameters
-    const queryData = {
-      org_unit_id: searchParams.get('org_unit_id') || undefined,
-      change_type: searchParams.get('change_type') || undefined,
-      from_date: searchParams.get('from_date') || undefined,
-      to_date: searchParams.get('to_date') || undefined,
-      page: parseInt(searchParams.get('page') || '1'),
-      size: parseInt(searchParams.get('size') || '20'),
-      sort: searchParams.get('sort') as 'changed_at' | 'change_type' || 'changed_at',
-      order: searchParams.get('order') as 'asc' | 'desc' || 'desc',
-    };
+    const org_unit_id = searchParams.get('org_unit_id');
+    const change_type = searchParams.get('change_type');
+    const from_date = searchParams.get('from_date');
+    const to_date = searchParams.get('to_date');
+    const page = parseInt(searchParams.get('page') || '1');
+    const size = parseInt(searchParams.get('size') || '20');
+    const sort = searchParams.get('sort') || 'changed_at';
+    const order = searchParams.get('order') as 'asc' | 'desc' || 'desc';
 
-    // Validate query parameters
-    const validatedQuery = HistoryQuerySchema.parse(queryData);
+    if (!org_unit_id) {
+      return NextResponse.json(
+        { success: false, error: 'org_unit_id is required' },
+        { status: 400 }
+      );
+    }
     
-    // Call service
-    const result = await historyService.getAll(validatedQuery);
-    
-    return NextResponse.json(result, { 
-      status: result.success ? 200 : 500
+    // Call repository
+    const result = await historyRepo.findAll({
+      org_unit_id: parseInt(org_unit_id, 10),
+      change_type,
+      from_date,
+      to_date,
+      page,
+      size,
+      sort,
+      order,
     });
+    
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error('History route error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Invalid request parameters' 
+        error: error instanceof Error ? error.message : 'Failed to fetch history' 
       },
-      { status: 400 }
+      { status: 500 }
     );
   }
 }

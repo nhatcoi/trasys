@@ -42,11 +42,10 @@ import {
   Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { 
+  orgApi,
   type OrgUnit, 
-  type OrgUnitWithRelation, 
-  useOrgUnitRelations,
-  useOrgUnitRelationMutations
-} from '@/features/org/api/use-org-units';
+  type OrgUnitRelation
+} from '@/features/org/api/api';
 import { 
   getTypeColor, 
   getTypeIcon,
@@ -64,6 +63,12 @@ interface EditRelationData {
   effective_from: string;
   effective_to: string;
   note: string;
+}
+
+// Extend OrgUnitRelation to include parent and child info
+interface OrgUnitWithRelation extends OrgUnitRelation {
+  parent?: OrgUnit;
+  child?: OrgUnit;
 }
 
 const relationTypes = [
@@ -88,12 +93,52 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
     note: '',
   });
 
-  // Fetch relations data using the new hook
-  const { data: relationsData, isLoading, error: relationsError } = useOrgUnitRelations(unitId);
-  const { updateRelation } = useOrgUnitRelationMutations();
+  // State for relations data
+  const [relationsData, setRelationsData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [relationsError, setRelationsError] = useState<string | null>(null);
+
+  // Fetch relations data
+  const fetchRelationsData = async () => {
+    try {
+      setIsLoading(true);
+      setRelationsError(null);
+      
+      const response = await orgApi.relations.getAllForUnit(unitId);
+      
+      setRelationsData(response);
+    } catch (err) {
+      setRelationsError(err instanceof Error ? err.message : 'Failed to fetch relations');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch data on mount
+  React.useEffect(() => {
+    if (unitId) {
+      fetchRelationsData();
+    }
+  }, [unitId]);
 
   const parentRelations = relationsData?.parentRelations || [];
   const childRelations = relationsData?.childRelations || [];
+
+  // Update relation function
+  const updateRelation = async (relationId: string, data: any) => {
+    try {
+      const result = await orgApi.relations.update(relationId, data);
+      
+      if (result.success) {
+        fetchRelationsData(); // Refresh data
+        return result.data;
+      } else {
+        throw new Error(result.error || 'Failed to update relation');
+      }
+    } catch (err) {
+      throw err;
+    }
+  };
 
   const handleUnitClick = (unitId: string) => {
     router.push(`/org/unit/${unitId}`);
@@ -141,7 +186,9 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
         note: editData.note || '',
       };
 
-      await updateRelation.mutateAsync({ key, data: updateData });
+      // Create a composite key for the relation
+      const relationKey = `${selectedRelation.parent_id}-${selectedRelation.child_id}-${selectedRelation.relation_type}-${selectedRelation.effective_from}`;
+      await updateRelation(relationKey, updateData);
       
       setEditDialogOpen(false);
       setSuccess('Cập nhật quan hệ thành công!');
@@ -190,7 +237,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
               variant="outlined"
               startIcon={<CancelIcon />}
               onClick={handleCancel}
-              disabled={updateRelation.isPending}
+              disabled={isLoading}
             >
               Hủy
             </Button>
@@ -201,7 +248,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
       {/* Alerts */}
       {(error || relationsError) && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error || relationsError?.message || 'Có lỗi xảy ra khi tải dữ liệu quan hệ'}
+          {error || relationsError || 'Có lỗi xảy ra khi tải dữ liệu quan hệ'}
         </Alert>
       )}
       
@@ -479,11 +526,11 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
           </Button>
           <Button
             variant="contained"
-            startIcon={updateRelation.isPending ? <CircularProgress size={16} /> : <SaveIcon />}
+            startIcon={isLoading ? <CircularProgress size={16} /> : <SaveIcon />}
             onClick={handleSaveRelation}
-            disabled={updateRelation.isPending}
+            disabled={isLoading}
           >
-            {updateRelation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
+            {isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
           </Button>
         </DialogActions>
       </Dialog>

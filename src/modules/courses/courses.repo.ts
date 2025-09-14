@@ -37,13 +37,13 @@ export class CourseRepository {
 
     // Execute query
     const [items, total] = await Promise.all([
-      db.courses.findMany({
+      db.course.findMany({
         where,
         skip,
         take: size,
         orderBy: { [sort]: order },
       }),
-      db.courses.count({ where }),
+      db.course.count({ where }),
     ]);
 
     // Serialize all IDs for consistency
@@ -70,7 +70,7 @@ export class CourseRepository {
 
   // Find by ID
   async findById(id: string): Promise<Course | null> {
-    const item = await db.courses.findUnique({
+    const item = await db.course.findUnique({
       where: { id: BigInt(id) },
     });
 
@@ -87,7 +87,7 @@ export class CourseRepository {
 
   // Create new course
   async create(data: CreateCourseInput): Promise<Course> {
-    const created = await db.courses.create({
+    const created = await db.course.create({
       data: {
         code: data.code,
         name_vi: data.name_vi,
@@ -109,7 +109,7 @@ export class CourseRepository {
 
   // Update course
   async update(id: string, data: UpdateCourseInput): Promise<Course> {
-    const updated = await db.courses.update({
+    const updated = await db.course.update({
       where: { id: BigInt(id) },
       data: {
         code: data.code,
@@ -132,7 +132,7 @@ export class CourseRepository {
 
   // Delete course
   async delete(id: string): Promise<void> {
-    await db.courses.delete({
+    await db.course.delete({
       where: { id: BigInt(id) },
     });
   }

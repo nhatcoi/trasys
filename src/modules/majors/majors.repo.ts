@@ -30,13 +30,13 @@ export class MajorRepository {
 
     // Execute query
     const [items, total] = await Promise.all([
-      db.majors.findMany({
+      db.major.findMany({
         where,
         skip,
         take: size,
         orderBy: { created_at: 'desc' },
       }),
-      db.majors.count({ where }),
+      db.major.count({ where }),
     ]);
 
     // Serialize all IDs for consistency
@@ -64,7 +64,7 @@ export class MajorRepository {
 
   // Find by ID - simplified
   async findById(id: string) {
-    const item = await db.majors.findUnique({
+    const item = await db.major.findUnique({
       where: { id: BigInt(id) },
     });
 
@@ -82,7 +82,7 @@ export class MajorRepository {
 
   // Create new major - simplified
   async create(data: CreateMajorInput) {
-    const created = await db.majors.create({
+    const created = await db.major.create({
       data: {
         code: data.code,
         name_vi: data.name_vi,
@@ -107,7 +107,7 @@ export class MajorRepository {
 
   // Update major - simplified
   async update(id: string, data: UpdateMajorInput) {
-    const updated = await db.majors.update({
+    const updated = await db.major.update({
       where: { id: BigInt(id) },
       data: {
         code: data.code,
@@ -133,7 +133,7 @@ export class MajorRepository {
 
   // Delete major
   async delete(id: string): Promise<void> {
-    await db.majors.delete({
+    await db.major.delete({
       where: { id: BigInt(id) },
     });
   }

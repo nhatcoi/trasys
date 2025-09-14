@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useOrgUnits, type OrgUnit } from '@/features/org/api/use-org-units';
+import { orgApi, type OrgUnit, type OrgStats } from '@/features/org/api/api';
 import {
   Box,
   Typography,
@@ -32,16 +32,9 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 
-interface OrgStats {
-  totalUnits: number;
-  totalEmployees: number;
-  activeUnits: number;
-  inactiveUnits: number;
-  departments: number;
-  divisions: number;
-  teams: number;
-  branches: number;
-}
+// Using OrgStats type from centralized API
+
+// Using OrgUnit type from centralized API
 
 interface RecentActivity {
   id: string;
@@ -61,41 +54,48 @@ interface TopUnit {
 }
 
 export default function OrgDashboardPage() {
+  const [stats, setStats] = useState<OrgStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
-  
-  // Use React Query hook for data fetching
-  const { data: orgUnitsResponse, isLoading: loading, error, refetch } = useOrgUnits();
-  const orgUnits = (orgUnitsResponse as { items?: OrgUnit[] })?.items || [];
 
-  // Calculate stats from orgUnits data
-  const stats: OrgStats = {
-    totalUnits: orgUnits.length,
-    totalEmployees: orgUnits.reduce((sum: number, unit: OrgUnit) => sum + (unit.employees?.length || 0), 0),
-    activeUnits: orgUnits.filter((unit: OrgUnit) => unit.status === 'active').length,
-    inactiveUnits: orgUnits.filter((unit: OrgUnit) => unit.status === 'inactive').length,
-    departments: orgUnits.filter((unit: OrgUnit) => unit.type === 'department').length,
-    divisions: orgUnits.filter((unit: OrgUnit) => unit.type === 'division').length,
-    teams: orgUnits.filter((unit: OrgUnit) => unit.type === 'team').length,
-    branches: orgUnits.filter((unit: OrgUnit) => unit.type === 'branch').length,
+  // Top units from stats data
+  const topUnits: TopUnit[] = stats?.topUnits || [];
+
+  // Fetch stats data using centralized API
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Fetching stats using direct fetch...');
+      
+      const response = await fetch('/api/org/stats');
+      const result = await response.json();
+      
+      console.log('Stats API response:', result);
+      
+      if (result.success) {
+        setStats(result.data);
+        console.log('Stats set:', result.data);
+      } else {
+        setError(result.error || 'Failed to fetch stats');
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch stats');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Top units by employee count
-  const topUnits: TopUnit[] = orgUnits
-    .map((unit: OrgUnit) => ({
-      id: unit.id,
-      name: unit.name,
-      code: unit.code,
-      employeeCount: unit.employees?.length || 0,
-      type: unit.type || 'unknown',
-    }))
-    .sort((a: TopUnit, b: TopUnit) => b.employeeCount - a.employeeCount)
-    .slice(0, 5);
-
   const handleRefresh = () => {
-    refetch();
+    fetchStats();
   };
 
   useEffect(() => {
+    fetchStats();
+    
     // Mock recent activities
     const mockActivities: RecentActivity[] = [
       {
@@ -123,6 +123,7 @@ export default function OrgDashboardPage() {
     ];
     
     setRecentActivities(mockActivities);
+
   }, []);
 
   const getActivityIcon = (type: string) => {
@@ -155,10 +156,13 @@ export default function OrgDashboardPage() {
     }
   };
 
+  console.log('Dashboard render - loading:', loading, 'error:', error, 'stats:', stats);
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <CircularProgress size={60} />
+        <Typography sx={{ ml: 2 }}>Đang tải dữ liệu...</Typography>
       </Box>
     );
   }
@@ -189,6 +193,7 @@ export default function OrgDashboardPage() {
           </Typography>
         </Box>
       </Stack>
+        
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -208,7 +213,7 @@ export default function OrgDashboardPage() {
                 </Avatar>
                 <Box>
                   <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    {stats.totalUnits}
+                    {stats?.totalUnits || 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Tổng đơn vị
@@ -228,7 +233,7 @@ export default function OrgDashboardPage() {
                 </Avatar>
                 <Box>
                   <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    {stats.totalEmployees}
+                    {stats?.totalEmployees || 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Tổng nhân viên
@@ -248,7 +253,7 @@ export default function OrgDashboardPage() {
                 </Avatar>
                 <Box>
                   <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    {stats.activeUnits}
+                    {stats?.activeUnits || 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Đơn vị hoạt động
@@ -268,7 +273,7 @@ export default function OrgDashboardPage() {
                 </Avatar>
                 <Box>
                   <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    {stats.inactiveUnits}
+                    {stats?.inactiveUnits || 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Đơn vị không hoạt động
@@ -294,12 +299,12 @@ export default function OrgDashboardPage() {
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                     <Typography variant="body2">Phòng ban</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {stats.departments}
+                      {stats?.departments || 0}
                     </Typography>
                   </Stack>
                   <LinearProgress
                     variant="determinate"
-                    value={stats.totalUnits > 0 ? (stats.departments / stats.totalUnits) * 100 : 0}
+                    value={stats && stats.totalUnits > 0 ? (stats.departments / stats.totalUnits) * 100 : 0}
                     sx={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(46, 76, 146, 0.1)' }}
                   />
                 </Box>
@@ -308,12 +313,12 @@ export default function OrgDashboardPage() {
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                     <Typography variant="body2">Bộ phận</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {stats.divisions}
+                      {stats?.divisions || 0}
                     </Typography>
                   </Stack>
                   <LinearProgress
                     variant="determinate"
-                    value={stats.totalUnits > 0 ? (stats.divisions / stats.totalUnits) * 100 : 0}
+                    value={stats && stats.totalUnits > 0 ? (stats.divisions / stats.totalUnits) * 100 : 0}
                     sx={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(46, 76, 146, 0.1)' }}
                   />
                 </Box>
@@ -322,12 +327,12 @@ export default function OrgDashboardPage() {
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                     <Typography variant="body2">Nhóm</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {stats.teams}
+                      {stats?.teams || 0}
                     </Typography>
                   </Stack>
                   <LinearProgress
                     variant="determinate"
-                    value={stats.totalUnits > 0 ? (stats.teams / stats.totalUnits) * 100 : 0}
+                    value={stats && stats.totalUnits > 0 ? (stats.teams / stats.totalUnits) * 100 : 0}
                     sx={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(255, 140, 0, 0.1)' }}
                   />
                 </Box>
@@ -336,12 +341,12 @@ export default function OrgDashboardPage() {
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                     <Typography variant="body2">Chi nhánh</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {stats.branches}
+                      {stats?.branches || 0}
                     </Typography>
                   </Stack>
                   <LinearProgress
                     variant="determinate"
-                    value={stats.totalUnits > 0 ? (stats.branches / stats.totalUnits) * 100 : 0}
+                    value={stats && stats.totalUnits > 0 ? (stats.branches / stats.totalUnits) * 100 : 0}
                     sx={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(255, 140, 0, 0.1)' }}
                   />
                 </Box>
@@ -367,10 +372,11 @@ export default function OrgDashboardPage() {
                           {index + 1}
                         </Avatar>
                       </ListItemAvatar>
-                      <ListItemText
-                        primary={unit.name}
-                        secondary={
-                          <Stack direction="row" spacing={1} alignItems="center">
+                      <Box sx={{ flex: 1 }}>
+                        <ListItemText
+                          primary={unit.name}
+                          secondary={
+                            <Stack direction="row" spacing={1} alignItems="center">
                             <Chip
                               label={unit.code}
                               size="small"
@@ -389,6 +395,7 @@ export default function OrgDashboardPage() {
                           </Stack>
                         }
                       />
+                      </Box>
                       <Box sx={{ textAlign: 'right' }}>
                         <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2e4c92' }}>
                           {unit.employeeCount}

@@ -1,81 +1,80 @@
+
 import { NextRequest, NextResponse } from 'next/server';
-import { ClassSectionService } from '@/modules/class-sections/class-sections.service';
+import { ClassSectionsRepository } from '@/modules/class-sections/class-sections.repo';
 
-const classSectionService = new ClassSectionService();
+const classsectionsRepo = new ClassSectionsRepository();
 
-// GET /api/class-sections/[id] - Get class section by ID
+// GET /api/class-sections/[id] - Get class-sections by ID
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request,
+  { params }
 ) {
   try {
     const { id } = await params;
     
-    const result = await classSectionService.getClassSectionById(id);
+    const item = await classsectionsRepo.findById(id);
     
-    if (!result.success) {
-      return NextResponse.json(result, { status: 404 });
+    if (!item) {
+      return NextResponse.json(
+        { success: false, error: 'class-sections not found' },
+        { status: 404 }
+      );
     }
     
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, data: item });
   } catch (error) {
+    console.error('class-sections GET error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+        error: error instanceof Error ? error.message : 'Failed to fetch class-sections' 
       },
       { status: 500 }
     );
   }
 }
 
-// PUT /api/class-sections/[id] - Update class section
+// PUT /api/class-sections/[id] - Update class-sections
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request,
+  { params }
 ) {
   try {
     const { id } = await params;
     const body = await request.json();
     
-    const result = await classSectionService.updateClassSection(id, body);
+    const item = await classsectionsRepo.update(id, body);
     
-    if (!result.success) {
-      return NextResponse.json(result, { status: 400 });
-    }
-    
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, data: item });
   } catch (error) {
+    console.error('class-sections PUT error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+        error: error instanceof Error ? error.message : 'Failed to update class-sections' 
       },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/class-sections/[id] - Delete class section
+// DELETE /api/class-sections/[id] - Delete class-sections
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request,
+  { params }
 ) {
   try {
     const { id } = await params;
     
-    const result = await classSectionService.deleteClassSection(id);
+    await classsectionsRepo.delete(id);
     
-    if (!result.success) {
-      return NextResponse.json(result, { status: 400 });
-    }
-    
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, message: 'class-sections deleted successfully' });
   } catch (error) {
+    console.error('class-sections DELETE error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+        error: error instanceof Error ? error.message : 'Failed to delete class-sections' 
       },
       { status: 500 }
     );

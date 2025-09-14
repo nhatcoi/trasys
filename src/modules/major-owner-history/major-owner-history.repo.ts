@@ -45,13 +45,13 @@ export class MajorOwnerHistoryRepository {
 
     // Execute query
     const [items, total] = await Promise.all([
-      db.major_owner_history.findMany({
+      db.majorOwnerHistory.findMany({
         where,
         skip,
         take: size,
         orderBy: { [sort]: order },
       }),
-      db.major_owner_history.count({ where }),
+      db.majorOwnerHistory.count({ where }),
     ]);
 
     // Serialize all IDs for consistency
@@ -79,7 +79,7 @@ export class MajorOwnerHistoryRepository {
 
   // Find by ID
   async findById(id: string): Promise<MajorOwnerHistory | null> {
-    const item = await db.major_owner_history.findUnique({
+    const item = await db.majorOwnerHistory.findUnique({
       where: { id: BigInt(id) },
     });
 
@@ -97,7 +97,7 @@ export class MajorOwnerHistoryRepository {
 
   // Create new major owner history
   async create(data: CreateMajorOwnerHistoryInput): Promise<MajorOwnerHistory> {
-    const created = await db.major_owner_history.create({
+    const created = await db.majorOwnerHistory.create({
       data: {
         major_id: BigInt(data.major_id),
         org_unit_id: BigInt(data.org_unit_id),
@@ -118,7 +118,7 @@ export class MajorOwnerHistoryRepository {
 
   // Update major owner history
   async update(id: string, data: UpdateMajorOwnerHistoryInput): Promise<MajorOwnerHistory> {
-    const updated = await db.major_owner_history.update({
+    const updated = await db.majorOwnerHistory.update({
       where: { id: BigInt(id) },
       data: {
         major_id: data.major_id ? BigInt(data.major_id) : undefined,
@@ -140,7 +140,7 @@ export class MajorOwnerHistoryRepository {
 
   // Delete major owner history
   async delete(id: string): Promise<void> {
-    await db.major_owner_history.delete({
+    await db.majorOwnerHistory.delete({
       where: { id: BigInt(id) },
     });
   }

@@ -1,55 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OrgUnitService } from '@/modules/org/org.service';
-import { CreateOrgUnitSchema, OrgUnitQuerySchema } from '@/modules/org/org.schema';
+import { OrgUnitRepository } from '@/modules/org/org.repo';
 
-const orgUnitService = new OrgUnitService();
+const orgUnitRepo = new OrgUnitRepository();
+
+// Simple validation helper
+function validateRequired(obj: any, fields: string[]) {
+  const missing = fields.filter(field => !obj[field]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required fields: ${missing.join(', ')}`);
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     
-    // Parse all query parameters
-    const queryOptions = {
-      // Pagination
-      page: searchParams.get('page') ? parseInt(searchParams.get('page')!) : undefined,
-      size: searchParams.get('size') ? parseInt(searchParams.get('size')!) : undefined,
-      
-      // Sorting
-      sort: searchParams.get('sort') || undefined,
-      order: searchParams.get('order') as 'asc' | 'desc' || undefined,
-      
-      // Search & Filter
-      search: searchParams.get('search') || undefined,
-      status: searchParams.get('status') || undefined,
-      type: searchParams.get('type') || undefined,
-      
-      // Date range
-      fromDate: searchParams.get('fromDate') || undefined,
-      toDate: searchParams.get('toDate') || undefined,
-      
-      // Fetch options
+    // Simple parameter processing
+    const page = parseInt(searchParams.get('page') || '1');
+    const size = parseInt(searchParams.get('size') || '20');
+    const search = searchParams.get('search') || '';
+    const status = searchParams.get('status') || '';
+    const type = searchParams.get('type') || '';
+    const sort = searchParams.get('sort') || 'created_at';
+    const order = searchParams.get('order') as 'asc' | 'desc' || 'desc';
+    
+    const result = await orgUnitRepo.findAll({
+      page,
+      size,
+      search,
+      status,
+      type,
+      sort,
+      order,
+      fromDate: searchParams.get('fromDate'),
+      toDate: searchParams.get('toDate'),
       include_children: searchParams.get('include_children') === 'true',
       include_employees: searchParams.get('include_employees') === 'true',
       include_parent: searchParams.get('include_parent') === 'true',
-    };
+    });
     
-    // Validate query options
-    const validatedOptions = OrgUnitQuerySchema.parse(queryOptions);
-    
-    // Always use options method for consistency
-    const result = await orgUnitService.getAll(validatedOptions);
-    
-    return NextResponse.json(result, { 
-      status: result.success ? 200 : 500 
+    return NextResponse.json({ 
+      success: true, 
+      data: result.items || result,
+      pagination: {
+        page,
+        size,
+        total: result.total || result.length,
+        totalPages: Math.ceil((result.total || result.length) / size),
+        hasNextPage: page < Math.ceil((result.total || result.length) / size),
+        hasPrevPage: page > 1
+      }
     });
   } catch (error) {
-    console.error('Route error:', error);
+    console.error('org-units GET error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Invalid query parameters' 
+        error: error instanceof Error ? error.message : 'Failed to fetch org units' 
       },
-      { status: 400 }
+      { status: 500 }
     );
   }
 }
@@ -58,23 +67,20 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // Validate input
-    const validatedData = CreateOrgUnitSchema.parse(body);
+    // Simple validation
+    validateRequired(body, ['name', 'code']);
     
-    // Call service
-    const result = await orgUnitService.create(validatedData);
+    const result = await orgUnitRepo.create(body);
     
-    return NextResponse.json(result, { 
-      status: result.success ? 201 : 500 
-    });
+    return NextResponse.json({ success: true, data: result }, { status: 201 });
   } catch (error) {
-    console.error('Route error:', error);
+    console.error('org-units POST error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Invalid request data' 
+        error: error instanceof Error ? error.message : 'Failed to create org unit' 
       },
-      { status: 400 }
+      { status: 500 }
     );
   }
 }

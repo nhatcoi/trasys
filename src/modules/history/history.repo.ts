@@ -38,19 +38,27 @@ export class HistoryRepository {
       orderBy,
       skip,
       take: options.size,
-      include: {
-        org_units: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            type: true,
-          }
-        }
-      }
     };
 
-    return await db.org_unit_history.findMany(queryOptions);
+    const [items, total] = await Promise.all([
+      db.orgUnitHistory.findMany(queryOptions),
+      db.orgUnitHistory.count({ where })
+    ]);
+
+    // Serialize BigInt fields
+    const serializedItems = items.map(item => ({
+      ...item,
+      id: item.id.toString(),
+      org_unit_id: item.org_unit_id.toString(),
+    }));
+
+    return {
+      items: serializedItems,
+      total,
+      page: options.page,
+      size: options.size,
+      totalPages: Math.ceil(total / options.size)
+    };
   }
 
   // Count total records for pagination
@@ -75,12 +83,12 @@ export class HistoryRepository {
       }
     }
 
-    return await db.org_unit_history.count({ where });
+    return await db.orgUnitHistory.count({ where });
   }
 
   // Get history by ID
   async findById(id: number) {
-    return db.org_unit_history.findUnique({
+    return db.orgUnitHistory.findUnique({
         where: {id},
         include: {
             org_units: {
@@ -103,7 +111,7 @@ export class HistoryRepository {
     change_type: string;
     details?: any;
   }) {
-    return db.org_unit_history.create({
+    return db.orgUnitHistory.create({
         data: {
             org_unit_id: data.org_unit_id,
             old_name: data.old_name,

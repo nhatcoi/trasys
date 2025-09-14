@@ -34,7 +34,7 @@ import {
   Assessment as AssessmentIcon,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
-import { useOrgUnit, useUpdateOrgUnit, type OrgUnit } from '@/features/org/api/use-org-units';
+import { orgApi, type OrgUnit } from '@/features/org/api/api';
 import { 
   getStatusColor, 
   getTypeColor, 
@@ -87,18 +87,57 @@ export default function UnitDetailPage() {
   const unitId = params.id as string;
   
   const [tabValue, setTabValue] = useState(0);
+  const [unit, setUnit] = useState<OrgUnit | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Use React Query to fetch unit details
-  const { data: unit, isLoading: loading, error } = useOrgUnit(unitId);
-  const updateOrgUnitMutation = useUpdateOrgUnit();
+  // Fetch unit data
+  const fetchUnitData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await orgApi.units.getById(unitId);
+      
+      if (response.success) {
+        setUnit(response.data);
+      } else {
+        setError(response.error || 'Failed to fetch unit');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch unit');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch data on mount
+  React.useEffect(() => {
+    if (unitId) {
+      fetchUnitData();
+    }
+  }, [unitId]);
+
+  // Update unit function
+  const updateUnit = async (data: any) => {
+    try {
+      const result = await orgApi.units.update(unitId, data);
+      
+      if (result.success) {
+        setUnit(result.data);
+        return { success: true, data: result.data };
+      } else {
+        throw new Error(result.error || 'Failed to update unit');
+      }
+    } catch (err) {
+      throw err;
+    }
+  };
 
   const handleUpdateUnit = async (updateData: Partial<OrgUnit>) => {
     if (!unit?.id) throw new Error('Unit ID not found');
     
-    await updateOrgUnitMutation.mutateAsync({
-      id: unit.id,
-      ...updateData,
-    });
+    await updateUnit(updateData);
   };
 
 
@@ -118,7 +157,7 @@ export default function UnitDetailPage() {
     setTabValue(newValue);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <CircularProgress size={60} />
@@ -131,7 +170,7 @@ export default function UnitDetailPage() {
       <Box>
         <Alert severity="error" sx={{ mb: 3 }}>
           <AlertTitle>Lỗi</AlertTitle>
-          {error instanceof Error ? error.message : 'Failed to fetch unit details'}
+          {error || 'Failed to fetch unit details'}
         </Alert>
         <Button onClick={handleBack} startIcon={<ArrowBackIcon />}>
           Quay lại

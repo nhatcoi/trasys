@@ -1,81 +1,80 @@
+
 import { NextRequest, NextResponse } from 'next/server';
-import { SectionService } from '@/modules/sections/sections.service';
+import { SectionsRepository } from '@/modules/sections/sections.repo';
 
-const sectionService = new SectionService();
+const sectionsRepo = new SectionsRepository();
 
-// GET /api/sections/[id] - Get section by ID
+// GET /api/sections/[id] - Get sections by ID
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request,
+  { params }
 ) {
   try {
     const { id } = await params;
     
-    const result = await sectionService.getById(id);
+    const item = await sectionsRepo.findById(id);
     
-    if (!result.success) {
-      return NextResponse.json(result, { status: 404 });
+    if (!item) {
+      return NextResponse.json(
+        { success: false, error: 'sections not found' },
+        { status: 404 }
+      );
     }
     
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, data: item });
   } catch (error) {
+    console.error('sections GET error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+        error: error instanceof Error ? error.message : 'Failed to fetch sections' 
       },
       { status: 500 }
     );
   }
 }
 
-// PUT /api/sections/[id] - Update section
+// PUT /api/sections/[id] - Update sections
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request,
+  { params }
 ) {
   try {
     const { id } = await params;
     const body = await request.json();
     
-    const result = await sectionService.update(id, body);
+    const item = await sectionsRepo.update(id, body);
     
-    if (!result.success) {
-      return NextResponse.json(result, { status: 400 });
-    }
-    
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, data: item });
   } catch (error) {
+    console.error('sections PUT error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+        error: error instanceof Error ? error.message : 'Failed to update sections' 
       },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/sections/[id] - Delete section
+// DELETE /api/sections/[id] - Delete sections
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request,
+  { params }
 ) {
   try {
     const { id } = await params;
     
-    const result = await sectionService.delete(id);
+    await sectionsRepo.delete(id);
     
-    if (!result.success) {
-      return NextResponse.json(result, { status: 400 });
-    }
-    
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, message: 'sections deleted successfully' });
   } catch (error) {
+    console.error('sections DELETE error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+        error: error instanceof Error ? error.message : 'Failed to delete sections' 
       },
       { status: 500 }
     );

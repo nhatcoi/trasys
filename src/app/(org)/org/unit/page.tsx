@@ -37,12 +37,10 @@ import {
   ListItemText,
 } from '@mui/material';
 import { 
-  useCreateOrgUnit, 
-  useUpdateOrgUnit, 
-  useDeleteOrgUnit,
+  orgApi,
   type OrgUnit,
-  type CreateUnitData 
-} from '@/features/org/api/use-org-units';
+  type PaginationParams
+} from '@/features/org/api/api';
 import {
   getStatusColor,
   getTypeColor,
@@ -68,37 +66,115 @@ import { useOrgUnitsPagination } from '@/hooks/use-org-units-pagination';
 
 export default function OrgUnitManagementPage() {
   const router = useRouter();
-  
-  // Use pagination hook
-  const {
-    orgUnits,
-    pagination,
-    isLoading,
-    isFetching,
-    error: queryError,
-    paginationState,
-    handlers,
-    getFilterValue,
-    updateFilter,
-  } = useOrgUnitsPagination({
-    initialPage: 0,
-    initialSize: 10,
-    initialSort: 'name',
-    initialOrder: 'asc',
-    initialSearch: '',
-    initialFilters: {
-      type: 'all',
-      status: 'all',
-    },
-    searchDebounceMs: 500,
+
+  // Simple state management
+  const [orgUnits, setOrgUnits] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [totalCount, setTotalCount] = React.useState(0);
+  const [paginationState, setPaginationState] = React.useState({
+    page: 1,
+    size: 10,
+    sort: 'name',
+    order: 'asc' as 'asc' | 'desc',
+    search: '',
+    type: 'all',
+    status: 'all',
   });
 
-  // Custom hooks for API operations
-  const createMutation = useCreateOrgUnit();
-  const updateMutation = useUpdateOrgUnit();
-  const deleteMutation = useDeleteOrgUnit();
+  // Fetch data function
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const params: PaginationParams = {
+        page: paginationState.page,
+        size: paginationState.size,
+        sort: paginationState.sort,
+        order: paginationState.order,
+        search: paginationState.search,
+        type: paginationState.type !== 'all' ? paginationState.type : undefined,
+        status: paginationState.status !== 'all' ? paginationState.status : undefined,
+      };
+
+      console.log('Fetching with params:', params);
+
+      const response = await orgApi.units.getAll(params);
+
+      console.log('API Response:', response);
+
+      
+      if (response.success) {
+        setOrgUnits(response.data || []);
+        setTotalCount(response.pagination?.total || 0);
+        console.log('orgUnits state updated, totalCount:', response.pagination?.total);
+      } else {
+        setError('Failed to fetch data');
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch data on mount and when pagination changes
+  React.useEffect(() => {
+    console.log('useEffect triggered, fetching data...');
+    fetchData();
+  }, [paginationState.page, paginationState.size, paginationState.sort, paginationState.order, paginationState.search, paginationState.type, paginationState.status]);
+
+  // Debug log for orgUnits state changes
+  React.useEffect(() => {
+    console.log('orgUnits state changed:', orgUnits);
+  }, [orgUnits]);
+
+  // Debug log for totalCount state changes
+  React.useEffect(() => {
+    console.log('totalCount state changed:', totalCount);
+  }, [totalCount]);
+
+  // Pagination handlers
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPaginationState(prev => ({ ...prev, page: newPage + 1 }));
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setPaginationState(prev => ({ ...prev, size: parseInt(event.target.value, 10), page: 1 }));
+  };
+
+  const handleSearchChange = (value: string) => {
+    setPaginationState(prev => ({ ...prev, search: value, page: 1 }));
+  };
+
+  const handleSortChange = (field: string) => {
+    setPaginationState(prev => ({
+      ...prev,
+      sort: field,
+      order: prev.sort === field && prev.order === 'asc' ? 'desc' : 'asc',
+      page: 1
+    }));
+  };
+
+  const handleFilterChange = (filters: { type?: string; status?: string }) => {
+    setPaginationState(prev => ({ ...prev, ...filters, page: 1 }));
+  };
+
+  const getFilterValue = (key: 'type' | 'status') => {
+    return paginationState[key];
+  };
+
+  const updateFilter = (key: 'type' | 'status', value: string) => {
+    setPaginationState(prev => ({ ...prev, [key]: value, page: 1 }));
+  };
+
+  // Custom hooks for API operations (simplified - no mutations for now)
+  // const createMutation = useCreateOrgUnit();
+  // const updateMutation = useUpdateOrgUnit();
+  // const deleteMutation = useDeleteOrgUnit();
   
-  const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
   // Dialog states
@@ -124,14 +200,19 @@ export default function OrgUnitManagementPage() {
 
   const handleCreateUnit = async () => {
     try {
-      await createMutation.mutateAsync(formData);
-      setOpenCreateDialog(false);
-      setFormData(getInitialFormData());
-      setSuccessMessage(ORG_UNIT_ALERTS.UNIT_CREATED(formData.name).message);
-      setError(null); // Clear any previous errors
+      const result = await orgApi.units.create(formData);
+      
+      if (result.success) {
+        setOpenCreateDialog(false);
+        setFormData(getInitialFormData());
+        fetchData(); // Refresh data
+        setSuccessMessage('Tạo đơn vị thành công!');
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to create unit');
+      }
     } catch (err) {
-      setError(ORG_UNIT_ALERTS.UNIT_CREATE_FAILED(formData.name).message);
-      setSuccessMessage(null); // Clear any previous success messages
+      setError('Failed to create unit');
     }
   };
 
@@ -139,14 +220,19 @@ export default function OrgUnitManagementPage() {
     if (!selectedUnit) return;
     
     try {
-      await updateMutation.mutateAsync({ id: selectedUnit.id, data: formData });
-      setOpenEditDialog(false);
-      setSelectedUnit(null);
-      setSuccessMessage(ORG_UNIT_ALERTS.UNIT_UPDATED(selectedUnit.name).message);
-      setError(null); // Clear any previous errors
+      const result = await orgApi.units.update(selectedUnit.id, formData);
+      
+      if (result.success) {
+        setOpenEditDialog(false);
+        setSelectedUnit(null);
+        fetchData(); // Refresh data
+        setSuccessMessage('Cập nhật đơn vị thành công!');
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to update unit');
+      }
     } catch (err) {
-      setError(ORG_UNIT_ALERTS.UNIT_UPDATE_FAILED(selectedUnit.name).message);
-      setSuccessMessage(null); // Clear any previous success messages
+      setError('Failed to update unit');
     }
   };
 
@@ -158,14 +244,19 @@ export default function OrgUnitManagementPage() {
     }
     
     try {
-      await deleteMutation.mutateAsync(selectedUnit.id);
-      setOpenDeleteDialog(false);
-      setSelectedUnit(null);
-      setSuccessMessage(ORG_UNIT_ALERTS.UNIT_DISABLED(selectedUnit.name).message);
-      setError(null); // Clear any previous errors
+      const result = await orgApi.units.delete(selectedUnit.id);
+      
+      if (result.success) {
+        setOpenDeleteDialog(false);
+        setSelectedUnit(null);
+        fetchData(); // Refresh data
+        setSuccessMessage('Xóa đơn vị thành công!');
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to delete unit');
+      }
     } catch (err) {
-      setError(ORG_UNIT_ALERTS.UNIT_DELETE_FAILED(selectedUnit.name).message);
-      setSuccessMessage(null); // Clear any previous success messages
+      setError('Failed to delete unit');
     }
   };
 
@@ -235,10 +326,10 @@ export default function OrgUnitManagementPage() {
         </Box>
       </Stack>
 
-      {(error || queryError) && (
+      {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           <AlertTitle>Lỗi</AlertTitle>
-          {error || (queryError instanceof Error ? queryError.message : 'Unknown error')}
+          {error}
         </Alert>
       )}
 
@@ -258,7 +349,7 @@ export default function OrgUnitManagementPage() {
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
             {/* Loading indicator */}
-            {isFetching && (
+            {isLoading && (
               <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
                 <CircularProgress size={20} />
               </Box>
@@ -267,7 +358,7 @@ export default function OrgUnitManagementPage() {
                <TextField
                  placeholder="Tìm kiếm đơn vị..."
                  value={paginationState.search}
-                 onChange={(e) => handlers.handleSearchChange(e.target.value)}
+                 onChange={(e) => handleSearchChange(e.target.value)}
                  size="small"
                  sx={{ minWidth: 250 }}
                  InputProps={{
@@ -331,33 +422,15 @@ export default function OrgUnitManagementPage() {
       </Card>
 
       {/* Pagination Info */}
-      {pagination && (
-        <Card sx={{ mb: 2 }}>
-          <CardContent>
+      <Card sx={{ mb: 2 }}>
+        <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Typography variant="body2" color="text.secondary">
-                Hiển thị {((pagination.page - 1) * pagination.size) + 1}-{Math.min(pagination.page * pagination.size, pagination.total)} của {pagination.total} đơn vị
+                Hiển thị {((paginationState.page - 1) * paginationState.size) + 1}-{Math.min(paginationState.page * paginationState.size, totalCount)} của {totalCount} đơn vị
               </Typography>
-              <Stack direction="row" spacing={1}>
-                <Chip 
-                  label={`Trang ${pagination.page}/${pagination.totalPages}`} 
-                  size="small" 
-                  color="primary" 
-                  variant="outlined" 
-                />
-                {pagination.hasNextPage && (
-                  <Chip 
-                    label="Có trang tiếp" 
-                    size="small" 
-                    color="success" 
-                    variant="outlined" 
-                  />
-                )}
-              </Stack>
             </Stack>
-          </CardContent>
-        </Card>
-      )}
+        </CardContent>
+      </Card>
 
       {/* Units Table */}
       <Card>
@@ -367,7 +440,7 @@ export default function OrgUnitManagementPage() {
               <TableRow>
                 <TableCell 
                   sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
-                  onClick={() => handlers.handleSortChange('name')}
+                  onClick={() => handleSortChange('name')}
                 >
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <span>Đơn vị</span>
@@ -378,7 +451,7 @@ export default function OrgUnitManagementPage() {
                 </TableCell>
                 <TableCell 
                   sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
-                  onClick={() => handlers.handleSortChange('code')}
+                  onClick={() => handleSortChange('code')}
                 >
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <span>Mã</span>
@@ -393,7 +466,7 @@ export default function OrgUnitManagementPage() {
                 <TableCell>Nhân viên</TableCell>
                 <TableCell 
                   sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
-                  onClick={() => handlers.handleSortChange('created_at')}
+                  onClick={() => handleSortChange('created_at')}
                 >
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <span>Ngày tạo</span>
@@ -506,11 +579,11 @@ export default function OrgUnitManagementPage() {
          <TablePagination
            rowsPerPageOptions={[5, 10, 25]}
            component="div"
-           count={pagination?.total || 0}
+           count={totalCount}
            rowsPerPage={paginationState.size}
-           page={paginationState.page}
-           onPageChange={handlers.handleChangePage}
-           onRowsPerPageChange={handlers.handleChangeRowsPerPage}
+           page={paginationState.page - 1} // Convert to 0-based
+           onPageChange={handleChangePage}
+           onRowsPerPageChange={handleChangeRowsPerPage}
            labelRowsPerPage="Số dòng mỗi trang:"
            labelDisplayedRows={({ from, to, count }) => 
              `${from}-${to} của ${count !== -1 ? count : `nhiều hơn ${to}`}`

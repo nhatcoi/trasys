@@ -41,7 +41,7 @@ export class OrgUnitRepository {
     // Build include clause
     const include: any = {};
     if (options.include_children) include.children = true;
-    if (options.include_employees) include.employees = true;
+    if (options.include_employees) include.OrgAssignment = true;
     if (options.include_parent) include.parent = true;
 
     // Build orderBy clause
@@ -63,7 +63,33 @@ export class OrgUnitRepository {
       queryOptions.include = include;
     }
 
-    return await db.orgUnit.findMany(queryOptions);
+    const [items, total] = await Promise.all([
+      db.orgUnit.findMany(queryOptions),
+      db.orgUnit.count({ where })
+    ]);
+    
+    // Serialize BigInt fields
+    const serializedItems = items.map(item => ({
+      ...item,
+      id: item.id.toString(),
+      parent_id: item.parent_id?.toString(),
+      // Serialize nested BigInt fields in OrgAssignment
+      org_assignment: item.OrgAssignment?.map((assignment: any) => ({
+        ...assignment,
+        id: assignment.id?.toString(),
+        employee_id: assignment.employee_id?.toString(),
+        org_unit_id: assignment.org_unit_id?.toString(),
+        position_id: assignment.position_id?.toString(),
+      })) || [],
+    }));
+
+    return {
+      items: serializedItems,
+      total,
+      page: options.page,
+      size: options.size,
+      totalPages: Math.ceil(total / options.size)
+    };
   }
 
   // Count total records for pagination
@@ -101,31 +127,18 @@ export class OrgUnitRepository {
 
   // Get organization unit by ID
   async findById(id: number) {
-    return await db.orgUnit.findUnique({
+    const result = await db.orgUnit.findUnique({
       where: { id },
-      include: {
-        children: true,
-        employees: true,
-        // Include relations where this unit is a child
-        parentRelations: {
-          include: {
-            parent: true,
-          },
-          where: {
-            effective_to: null, // Only active relations
-          },
-        },
-        // Include relations where this unit is a parent
-        childRelations: {
-          include: {
-            child: true,
-          },
-          where: {
-            effective_to: null, // Only active relations
-          },
-        },
-      },
     });
+
+    if (!result) return null;
+
+    // Serialize BigInt fields
+    return {
+      ...result,
+      id: result.id.toString(),
+      parent_id: result.parent_id?.toString(),
+    };
   }
 
   // Create new organization unit
@@ -145,8 +158,8 @@ export class OrgUnitRepository {
   }
 
   // Update organization unit
-  async update(id: number, data: UpdateOrgUnitInput) {
-    return await db.orgUnit.update({
+  async update(id: number, data: any) {
+    const result = await db.orgUnit.update({
       where: { id },
       data: {
         name: data.name,
@@ -159,14 +172,28 @@ export class OrgUnitRepository {
         effective_to: data.effective_to ? new Date(data.effective_to) : undefined,
       },
     });
+
+    // Serialize BigInt fields
+    return {
+      ...result,
+      id: result.id.toString(),
+      parent_id: result.parent_id?.toString(),
+    };
   }
 
   // "Delete" organization unit: update status to 'deleted'
   async delete(id: number) {
-    return await db.orgUnit.update({
+    const result = await db.orgUnit.update({
       where: { id },
       data: { status: 'deleted' },
     });
+
+    // Serialize BigInt fields
+    return {
+      ...result,
+      id: result.id.toString(),
+      parent_id: result.parent_id?.toString(),
+    };
   }
 
   // Get organization units by parent ID

@@ -31,13 +31,13 @@ export class ProgramRepository {
 
     // Execute query
     const [items, total] = await Promise.all([
-      db.programs.findMany({
+      db.program.findMany({
         where,
         skip,
         take: size,
         orderBy: { created_at: 'desc' },
       }),
-      db.programs.count({ where }),
+      db.program.count({ where }),
     ]);
 
     // Serialize all IDs for consistency
@@ -67,7 +67,7 @@ export class ProgramRepository {
 
   // Find by ID - simplified
   async findById(id: string) {
-    const item = await db.programs.findUnique({
+    const item = await db.program.findUnique({
       where: { id: BigInt(id) },
     });
 
@@ -87,7 +87,7 @@ export class ProgramRepository {
 
   // Create new program - simplified
   async create(data: CreateProgramsInput) {
-    const created = await db.programs.create({
+    const created = await db.program.create({
       data: {
         major_id: data.major_id ? BigInt(data.major_id) : BigInt(1), // Use default major_id for now
         org_unit_id: data.org_unit_id ? BigInt(data.org_unit_id) : null,
@@ -114,7 +114,7 @@ export class ProgramRepository {
 
   // Update program - simplified
   async update(id: string, data: UpdateProgramsInput) {
-    const updated = await db.programs.update({
+    const updated = await db.program.update({
       where: { id: BigInt(id) },
       data: {
         major_id: data.major_id ? BigInt(data.major_id) : undefined,
@@ -142,7 +142,7 @@ export class ProgramRepository {
 
   // Delete program
   async delete(id: string): Promise<void> {
-    await db.programs.delete({
+    await db.program.delete({
       where: { id: BigInt(id) },
     });
   }

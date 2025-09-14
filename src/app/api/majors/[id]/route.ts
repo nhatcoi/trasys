@@ -1,81 +1,80 @@
+
 import { NextRequest, NextResponse } from 'next/server';
-import { MajorService } from '@/modules/majors/majors.service';
+import { MajorsRepository } from '@/modules/majors/majors.repo';
 
-const majorService = new MajorService();
+const majorsRepo = new MajorsRepository();
 
-// GET /api/majors/[id] - Get major by ID
+// GET /api/majors/[id] - Get majors by ID
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request,
+  { params }
 ) {
   try {
     const { id } = await params;
     
-    const result = await majorService.getMajorById(id);
+    const item = await majorsRepo.findById(id);
     
-    if (!result.success) {
-      return NextResponse.json(result, { status: 404 });
+    if (!item) {
+      return NextResponse.json(
+        { success: false, error: 'majors not found' },
+        { status: 404 }
+      );
     }
     
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, data: item });
   } catch (error) {
+    console.error('majors GET error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+        error: error instanceof Error ? error.message : 'Failed to fetch majors' 
       },
       { status: 500 }
     );
   }
 }
 
-// PUT /api/majors/[id] - Update major
+// PUT /api/majors/[id] - Update majors
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request,
+  { params }
 ) {
   try {
     const { id } = await params;
     const body = await request.json();
     
-    const result = await majorService.updateMajor(id, body);
+    const item = await majorsRepo.update(id, body);
     
-    if (!result.success) {
-      return NextResponse.json(result, { status: 400 });
-    }
-    
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, data: item });
   } catch (error) {
+    console.error('majors PUT error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+        error: error instanceof Error ? error.message : 'Failed to update majors' 
       },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/majors/[id] - Delete major
+// DELETE /api/majors/[id] - Delete majors
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request,
+  { params }
 ) {
   try {
     const { id } = await params;
     
-    const result = await majorService.deleteMajor(id);
+    await majorsRepo.delete(id);
     
-    if (!result.success) {
-      return NextResponse.json(result, { status: 400 });
-    }
-    
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, message: 'majors deleted successfully' });
   } catch (error) {
+    console.error('majors DELETE error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+        error: error instanceof Error ? error.message : 'Failed to delete majors' 
       },
       { status: 500 }
     );

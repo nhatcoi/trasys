@@ -30,6 +30,8 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   CalendarToday as CalendarIcon,
+  Analytics as AnalyticsIcon,
+  People as PeopleIcon,
 } from '@mui/icons-material';
 import { type OrgUnit } from '@/features/org/api/use-org-units';
 import { getTypeColor, getTypeIcon } from '@/utils/org-unit-utils';
@@ -137,41 +139,128 @@ export default function BasicInfoTab({ unit, onUpdate }: BasicInfoTabProps) {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-          Thông tin cơ bản
-        </Typography>
-        
-        {!isEditing ? (
-          <Button
-            variant="outlined"
-            startIcon={<EditIcon />}
-            onClick={handleEdit}
-            sx={{ minWidth: 120 }}
-          >
-            Chỉnh sửa
-          </Button>
-        ) : (
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="outlined"
-              startIcon={<CancelIcon />}
-              onClick={handleCancel}
-              disabled={isLoading}
-            >
-              Hủy
-            </Button>
+      {/* Header Section */}
+      <Box sx={{ mb: 4 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)', backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Thông tin cơ bản
+          </Typography>
+          
+          {!isEditing ? (
             <Button
               variant="contained"
-              startIcon={isLoading ? <CircularProgress size={16} /> : <SaveIcon />}
-              onClick={handleSave}
-              disabled={isLoading}
-              sx={{ minWidth: 120 }}
+              startIcon={<EditIcon />}
+              onClick={handleEdit}
+              sx={{ 
+                minWidth: 140,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 'bold',
+                boxShadow: 2,
+                '&:hover': {
+                  boxShadow: 4,
+                  transform: 'translateY(-2px)',
+                },
+                transition: 'all 0.3s ease-in-out'
+              }}
             >
-              {isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
+              Chỉnh sửa
             </Button>
-          </Stack>
-        )}
+          ) : (
+            <Stack direction="row" spacing={2}>
+              <Button
+                variant="outlined"
+                startIcon={<CancelIcon />}
+                onClick={handleCancel}
+                disabled={isLoading}
+                sx={{ 
+                  minWidth: 100,
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 'bold'
+                }}
+              >
+                Hủy
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={isLoading ? <CircularProgress size={16} /> : <SaveIcon />}
+                onClick={handleSave}
+                disabled={isLoading}
+                sx={{ 
+                  minWidth: 140,
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 'bold',
+                  boxShadow: 2,
+                  '&:hover': {
+                    boxShadow: 4,
+                    transform: 'translateY(-2px)',
+                  },
+                  transition: 'all 0.3s ease-in-out'
+                }}
+              >
+                {isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </Button>
+            </Stack>
+          )}
+        </Stack>
+        
+        {/* Unit Avatar & Basic Info Header */}
+        <Card sx={{ 
+          background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+          borderRadius: 3,
+          overflow: 'hidden',
+          boxShadow: 3
+        }}>
+          <CardContent sx={{ p: 3 }}>
+            <Stack direction="row" alignItems="center" spacing={3}>
+              <Avatar
+                sx={{
+                  width: 80,
+                  height: 80,
+                  backgroundColor: getTypeColor(unit.type || ''),
+                  boxShadow: 4,
+                  border: '4px solid white'
+                }}
+              >
+                {React.createElement(getTypeIcon(unit.type || ''), { sx: { fontSize: 40 } })}
+              </Avatar>
+              
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1, color: '#1976d2' }}>
+                  {unit.name}
+                </Typography>
+                <Typography variant="h6" sx={{ fontFamily: 'monospace', color: '#666', mb: 2 }}>
+                  {unit.code}
+                </Typography>
+                
+                <Stack direction="row" spacing={2}>
+                  <Chip
+                    label={unit.type || 'Chưa xác định'}
+                    size="small"
+                    sx={{
+                      backgroundColor: getTypeColor(unit.type || ''),
+                      color: 'white',
+                      fontWeight: 'bold',
+                      boxShadow: 1
+                    }}
+                  />
+                  <Chip
+                    label={unit.status || 'Chưa xác định'}
+                    size="small"
+                    sx={{
+                      backgroundColor: unit.status === 'active' ? '#4caf50' : '#ff9800',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      boxShadow: 1
+                    }}
+                  />
+                </Stack>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
       </Box>
 
       {/* Alerts */}
@@ -187,18 +276,32 @@ export default function BasicInfoTab({ unit, onUpdate }: BasicInfoTabProps) {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3 }}>
         {/* Basic Information */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+        <Card sx={{ 
+          borderRadius: 3,
+          boxShadow: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          transition: 'all 0.3s ease-in-out',
+          '&:hover': {
+            boxShadow: 4,
+            transform: 'translateY(-2px)',
+          }
+        }}>
+          <CardContent sx={{ p: 3 }}>
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
+              <Avatar sx={{ backgroundColor: '#1976d2', width: 40, height: 40 }}>
+                <BusinessIcon />
+              </Avatar>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1976d2' }}>
                 Thông tin chính
               </Typography>
-              
-              <Stack spacing={2}>
+            </Stack>
+            
+            <Stack spacing={3}>
                 <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Tên đơn vị
                   </Typography>
                   {isEditing ? (
@@ -208,16 +311,27 @@ export default function BasicInfoTab({ unit, onUpdate }: BasicInfoTabProps) {
                       value={editData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                       placeholder="Nhập tên đơn vị"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#1976d2',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#1976d2',
+                          },
+                        },
+                      }}
                     />
                   ) : (
-                    <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#1976d2', p: 1.5, backgroundColor: '#f5f7fa', borderRadius: 2 }}>
                       {unit.name}
                     </Typography>
                   )}
                 </Box>
 
                 <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Mã đơn vị
                   </Typography>
                   {isEditing ? (
@@ -227,9 +341,20 @@ export default function BasicInfoTab({ unit, onUpdate }: BasicInfoTabProps) {
                       value={editData.code}
                       onChange={(e) => handleInputChange('code', e.target.value)}
                       placeholder="Nhập mã đơn vị"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#1976d2',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#1976d2',
+                          },
+                        },
+                      }}
                     />
                   ) : (
-                    <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
+                    <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#666', p: 1.5, backgroundColor: '#f5f7fa', borderRadius: 2 }}>
                       {unit.code}
                     </Typography>
                   )}
@@ -323,20 +448,33 @@ export default function BasicInfoTab({ unit, onUpdate }: BasicInfoTabProps) {
                     </Typography>
                   )}
                 </Box>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
+            </Stack>
+          </CardContent>
+        </Card>
 
         {/* Dates and Hierarchy */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+        <Card sx={{ 
+          borderRadius: 3,
+          boxShadow: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          transition: 'all 0.3s ease-in-out',
+          '&:hover': {
+            boxShadow: 4,
+            transform: 'translateY(-2px)',
+          }
+        }}>
+          <CardContent sx={{ p: 3 }}>
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
+              <Avatar sx={{ backgroundColor: '#42a5f5', width: 40, height: 40 }}>
+                <CalendarIcon />
+              </Avatar>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#42a5f5' }}>
                 Thời gian & Phân cấp
               </Typography>
+            </Stack>
               
-              <Stack spacing={2}>
+              <Stack spacing={3}>
                 <Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Có hiệu lực từ
@@ -424,77 +562,82 @@ export default function BasicInfoTab({ unit, onUpdate }: BasicInfoTabProps) {
               </Stack>
             </CardContent>
           </Card>
-        </Grid>
 
         {/* Statistics */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+        <Card sx={{ 
+          gridColumn: '1 / -1',
+          borderRadius: 3,
+          boxShadow: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          transition: 'all 0.3s ease-in-out',
+          '&:hover': {
+            boxShadow: 4,
+            transform: 'translateY(-2px)',
+          }
+        }}>
+          <CardContent sx={{ p: 3 }}>
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
+              <Avatar sx={{ backgroundColor: '#ff9800', width: 40, height: 40 }}>
+                <AnalyticsIcon />
+              </Avatar>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
                 Thống kê tổng quan
               </Typography>
-              
-              <Grid container spacing={2}>
-                <Grid item xs={6} sm={3}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Avatar sx={{ backgroundColor: '#1976d2', mx: 'auto', mb: 1 }}>
-                      <BusinessIcon />
-                    </Avatar>
-                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                      {unit.children?.length || 0}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Đơn vị con
-                    </Typography>
-                  </Box>
-                </Grid>
+            </Stack>
+            
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 3 }}>
+              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                <Avatar sx={{ backgroundColor: '#1976d2', mx: 'auto', mb: 2, width: 50, height: 50 }}>
+                  <BusinessIcon sx={{ fontSize: 24 }} />
+                </Avatar>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1976d2', mb: 1 }}>
+                  {unit.children?.length || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold' }}>
+                  Đơn vị con
+                </Typography>
+              </Box>
 
-                <Grid item xs={6} sm={3}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Avatar sx={{ backgroundColor: '#2e7d32', mx: 'auto', mb: 1 }}>
-                      <BusinessIcon />
-                    </Avatar>
-                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                      {unit.employees?.length || 0}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Tổng nhân viên
-                    </Typography>
-                  </Box>
-                </Grid>
+              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                <Avatar sx={{ backgroundColor: '#2e7d32', mx: 'auto', mb: 2, width: 50, height: 50 }}>
+                  <PeopleIcon sx={{ fontSize: 24 }} />
+                </Avatar>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2e7d32', mb: 1 }}>
+                  {unit.employees?.length || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold' }}>
+                  Tổng nhân viên
+                </Typography>
+              </Box>
 
-                <Grid item xs={6} sm={3}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Avatar sx={{ backgroundColor: '#ed6c02', mx: 'auto', mb: 1 }}>
-                      <BusinessIcon />
-                    </Avatar>
-                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                      {unit.parentRelations?.length || 0}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Quan hệ cấp trên
-                    </Typography>
-                  </Box>
-                </Grid>
+              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                <Avatar sx={{ backgroundColor: '#ed6c02', mx: 'auto', mb: 2, width: 50, height: 50 }}>
+                  <BusinessIcon sx={{ fontSize: 24 }} />
+                </Avatar>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#ed6c02', mb: 1 }}>
+                  {unit.parentRelations?.length || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold' }}>
+                  Quan hệ cấp trên
+                </Typography>
+              </Box>
 
-                <Grid item xs={6} sm={3}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Avatar sx={{ backgroundColor: '#9c27b0', mx: 'auto', mb: 1 }}>
-                      <BusinessIcon />
-                    </Avatar>
-                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                      {unit.childRelations?.length || 0}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Quan hệ cấp dưới
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+                <Avatar sx={{ backgroundColor: '#9c27b0', mx: 'auto', mb: 2, width: 50, height: 50 }}>
+                  <BusinessIcon sx={{ fontSize: 24 }} />
+                </Avatar>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#9c27b0', mb: 1 }}>
+                  {unit.childRelations?.length || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold' }}>
+                  Quan hệ cấp dưới
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
     </Box>
   );
 }

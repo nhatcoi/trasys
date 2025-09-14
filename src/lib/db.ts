@@ -8,5 +8,5 @@ export const db = globalForPrisma.prisma ?? new PrismaClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
 
-// Export types for TypeScript
-export type { OrgUnit, Employee } from '@prisma/client'
+// Export all Prisma types for TypeScript
+export type * from '@prisma/client'

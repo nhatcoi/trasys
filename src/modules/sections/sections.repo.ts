@@ -30,13 +30,13 @@ export class SectionRepository {
 
     // Execute query
     const [items, total] = await Promise.all([
-      db.sections.findMany({
+      db.section.findMany({
         where,
         skip,
         take: size,
         orderBy: { [sort]: order },
       }),
-      db.sections.count({ where }),
+      db.section.count({ where }),
     ]);
 
     // Serialize all IDs for consistency
@@ -64,7 +64,7 @@ export class SectionRepository {
 
   // Find section by ID
   async findById(id: string) {
-    const section = await db.sections.findUnique({
+    const section = await db.section.findUnique({
       where: { id: parseInt(id) },
     });
 
@@ -83,7 +83,7 @@ export class SectionRepository {
 
   // Create new section
   async create(data: CreateSectionsInput) {
-    const created = await db.sections.create({
+    const created = await db.section.create({
       data: {
         code: data.code,
         course_id: parseInt(data.course_id),
@@ -107,7 +107,7 @@ export class SectionRepository {
 
   // Update section
   async update(id: string, data: UpdateSectionsInput) {
-    const updated = await db.sections.update({
+    const updated = await db.section.update({
       where: { id: parseInt(id) },
       data: {
         code: data.code,
@@ -132,7 +132,7 @@ export class SectionRepository {
 
   // Delete section
   async delete(id: string) {
-    await db.sections.delete({
+    await db.section.delete({
       where: { id: parseInt(id) },
     });
   }

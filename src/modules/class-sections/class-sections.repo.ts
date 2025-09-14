@@ -39,13 +39,13 @@ export class ClassSectionRepository {
 
     // Execute query
     const [items, total] = await Promise.all([
-      db.class_sections.findMany({
+      db.classSection.findMany({
         where,
         skip,
         take: size,
         orderBy: { [sort]: order },
       }),
-      db.class_sections.count({ where }),
+      db.classSection.count({ where }),
     ]);
 
     // Serialize all IDs for consistency
@@ -75,7 +75,7 @@ export class ClassSectionRepository {
 
   // Find by ID
   async findById(id: string): Promise<ClassSection | null> {
-    const item = await db.class_sections.findUnique({
+    const item = await db.classSection.findUnique({
       where: { id: BigInt(id) },
     });
 
@@ -95,7 +95,7 @@ export class ClassSectionRepository {
 
   // Create new class section
   async create(data: CreateClassSectionInput): Promise<ClassSection> {
-    const created = await db.class_sections.create({
+    const created = await db.classSection.create({
       data: {
         course_id: BigInt(data.course_id),
         course_version_id: data.course_version_id ? BigInt(data.course_version_id) : null,
@@ -120,7 +120,7 @@ export class ClassSectionRepository {
 
   // Update class section
   async update(id: string, data: UpdateClassSectionInput): Promise<ClassSection> {
-    const updated = await db.class_sections.update({
+    const updated = await db.classSection.update({
       where: { id: BigInt(id) },
       data: {
         course_id: data.course_id ? BigInt(data.course_id) : undefined,
@@ -146,7 +146,7 @@ export class ClassSectionRepository {
 
   // Delete class section
   async delete(id: string): Promise<void> {
-    await db.class_sections.delete({
+    await db.classSection.delete({
       where: { id: BigInt(id) },
     });
   }

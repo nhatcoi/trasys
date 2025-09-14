@@ -44,13 +44,13 @@ export class OrgStructureRequestRepository {
 
     // Execute query
     const [items, total] = await Promise.all([
-      db.org_structure_request.findMany({
+      db.orgStructureRequest.findMany({
         where,
         skip,
         take: size,
         orderBy: { [sort]: order },
       }),
-      db.org_structure_request.count({ where }),
+      db.orgStructureRequest.count({ where }),
     ]);
 
     // Serialize all IDs for consistency
@@ -78,7 +78,7 @@ export class OrgStructureRequestRepository {
 
   // Find by ID
   async findById(id: string): Promise<OrgStructureRequest | null> {
-    const item = await db.org_structure_request.findUnique({
+    const item = await db.orgStructureRequest.findUnique({
       where: { id: BigInt(id) },
     });
 
@@ -96,7 +96,7 @@ export class OrgStructureRequestRepository {
 
   // Create new org structure request
   async create(data: CreateOrgStructureRequestInput): Promise<OrgStructureRequest> {
-    const created = await db.org_structure_request.create({
+    const created = await db.orgStructureRequest.create({
       data: {
         requester_id: data.requester_id ? BigInt(data.requester_id) : null,
         request_type: data.request_type,
@@ -119,7 +119,7 @@ export class OrgStructureRequestRepository {
 
   // Update org structure request
   async update(id: string, data: UpdateOrgStructureRequestInput): Promise<OrgStructureRequest> {
-    const updated = await db.org_structure_request.update({
+    const updated = await db.orgStructureRequest.update({
       where: { id: BigInt(id) },
       data: {
         requester_id: data.requester_id ? BigInt(data.requester_id) : undefined,
@@ -143,7 +143,7 @@ export class OrgStructureRequestRepository {
 
   // Delete org structure request
   async delete(id: string): Promise<void> {
-    await db.org_structure_request.delete({
+    await db.orgStructureRequest.delete({
       where: { id: BigInt(id) },
     });
   }

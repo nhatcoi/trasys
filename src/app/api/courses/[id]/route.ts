@@ -1,81 +1,80 @@
+
 import { NextRequest, NextResponse } from 'next/server';
-import { CourseService } from '@/modules/courses/courses.service';
+import { CourseRepository } from '@/modules/courses/courses.repo';
 
-const courseService = new CourseService();
+const courseRepo = new CourseRepository();
 
-// GET /api/courses/[id] - Get course by ID
+// GET /api/courses/[id] - Get courses by ID
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request,
+  { params }
 ) {
   try {
     const { id } = await params;
     
-    const result = await courseService.getCourseById(id);
+    const item = await courseRepo.findById(id);
     
-    if (!result.success) {
-      return NextResponse.json(result, { status: 404 });
+    if (!item) {
+      return NextResponse.json(
+        { success: false, error: 'courses not found' },
+        { status: 404 }
+      );
     }
     
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, data: item });
   } catch (error) {
+    console.error('courses GET error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+        error: error instanceof Error ? error.message : 'Failed to fetch courses' 
       },
       { status: 500 }
     );
   }
 }
 
-// PUT /api/courses/[id] - Update course
+// PUT /api/courses/[id] - Update courses
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request,
+  { params }
 ) {
   try {
     const { id } = await params;
     const body = await request.json();
     
-    const result = await courseService.updateCourse(id, body);
+    const item = await courseRepo.update(id, body);
     
-    if (!result.success) {
-      return NextResponse.json(result, { status: 400 });
-    }
-    
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, data: item });
   } catch (error) {
+    console.error('courses PUT error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+        error: error instanceof Error ? error.message : 'Failed to update courses' 
       },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/courses/[id] - Delete course
+// DELETE /api/courses/[id] - Delete courses
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request,
+  { params }
 ) {
   try {
     const { id } = await params;
     
-    const result = await courseService.deleteCourse(id);
+    await courseRepo.delete(id);
     
-    if (!result.success) {
-      return NextResponse.json(result, { status: 400 });
-    }
-    
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true, message: 'courses deleted successfully' });
   } catch (error) {
+    console.error('courses DELETE error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+        error: error instanceof Error ? error.message : 'Failed to delete courses' 
       },
       { status: 500 }
     );

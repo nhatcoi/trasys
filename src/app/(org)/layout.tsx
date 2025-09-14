@@ -36,6 +36,8 @@ import {
   Approval as ApprovalIcon,
   Publish as PublishIcon,
   Storage as StorageIcon,
+  AccountTree as AccountTreeIcon,
+  Timeline as TimelineIcon,
 } from '@mui/icons-material';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -51,6 +53,7 @@ export default function OrgLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [unitManagementOpen, setUnitManagementOpen] = useState(false);
+  const [treeManagementOpen, setTreeManagementOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -66,6 +69,10 @@ export default function OrgLayout({
     setUnitManagementOpen(!unitManagementOpen);
   };
 
+  const handleTreeManagementToggle = () => {
+    setTreeManagementOpen(!treeManagementOpen);
+  };
+
   const menuItems = [
     {
       key: '/org/dashboard',
@@ -73,9 +80,22 @@ export default function OrgLayout({
       label: 'Dashboard',
     },
     {
-      key: '/org/tree',
+      key: 'tree-management',
       icon: <ApartmentIcon />,
       label: 'Cây tổ chức',
+      hasSubmenu: true,
+      submenu: [
+        {
+          key: '/org/tree',
+          icon: <AccountTreeIcon />,
+          label: 'Cây tổ chức',
+        },
+        {
+          key: '/org/diagram',
+          icon: <TimelineIcon />,
+          label: 'Sơ đồ',
+        },
+      ],
     },
     {
       key: 'unit-management',
@@ -126,7 +146,11 @@ export default function OrgLayout({
 
   const handleMenuItemClick = (item: any) => {
     if (item.hasSubmenu) {
-      handleUnitManagementToggle();
+      if (item.key === 'unit-management') {
+        handleUnitManagementToggle();
+      } else if (item.key === 'tree-management') {
+        handleTreeManagementToggle();
+      }
     } else {
       handleMenuClick(item.key);
     }
@@ -147,7 +171,7 @@ export default function OrgLayout({
             textAlign: 'center'
           }}
         >
-          {collapsed ? 'T' : 'Trasy'}
+          {collapsed ? 'T' : 'Quản lí cơ cấu tổ chức'}
         </Typography>
       </Toolbar>
       
@@ -176,7 +200,33 @@ export default function OrgLayout({
                   <>
                     <ListItemText primary={item.label} />
                     {item.hasSubmenu && (
-                      unitManagementOpen ? <ChevronRightIcon /> : <ChevronLeftIcon />
+                      item.key === 'tree-management' ? (
+                        treeManagementOpen ? (
+                          <ChevronRightIcon sx={{ 
+                            transform: 'rotate(90deg)',
+                            transition: 'transform 0.2s ease-in-out'
+                          }} />
+                        ) : (
+                          <ChevronRightIcon sx={{ 
+                            transition: 'transform 0.2s ease-in-out'
+                          }} />
+                        )
+                      ) : (
+                        item.key === 'unit-management' ? (
+                          unitManagementOpen ? (
+                            <ChevronRightIcon sx={{ 
+                              transform: 'rotate(90deg)',
+                              transition: 'transform 0.2s ease-in-out'
+                            }} />
+                          ) : (
+                            <ChevronRightIcon sx={{ 
+                              transition: 'transform 0.2s ease-in-out'
+                            }} />
+                          )
+                        ) : (
+                          <ChevronRightIcon />
+                        )
+                      )
                     )}
                   </>
                 )}
@@ -185,7 +235,10 @@ export default function OrgLayout({
             
             {/* Submenu */}
             {item.hasSubmenu && item.submenu && !collapsed && (
-              <Collapse in={unitManagementOpen} timeout="auto" unmountOnExit>
+              <Collapse in={
+                (item.key === 'unit-management' && unitManagementOpen) || 
+                (item.key === 'tree-management' && treeManagementOpen)
+              } timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
                   {item.submenu.map((subItem) => (
                     <ListItem key={subItem.key} disablePadding>
@@ -304,3 +357,4 @@ export default function OrgLayout({
     </Box>
   );
 }
+

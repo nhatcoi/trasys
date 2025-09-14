@@ -91,8 +91,8 @@ export function useOrgUnitsPagination(
   const { data: orgUnitsResponse, isLoading, isFetching, error } = useOrgUnits(pagination.queryParams);
 
   // Extract data from response
-  const orgUnits = orgUnitsResponse?.items || [];
-  const paginationInfo = orgUnitsResponse?.pagination;
+  const orgUnits = orgUnitsResponse?.data || [];
+  const paginationInfo = null; // No pagination info in new API format
 
   // Helper to update specific filter
   const updateFilter = (key: keyof OrgUnitFilters, value: string) => {

@@ -42,11 +42,7 @@ export class OrgUnitRelationRepository {
         where,
         skip,
         take: size,
-        orderBy: { [sort]: order },
-        include: {
-          parent: true,
-          child: true,
-        },
+        orderBy: sort ? { [sort]: order } : { created_at: 'desc' },
       }),
       db.orgUnitRelation.count({ where }),
     ]);
