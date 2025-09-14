@@ -26,8 +26,8 @@ export default function SignIn() {
             if (result?.error) {
                 setError('Email/Username hoặc password không đúng')
             } else {
-                // Đăng nhập thành công
-                router.push('/')
+                // Đăng nhập thành công - redirect về /hr/dashboard
+                router.push('/hr/dashboard')
                 router.refresh()
             }
         } catch (error) {

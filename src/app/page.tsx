@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Button,
@@ -22,6 +25,20 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { DbTest } from '@/components/db-test';
 
 export default function Home() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Nếu user đã đăng nhập, redirect về /hr/dashboard
+    if (status === 'authenticated' && session) {
+      router.push('/hr/dashboard');
+    }
+  }, [session, status, router]);
+
+  // Nếu đang loading hoặc đã đăng nhập, không hiển thị gì
+  if (status === 'loading' || (status === 'authenticated' && session)) {
+    return null;
+  }
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
       {/* Header */}
@@ -49,19 +66,19 @@ export default function Home() {
                       Hệ thống đào tạo đơn giản
                     </Typography>
                   </Box>
-                  
+
                   <Stack spacing={2}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                       <CheckCircleIcon color="success" />
                       <Typography>Material-UI đã sẵn sàng</Typography>
                     </Box>
-                    
+
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                       <RocketIcon color="primary" />
                       <Typography>Next.js App Router</Typography>
                     </Box>
                   </Stack>
-                  
+
                   <Stack direction="row" spacing={2} justifyContent="center">
                     <Button
                       variant="contained"
@@ -86,7 +103,7 @@ export default function Home() {
               </CardContent>
             </Card>
           </Grid>
-          
+
           <Grid item xs={12} sm={10} md={8} lg={6}>
             <DbTest />
           </Grid>
