@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -10,28 +10,182 @@ import {
   Grid,
   Chip,
   Avatar,
-  Divider,
+  Button,
+  IconButton,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   Business as BusinessIcon,
+  Edit as EditIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
   CalendarToday as CalendarIcon,
-  LocationOn as LocationIcon,
-  Description as DescriptionIcon,
-  Home as HomeIcon,
 } from '@mui/icons-material';
 import { type OrgUnit } from '@/features/org/api/use-org-units';
 import { getTypeColor, getTypeIcon } from '@/utils/org-unit-utils';
 
 interface BasicInfoTabProps {
   unit: OrgUnit;
+  onUpdate: (updatedUnit: Partial<OrgUnit>) => Promise<void>;
 }
 
-export default function BasicInfoTab({ unit }: BasicInfoTabProps) {
+interface EditFormData {
+  name: string;
+  code: string;
+  type: string;
+  status: string;
+  description: string;
+  effective_from: string;
+  effective_to: string;
+}
+
+export default function BasicInfoTab({ unit, onUpdate }: BasicInfoTabProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [editData, setEditData] = useState<EditFormData>({
+    name: unit.name,
+    code: unit.code,
+    type: unit.type || '',
+    status: unit.status || '',
+    description: unit.description || '',
+    effective_from: unit.effective_from ? new Date(unit.effective_from).toISOString().split('T')[0] : '',
+    effective_to: unit.effective_to ? new Date(unit.effective_to).toISOString().split('T')[0] : '',
+  });
+
+  const orgUnitTypes = [
+    { value: 'U', label: 'University (Trường Đại học)' },
+    { value: 'F', label: 'Faculty (Khoa)' },
+    { value: 'D', label: 'Department (Bộ môn)' },
+    { value: 'B', label: 'Board (Ban)' },
+    { value: 'C', label: 'Center (Trung tâm)' },
+  ];
+
+  const orgUnitStatuses = [
+    { value: 'active', label: 'Hoạt động' },
+    { value: 'inactive', label: 'Không hoạt động' },
+    { value: 'pending', label: 'Chờ duyệt' },
+    { value: 'archived', label: 'Lưu trữ' },
+  ];
+
+  const handleEdit = () => {
+    setIsEditing(true);
+    setError(null);
+    setSuccess(null);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditData({
+      name: unit.name,
+      code: unit.code,
+      type: unit.type || '',
+      status: unit.status || '',
+      description: unit.description || '',
+      effective_from: unit.effective_from ? new Date(unit.effective_from).toISOString().split('T')[0] : '',
+      effective_to: unit.effective_to ? new Date(unit.effective_to).toISOString().split('T')[0] : '',
+    });
+    setError(null);
+    setSuccess(null);
+  };
+
+  const handleSave = async () => {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // Prepare update data
+      const updateData: Partial<OrgUnit> = {
+        name: editData.name,
+        code: editData.code,
+        type: editData.type || null,
+        status: editData.status || null,
+        description: editData.description || null,
+        effective_from: editData.effective_from ? new Date(editData.effective_from).toISOString() : null,
+        effective_to: editData.effective_to ? new Date(editData.effective_to).toISOString() : null,
+      };
+
+      await onUpdate(updateData);
+      
+      setIsEditing(false);
+      setSuccess('Cập nhật thông tin thành công!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi cập nhật');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof EditFormData, value: string) => {
+    setEditData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
   return (
     <Box>
-      <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3 }}>
-        Thông tin cơ bản
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+          Thông tin cơ bản
+        </Typography>
+        
+        {!isEditing ? (
+          <Button
+            variant="outlined"
+            startIcon={<EditIcon />}
+            onClick={handleEdit}
+            sx={{ minWidth: 120 }}
+          >
+            Chỉnh sửa
+          </Button>
+        ) : (
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              startIcon={<CancelIcon />}
+              onClick={handleCancel}
+              disabled={isLoading}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={isLoading ? <CircularProgress size={16} /> : <SaveIcon />}
+              onClick={handleSave}
+              disabled={isLoading}
+              sx={{ minWidth: 120 }}
+            >
+              {isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
+            </Button>
+          </Stack>
+        )}
+      </Box>
+
+      {/* Alerts */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+      
+      {success && (
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+          {success}
+        </Alert>
+      )}
 
       <Grid container spacing={3}>
         {/* Basic Information */}
@@ -44,54 +198,131 @@ export default function BasicInfoTab({ unit }: BasicInfoTabProps) {
               
               <Stack spacing={2}>
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Tên đơn vị
+                  </Typography>
+                  {isEditing ? (
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={editData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      placeholder="Nhập tên đơn vị"
+                    />
+                  ) : (
+                    <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                      {unit.name}
+                    </Typography>
+                  )}
+                </Box>
+
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Mã đơn vị
                   </Typography>
-                  <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
-                    {unit.code}
-                  </Typography>
+                  {isEditing ? (
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={editData.code}
+                      onChange={(e) => handleInputChange('code', e.target.value)}
+                      placeholder="Nhập mã đơn vị"
+                    />
+                  ) : (
+                    <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
+                      {unit.code}
+                    </Typography>
+                  )}
                 </Box>
 
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Loại đơn vị
                   </Typography>
-                  <Chip
-                    label={unit.type || 'Chưa xác định'}
-                    size="small"
-                    sx={{
-                      backgroundColor: getTypeColor(unit.type || ''),
-                      color: 'white',
-                      fontSize: '0.75rem',
-                    }}
-                  />
+                  {isEditing ? (
+                    <FormControl fullWidth size="small">
+                      <Select
+                        value={editData.type}
+                        onChange={(e) => handleInputChange('type', e.target.value)}
+                        displayEmpty
+                      >
+                        <MenuItem value="">
+                          <em>Chọn loại đơn vị</em>
+                        </MenuItem>
+                        {orgUnitTypes.map((type) => (
+                          <MenuItem key={type.value} value={type.value}>
+                            {type.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <Chip
+                      label={unit.type || 'Chưa xác định'}
+                      size="small"
+                      sx={{
+                        backgroundColor: getTypeColor(unit.type || ''),
+                        color: 'white',
+                        fontSize: '0.75rem',
+                      }}
+                    />
+                  )}
                 </Box>
 
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Trạng thái
                   </Typography>
-                  <Chip
-                    label={unit.status || 'Chưa xác định'}
-                    size="small"
-                    sx={{
-                      backgroundColor: getTypeColor(unit.status || ''),
-                      color: 'white',
-                      fontSize: '0.75rem',
-                    }}
-                  />
+                  {isEditing ? (
+                    <FormControl fullWidth size="small">
+                      <Select
+                        value={editData.status}
+                        onChange={(e) => handleInputChange('status', e.target.value)}
+                        displayEmpty
+                      >
+                        <MenuItem value="">
+                          <em>Chọn trạng thái</em>
+                        </MenuItem>
+                        {orgUnitStatuses.map((status) => (
+                          <MenuItem key={status.value} value={status.value}>
+                            {status.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <Chip
+                      label={unit.status || 'Chưa xác định'}
+                      size="small"
+                      sx={{
+                        backgroundColor: getTypeColor(unit.status || ''),
+                        color: 'white',
+                        fontSize: '0.75rem',
+                      }}
+                    />
+                  )}
                 </Box>
 
-                {unit.description && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Mô tả
-                    </Typography>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Mô tả
+                  </Typography>
+                  {isEditing ? (
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      size="small"
+                      value={editData.description}
+                      onChange={(e) => handleInputChange('description', e.target.value)}
+                      placeholder="Nhập mô tả đơn vị"
+                    />
+                  ) : (
                     <Typography variant="body1">
-                      {unit.description}
+                      {unit.description || 'Chưa có mô tả'}
                     </Typography>
-                  </Box>
-                )}
+                  )}
+                </Box>
               </Stack>
             </CardContent>
           </Card>
@@ -106,27 +337,45 @@ export default function BasicInfoTab({ unit }: BasicInfoTabProps) {
               </Typography>
               
               <Stack spacing={2}>
-                {unit.effective_from && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Có hiệu lực từ
-                    </Typography>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Có hiệu lực từ
+                  </Typography>
+                  {isEditing ? (
+                    <TextField
+                      fullWidth
+                      type="date"
+                      size="small"
+                      value={editData.effective_from}
+                      onChange={(e) => handleInputChange('effective_from', e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  ) : (
                     <Typography variant="body1">
-                      {new Date(unit.effective_from).toLocaleDateString('vi-VN')}
+                      {unit.effective_from ? new Date(unit.effective_from).toLocaleDateString('vi-VN') : 'Chưa xác định'}
                     </Typography>
-                  </Box>
-                )}
+                  )}
+                </Box>
 
-                {unit.effective_to && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Có hiệu lực đến
-                    </Typography>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Có hiệu lực đến
+                  </Typography>
+                  {isEditing ? (
+                    <TextField
+                      fullWidth
+                      type="date"
+                      size="small"
+                      value={editData.effective_to}
+                      onChange={(e) => handleInputChange('effective_to', e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  ) : (
                     <Typography variant="body1">
-                      {new Date(unit.effective_to).toLocaleDateString('vi-VN')}
+                      {unit.effective_to ? new Date(unit.effective_to).toLocaleDateString('vi-VN') : 'Không giới hạn'}
                     </Typography>
-                  </Box>
-                )}
+                  )}
+                </Box>
 
                 <Box>
                   <Typography variant="body2" color="text.secondary">

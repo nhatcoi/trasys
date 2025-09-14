@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SectionService } from '@/modules/sections/sections.service';
-import { SectionQuerySchema } from '@/modules/sections/sections.schema';
 
 const sectionService = new SectionService();
 
@@ -10,7 +9,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const params = Object.fromEntries(searchParams.entries());
     
-    const result = await sectionService.getAllSectionsWithOptions(params);
+    const result = await sectionService.getAll(params);
     
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
@@ -32,7 +31,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const result = await sectionService.createSection(body);
+    const result = await sectionService.create(body);
     
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });

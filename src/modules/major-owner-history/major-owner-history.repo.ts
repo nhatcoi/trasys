@@ -12,7 +12,7 @@ import {
 
 export class MajorOwnerHistoryRepository {
   // Find all major owner histories with pagination and filters
-  async findAllWithOptions(options: MajorOwnerHistoryQuery) {
+  async findAll(options: MajorOwnerHistoryQuery) {
     const { page, size, sort, order, search, major_id, org_unit_id, start_date, end_date } = options;
     const skip = (page - 1) * size;
 
@@ -54,7 +54,7 @@ export class MajorOwnerHistoryRepository {
       db.major_owner_history.count({ where }),
     ]);
 
-    // Convert BigInt to string for JSON serialization
+    // Serialize all IDs for consistency
     const serializedItems = items.map(item => ({
       ...item,
       id: item.id.toString(),

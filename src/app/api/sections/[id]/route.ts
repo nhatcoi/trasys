@@ -11,7 +11,7 @@ export async function GET(
   try {
     const { id } = await params;
     
-    const result = await sectionService.getSectionById(id);
+    const result = await sectionService.getById(id);
     
     if (!result.success) {
       return NextResponse.json(result, { status: 404 });
@@ -38,7 +38,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     
-    const result = await sectionService.updateSection(id, body);
+    const result = await sectionService.update(id, body);
     
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
@@ -64,7 +64,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     
-    const result = await sectionService.deleteSection(id);
+    const result = await sectionService.delete(id);
     
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });

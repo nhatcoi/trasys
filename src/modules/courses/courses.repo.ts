@@ -46,7 +46,7 @@ export class CourseRepository {
       db.courses.count({ where }),
     ]);
 
-    // Convert BigInt to string for JSON serialization
+    // Serialize all IDs for consistency
     const serializedItems = items.map(item => ({
       ...item,
       id: item.id.toString(),

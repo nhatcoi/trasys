@@ -1,15 +1,17 @@
 import { z } from 'zod';
 import { createMinimalQuerySchema } from '@/lib/validation-utils';
 
-// Minimal Programs schemas
+// Minimal Programs schemas - match database requirements
 export const CreateProgramsSchema = z.object({
-  code: z.string().min(1, 'Code is required'),
-  name_vi: z.string().min(1, 'Name is required'),
-  org_unit_id: z.string().min(1, 'Org unit is required'),
+  major_id: z.string().optional(), // Temporarily optional for debugging
+  org_unit_id: z.string().optional(),
+  version: z.string().min(1, 'Version is required'),
+  total_credits: z.number().min(1, 'Total credits is required'),
   // Optional fields
-  name_en: z.string().optional(),
-  description: z.string().optional(),
-  status: z.string().default('active'),
+  plo: z.any().optional(),
+  status: z.string().default('DRAFT'),
+  effective_from: z.string().optional(),
+  effective_to: z.string().optional(),
 });
 
 export const UpdateProgramsSchema = CreateProgramsSchema.partial();

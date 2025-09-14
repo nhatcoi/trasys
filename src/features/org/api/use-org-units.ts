@@ -134,7 +134,7 @@ export function useOrgUnits(params?: {
     },
     staleTime: 5 * 60 * 1000, // 5 minutes cache
     refetchOnWindowFocus: false,
-    keepPreviousData: true, // Keep previous data while fetching new data
+    placeholderData: (previousData) => previousData, // Keep previous data while fetching new data
   });
 }
 
@@ -169,13 +169,15 @@ export function useUpdateOrgUnit() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: CreateUnitData }) => 
+    mutationFn: ({ id, ...data }: { id: string } & Partial<OrgUnit>) => 
       fetcher<OrgUnit>(`/org/units/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
       }),
-    onSuccess: () => {
-      // xóa cache và lấy lại ds đơn vị
+    onSuccess: (_, { id }) => {
+      // Invalidate specific unit cache
+      queryClient.invalidateQueries({ queryKey: queryKeys.org.unit(id) });
+      // Invalidate units list cache
       queryClient.invalidateQueries({ queryKey: queryKeys.org.units() });
     },
   });
@@ -236,4 +238,97 @@ export function useOrgUnitHistory(params?: {
     enabled: !!params?.org_unit_id,
     staleTime: 2 * 60 * 1000, // 2 minutes cache
   });
+}
+
+// Hook for fetching org unit relations
+export function useOrgUnitRelations(unitId: string) {
+  return useQuery({
+    queryKey: ['org-unit-relations', unitId],
+    queryFn: async () => {
+      // Fetch relations where this unit is parent
+      const parentResponse = await fetcher(`/org-unit-relations?parent_id=${unitId}`);
+      // Fetch relations where this unit is child  
+      const childResponse = await fetcher(`/org-unit-relations?child_id=${unitId}`);
+      
+      return {
+        parentRelations: (parentResponse as any).items || [],
+        childRelations: (childResponse as any).items || [],
+      };
+    },
+    enabled: !!unitId,
+    staleTime: 2 * 60 * 1000, // 2 minutes cache
+  });
+}
+
+// Hook for CRUD operations on org unit relations
+export function useOrgUnitRelationMutations() {
+  const queryClient = useQueryClient();
+
+  const createRelation = useMutation({
+    mutationFn: (data: {
+      parent_id: string;
+      child_id: string;
+      relation_type: 'direct' | 'advisory' | 'support' | 'collab';
+      effective_from: string;
+      effective_to?: string | null;
+      note?: string;
+    }) => fetcher('/org-unit-relations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    onSuccess: (_, variables) => {
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['org-unit-relations', variables.parent_id] });
+      queryClient.invalidateQueries({ queryKey: ['org-unit-relations', variables.child_id] });
+    },
+  });
+
+  const updateRelation = useMutation({
+    mutationFn: ({ 
+      key, 
+      data 
+    }: {
+      key: {
+        parent_id: string;
+        child_id: string;
+        relation_type: string;
+        effective_from: string;
+      };
+      data: Partial<{
+        relation_type: 'direct' | 'advisory' | 'support' | 'collab';
+        effective_to: string | null;
+        note: string;
+      }>;
+    }) => fetcher(`/org-unit-relations/by-key?${new URLSearchParams(key as any).toString()}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+    onSuccess: (_, variables) => {
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['org-unit-relations', variables.key.parent_id] });
+      queryClient.invalidateQueries({ queryKey: ['org-unit-relations', variables.key.child_id] });
+    },
+  });
+
+  const deleteRelation = useMutation({
+    mutationFn: (key: {
+      parent_id: string;
+      child_id: string;
+      relation_type: string;
+      effective_from: string;
+    }) => fetcher(`/org-unit-relations/by-key?${new URLSearchParams(key as any).toString()}`, {
+      method: 'DELETE',
+    }),
+    onSuccess: (_, variables) => {
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['org-unit-relations', variables.parent_id] });
+      queryClient.invalidateQueries({ queryKey: ['org-unit-relations', variables.child_id] });
+    },
+  });
+
+  return {
+    createRelation,
+    updateRelation,
+    deleteRelation,
+  };
 }

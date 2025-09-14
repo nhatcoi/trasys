@@ -34,7 +34,7 @@ import {
   Assessment as AssessmentIcon,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
-import { useOrgUnit, type OrgUnit } from '@/features/org/api/use-org-units';
+import { useOrgUnit, useUpdateOrgUnit, type OrgUnit } from '@/features/org/api/use-org-units';
 import { 
   getStatusColor, 
   getTypeColor, 
@@ -90,6 +90,17 @@ export default function UnitDetailPage() {
 
   // Use React Query to fetch unit details
   const { data: unit, isLoading: loading, error } = useOrgUnit(unitId);
+  const updateOrgUnitMutation = useUpdateOrgUnit();
+
+  const handleUpdateUnit = async (updateData: Partial<OrgUnit>) => {
+    if (!unit?.id) throw new Error('Unit ID not found');
+    
+    await updateOrgUnitMutation.mutateAsync({
+      id: unit.id,
+      ...updateData,
+    });
+  };
+
 
   const handleEdit = () => {
     console.log('Edit unit:', unit?.id);
@@ -293,11 +304,11 @@ export default function UnitDetailPage() {
         </Box>
 
         <TabPanel value={tabValue} index={0}>
-          <BasicInfoTab unit={unit} />
+          <BasicInfoTab unit={unit} onUpdate={handleUpdateUnit} />
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
-          <RelationsTab unit={unit} />
+          <RelationsTab unitId={unitId} />
         </TabPanel>
 
         <TabPanel value={tabValue} index={2}>

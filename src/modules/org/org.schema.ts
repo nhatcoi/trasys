@@ -4,10 +4,11 @@ import { z } from 'zod';
 export const CreateOrgUnitSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   code: z.string().min(1, 'Code is required'),
-  parent_id: z.number().optional(),
+  parent_id: z.string().optional(),
   type: z.string().optional(),
   description: z.string().optional(),
   status: z.string().optional(),
+  campus_id: z.string().optional(),
   effective_from: z.string().optional(),
   effective_to: z.string().optional(),
 });
@@ -15,12 +16,13 @@ export const CreateOrgUnitSchema = z.object({
 export const UpdateOrgUnitSchema = z.object({
   name: z.string().min(1).optional(),
   code: z.string().min(1).optional(),
-  parent_id: z.number().optional(),
+  parent_id: z.string().optional(),
   type: z.string().optional(),
   description: z.string().optional(),
   status: z.string().optional(),
+  campus_id: z.string().optional(),
   effective_from: z.string().optional(),
-  effective_to: z.string().optional(),
+  effective_to: z.string().nullable().optional(),
 });
 
 // Params validation schema

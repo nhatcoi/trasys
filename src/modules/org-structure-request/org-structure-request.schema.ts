@@ -4,11 +4,11 @@ import { createMinimalQuerySchema } from '@/lib/validation-utils';
 // Minimal OrgStructureRequest schemas
 export const CreateOrgStructureRequestSchema = z.object({
   request_type: z.string().min(1, 'Request type is required'),
-  org_unit_id: z.string().min(1, 'Org unit ID is required'),
-  // Optional fields
-  status: z.string().default('pending'),
-  description: z.string().optional(),
-  requested_by: z.string().optional(),
+  requester_id: z.string().optional(),
+  target_org_unit_id: z.string().optional(),
+  payload: z.any(), // JSON field - required
+  status: z.string().default('SUBMITTED'),
+  workflow_step: z.number().default(1),
 });
 
 export const UpdateOrgStructureRequestSchema = CreateOrgStructureRequestSchema.partial();

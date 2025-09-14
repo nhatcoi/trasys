@@ -12,7 +12,7 @@ import {
 
 export class OrgStructureRequestRepository {
   // Find all org structure requests with pagination and filters
-  async findAllWithOptions(options: OrgStructureRequestQuery) {
+  async findAll(options: OrgStructureRequestQuery) {
     const { page, size, sort, order, search, request_type, status, target_org_unit_id, requester_id } = options;
     const skip = (page - 1) * size;
 
@@ -53,7 +53,7 @@ export class OrgStructureRequestRepository {
       db.org_structure_request.count({ where }),
     ]);
 
-    // Convert BigInt to string for JSON serialization
+    // Serialize all IDs for consistency
     const serializedItems = items.map(item => ({
       ...item,
       id: item.id.toString(),

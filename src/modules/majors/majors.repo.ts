@@ -39,7 +39,7 @@ export class MajorRepository {
       db.majors.count({ where }),
     ]);
 
-    // Simple serialization
+    // Serialize all IDs for consistency
     const serializedItems = items.map(item => ({
       ...item,
       id: item.id.toString(),

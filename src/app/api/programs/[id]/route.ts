@@ -11,7 +11,7 @@ export async function GET(
   try {
     const { id } = await params;
     
-    const result = await programService.getProgramById(id);
+    const result = await programService.getById(id);
     
     if (!result.success) {
       return NextResponse.json(result, { status: 404 });
@@ -38,7 +38,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     
-    const result = await programService.updateProgram(id, body);
+    const result = await programService.update(id, body);
     
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
@@ -64,7 +64,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     
-    const result = await programService.deleteProgram(id);
+    const result = await programService.delete(id);
     
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });

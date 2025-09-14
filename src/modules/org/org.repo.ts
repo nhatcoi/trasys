@@ -134,7 +134,7 @@ export class OrgUnitRepository {
       data: {
         name: data.name,
         code: data.code,
-        parent_id: data.parent_id,
+        parent_id: data.parent_id ? BigInt(data.parent_id) : null,
         type: data.type,
         description: data.description,
         status: data.status,
@@ -149,7 +149,12 @@ export class OrgUnitRepository {
     return await db.orgUnit.update({
       where: { id },
       data: {
-        ...data,
+        name: data.name,
+        code: data.code,
+        parent_id: data.parent_id ? BigInt(data.parent_id) : undefined,
+        type: data.type,
+        description: data.description,
+        status: data.status,
         effective_from: data.effective_from ? new Date(data.effective_from) : undefined,
         effective_to: data.effective_to ? new Date(data.effective_to) : undefined,
       },

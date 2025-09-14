@@ -15,11 +15,10 @@ export class ProgramService {
     this.programRepo = new ProgramRepository();
   }
 
-  // Simplified get all programs
-  async getAllProgramsWithOptions(options: ProgramsQuery) {
+  async getAll(options: ProgramsQuery) {
     try {
       const validatedOptions = ProgramsQuerySchema.parse(options);
-      const result = await this.programRepo.findAllWithOptions(validatedOptions);
+      const result = await this.programRepo.findAll(validatedOptions);
       
       return { success: true, data: result };
     } catch (error) {
@@ -30,8 +29,7 @@ export class ProgramService {
     }
   }
 
-  // Simplified get by ID
-  async getProgramById(id: string) {
+  async getById(id: string) {
     try {
       const program = await this.programRepo.findById(id);
       
@@ -48,23 +46,43 @@ export class ProgramService {
     }
   }
 
-  // Simplified create
-  async createProgram(data: CreateProgramsInput) {
+  async create(data: CreateProgramsInput) {
     try {
       const validatedData = CreateProgramsSchema.parse(data);
       const program = await this.programRepo.create(validatedData);
       
       return { success: true, data: program };
     } catch (error) {
+      // Handle specific database errors
+      if (error instanceof Error) {
+        if (error.message.includes('Unique constraint failed')) {
+          return {
+            success: false,
+            error: `Program với major_id "${data.major_id}" và version "${data.version}" đã tồn tại. Vui lòng chọn version khác hoặc major_id khác.`,
+          };
+        }
+        
+        if (error.message.includes('Foreign key constraint')) {
+          return {
+            success: false,
+            error: `Major với ID "${data.major_id}" không tồn tại. Vui lòng chọn major_id hợp lệ.`,
+          };
+        }
+        
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to create program',
+        error: 'Failed to create program',
       };
     }
   }
-
-  // Simplified update
-  async updateProgram(id: string, data: UpdateProgramsInput) {
+  
+  async update(id: string, data: UpdateProgramsInput) {
     try {
       const validatedData = UpdateProgramsSchema.parse(data);
       const program = await this.programRepo.update(id, validatedData);
@@ -79,7 +97,7 @@ export class ProgramService {
   }
 
   // Simplified delete
-  async deleteProgram(id: string) {
+  async delete(id: string) {
     try {
       await this.programRepo.delete(id);
       return { success: true };

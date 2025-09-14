@@ -4,11 +4,12 @@ import { createMinimalQuerySchema } from '@/lib/validation-utils';
 // Minimal Sections schemas
 export const CreateSectionsSchema = z.object({
   code: z.string().min(1, 'Code is required'),
-  name_vi: z.string().min(1, 'Name is required'),
+  course_id: z.string().min(1, 'Course ID is required'),
+  term_id: z.string().min(1, 'Term ID is required'),
   org_unit_id: z.string().min(1, 'Org unit is required'),
   // Optional fields
-  name_en: z.string().optional(),
-  description: z.string().optional(),
+  capacity: z.number().default(30),
+  instructor_id: z.string().optional(),
   status: z.string().default('active'),
 });
 

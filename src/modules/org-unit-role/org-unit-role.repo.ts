@@ -45,7 +45,7 @@ export class OrgUnitRoleRepository {
       db.org_unit_role.count({ where }),
     ]);
 
-    // Convert BigInt to string for JSON serialization
+    // Serialize all IDs for consistency
     const serializedItems = items.map(item => ({
       ...item,
       id: item.id.toString(),

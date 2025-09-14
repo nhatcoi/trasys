@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const params = Object.fromEntries(searchParams.entries());
     
-    const result = await programService.getAllProgramsWithOptions(params);
+    const result = await programService.getAll(params);
     
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const result = await programService.createProgram(body);
+    const result = await programService.create(body);
     
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });

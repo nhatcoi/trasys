@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OrgStructureRequestService } from '@/modules/org-structure-request/org-structure-request.service';
+import { OrgUnitRelationService } from '@/modules/org-unit-relation/org-unit-relation.service';
 
-const orgStructureRequestService = new OrgStructureRequestService();
+const orgUnitRelationService = new OrgUnitRelationService();
 
-// GET /api/org-structure-requests - Get all org structure requests with pagination and filters
+// GET /api/org-unit-relations - Get all org unit relations with pagination and filters
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const params = Object.fromEntries(searchParams.entries());
     
-    const result = await orgStructureRequestService.getAll(params);
+    const result = await orgUnitRelationService.getAll(params);
     
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
@@ -27,11 +27,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/org-structure-requests - Create new org structure request
+// POST /api/org-unit-relations - Create new org unit relation
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const result = await orgStructureRequestService.create(body);
+    const result = await orgUnitRelationService.create(body);
     
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
@@ -48,3 +48,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
