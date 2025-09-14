@@ -6,43 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["hr", "public"]
-}
-
-model OrgUnit {
-  id                                                       BigInt                  @id(map: "org_unit_pkey") @default(autoincrement())
-  parent_id                                                BigInt?                 @map("parent_id")
-  type                                                     String?                 @db.VarChar(10)
-  code                                                     String                  @db.VarChar(50)
-  name                                                     String                  @db.VarChar(255)
-  created_at                                               DateTime?               @default(now()) @map("created_at") @db.Timestamp(6)
-  updated_at                                               DateTime?               @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  description                                              String?
-  status                                                   String?                 @default("active") @db.VarChar(20)
-  effective_from                                           DateTime?               @default(dbgenerated("CURRENT_DATE")) @map("effective_from") @db.Date
-  effective_to                                             DateTime?               @map("effective_to") @db.Date
-  assignments                                              OrgAssignment[]
-  class_sections                                           class_sections[]
-  courses                                                  courses[]
-  employees                                                employees[]
-  major_owner_history                                      major_owner_history[]
-  majors                                                   majors[]
-  org_structure_request                                    org_structure_request[]
-  org_unit_history                                         org_unit_history[]
-  org_unit_relation_org_unit_relation_child_idToorg_units  org_unit_relation[]     @relation("org_unit_relation_child_idToorg_units")
-  org_unit_relation_org_unit_relation_parent_idToorg_units org_unit_relation[]     @relation("org_unit_relation_parent_idToorg_units")
-  org_unit_role                                            org_unit_role[]
-  parent                                                   OrgUnit?                @relation("OrgHierarchy", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_org_units_parent")
-  children                                                 OrgUnit[]               @relation("OrgHierarchy")
-  programs                                                 programs[]
-  sections                                                 sections[]
-
-  @@index([effective_from, effective_to], map: "idx_org_unit_effective_dates")
-  @@index([parent_id], map: "idx_org_unit_parent_id")
-  @@index([status], map: "idx_org_unit_status")
-  @@index([type], map: "idx_org_unit_type")
-  @@map("org_units")
-  @@schema("public")
+  schemas  = ["academic", "auth", "finance", "hr", "org", "public", "report", "schedule", "student"]
 }
 
 model Employee {
@@ -59,7 +23,7 @@ model Employee {
   employee_log            employee_log[]
   employee_qualification  employee_qualification[]
   employee_training       employee_training[]
-  user                    User                      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "employee_user_id_fkey")
+  user                    users                     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "employee_user_id_fkey")
   employments             employments[]
   leave_requests          leave_requests[]
   assignments             OrgAssignment[]
@@ -86,7 +50,7 @@ model OrgAssignment {
   created_at      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updated_at      DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   employee        Employee       @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  org_unit        OrgUnit        @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  org_unit        org_units      @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   job_positions   job_positions? @relation(fields: [position_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([employee_id], map: "idx_hr_assign_emp")
@@ -94,30 +58,6 @@ model OrgAssignment {
   @@index([org_unit_id], map: "idx_hr_assign_unit")
   @@map("org_assignment")
   @@schema("hr")
-}
-
-model User {
-  id            BigInt         @id(map: "user_pkey") @default(autoincrement())
-  username      String         @unique(map: "user_username_key") @db.VarChar(64)
-  email         String?        @unique(map: "user_email_key") @db.VarChar(255)
-  password_hash String
-  status        String?        @default("ACTIVE") @db.VarChar(16)
-  last_login_at DateTime?      @map("last_login_at") @db.Timestamptz(6)
-  created_at    DateTime?      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updated_at    DateTime?      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  full_name     String         @map("full_name") @db.VarChar(255)
-  dob           DateTime?      @db.Date
-  gender        String?        @db.VarChar(16)
-  phone         String?        @db.VarChar(32)
-  address       String?
-  employee_log  employee_log[]
-  employees     Employee[]
-  user_role     user_role[]
-
-  @@index([full_name], map: "idx_user_full_name")
-  @@index([phone], map: "idx_user_phone")
-  @@map("users")
-  @@schema("public")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -160,7 +100,7 @@ model employee_log {
   ip_address  String?  @db.Inet
   user_agent  String?
   created_at  DateTime @default(now()) @db.Timestamptz(6)
-  users       User?    @relation(fields: [actor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users       users?   @relation(fields: [actor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   employees   Employee @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([action], map: "idx_hr_employee_log_action")
@@ -303,54 +243,133 @@ model trainings {
   @@schema("hr")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model academic_terms {
-  id             BigInt           @id(map: "term_academic_pkey") @default(autoincrement())
-  code           String           @unique(map: "term_academic_code_key") @db.VarChar(32)
-  title          String?          @db.VarChar(128)
-  start_date     DateTime?        @db.Date
-  end_date       DateTime?        @db.Date
-  created_at     DateTime         @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime         @default(now()) @db.Timestamptz(6)
-  class_sections class_sections[]
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model users {
+  id            BigInt         @id(map: "user_pkey") @default(autoincrement())
+  username      String         @unique(map: "user_username_key") @db.VarChar(64)
+  email         String?        @unique(map: "user_email_key") @db.VarChar(255)
+  password_hash String
+  status        String?        @default("ACTIVE") @db.VarChar(16)
+  last_login_at DateTime?      @db.Timestamptz(6)
+  created_at    DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?      @default(now()) @db.Timestamptz(6)
+  full_name     String         @db.VarChar(255)
+  dob           DateTime?      @db.Date
+  gender        String?        @db.VarChar(16)
+  phone         String?        @db.VarChar(32)
+  address       String?
+  employee_log  employee_log[]
+  employees     Employee[]
 
-  @@index([code], map: "idx_term_academic_code")
-  @@index([start_date, end_date], map: "idx_term_academic_dates")
-  @@schema("public")
+  @@index([full_name], map: "idx_user_full_name")
+  @@index([phone], map: "idx_user_phone")
+  @@schema("auth")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model org_structure_request {
+  id                 BigInt    @id @default(autoincrement())
+  requester_id       BigInt?
+  request_type       String
+  target_org_unit_id BigInt?
+  payload            Json
+  status             String    @default("SUBMITTED")
+  workflow_step      Int       @default(1)
+  created_at         DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@schema("org")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model org_unit_backups {
+  id         Int?
+  parent_id  Int?
+  type       String?   @db.VarChar(1)
+  code       String?   @db.VarChar(50)
+  name       String?   @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(6)
+  updated_at DateTime? @db.Timestamp(6)
+
+  @@ignore
+  @@schema("org")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model org_unit_history {
+  id          BigInt    @id @default(autoincrement())
+  org_unit_id BigInt
+  old_name    String?
+  new_name    String?
+  change_type String
+  details     Json?
+  changed_at  DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@schema("org")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model approval_tasks {
-  id            Int       @id(map: "approval_task_pkey") @default(autoincrement())
-  entity_type   String    @db.VarChar(50)
-  entity_id     Int
-  step          Int       @default(1)
-  assignee_role String    @db.VarChar(50)
-  org_scope     String?   @db.VarChar(1)
-  status        String?   @default("pending") @db.VarChar(20)
-  due_at        DateTime? @db.Timestamp(6)
-  created_at    DateTime? @default(now()) @db.Timestamp(6)
-  updated_at    DateTime? @default(now()) @db.Timestamp(6)
+model org_unit_relation {
+  parent_id      BigInt
+  child_id       BigInt
+  relation_type  org_relation_type
+  effective_from DateTime          @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_to   DateTime?         @db.Date
+  note           String?
+  created_at     DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime          @default(now()) @db.Timestamptz(6)
 
-  @@schema("public")
+  @@id([parent_id, child_id, relation_type, effective_from])
+  @@index([child_id], map: "idx_org_unit_relation_child")
+  @@index([effective_from, effective_to], map: "idx_org_unit_relation_effective")
+  @@index([parent_id], map: "idx_org_unit_relation_parent")
+  @@index([relation_type], map: "idx_org_unit_relation_type")
+  @@schema("org")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model audit_logs {
-  id        Int       @id(map: "audit_log_pkey") @default(autoincrement())
-  actor_id  Int
-  action    String    @db.VarChar(100)
-  entity    String    @db.VarChar(50)
-  entity_id Int
-  ts        DateTime? @default(now()) @db.Timestamp(6)
-  before    Json?
-  after     Json?
-  ip        String?   @db.Inet
+model org_unit_role {
+  id          BigInt    @id @default(autoincrement())
+  org_unit_id BigInt?
+  role_code   String
+  title       String?
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
 
-  @@index([entity, entity_id], map: "idx_audit_log_entity")
-  @@index([ts], map: "idx_audit_log_ts")
-  @@schema("public")
+  @@schema("org")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model org_units {
+  id                  BigInt                @id(map: "org_unit_pkey") @default(autoincrement())
+  parent_id           BigInt?
+  type                String?               @db.VarChar(10)
+  code                String                @db.VarChar(50)
+  name                String                @db.VarChar(255)
+  created_at          DateTime?             @default(now()) @db.Timestamp(6)
+  updated_at          DateTime?             @default(now()) @db.Timestamp(6)
+  description         String?
+  status              String?               @default("active") @db.VarChar(20)
+  effective_from      DateTime?             @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_to        DateTime?             @db.Date
+  courses             courses[]
+  major_owner_history major_owner_history[]
+  majors              majors[]
+  programs            programs[]
+  assignments         OrgAssignment[]
+  class_sections      class_sections[]
+  sections            sections[]
+
+  @@index([effective_from, effective_to], map: "idx_org_unit_effective_dates")
+  @@index([parent_id], map: "idx_org_unit_parent_id")
+  @@index([status], map: "idx_org_unit_status")
+  @@index([type], map: "idx_org_unit_type")
+  @@schema("org")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -383,31 +402,7 @@ model campuses {
   @@index([is_active], map: "idx_campus_is_active")
   @@index([name_vi], map: "idx_campus_name")
   @@index([province], map: "idx_campus_province")
-  @@schema("public")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model class_sections {
-  id                    BigInt                  @id(map: "class_section_pkey") @default(autoincrement())
-  course_id             BigInt
-  course_version_id     BigInt?
-  term_academic_id      BigInt
-  section_code          String?                 @db.VarChar(32)
-  capacity              Int?
-  org_unit_id           BigInt?
-  created_at            DateTime                @default(now()) @db.Timestamptz(6)
-  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
-  courses               courses                 @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_course_id_fkey")
-  course_versions       course_versions?        @relation(fields: [course_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_course_version_id_fkey")
-  org_units             OrgUnit?                @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_org_unit_id_fkey")
-  academic_terms        academic_terms          @relation(fields: [term_academic_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_term_academic_id_fkey")
-  instructor_assignment instructor_assignment[]
-
-  @@index([section_code], map: "idx_class_section_code")
-  @@index([course_id], map: "idx_class_section_course")
-  @@index([org_unit_id], map: "idx_class_section_org")
-  @@index([term_academic_id], map: "idx_class_section_term")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -423,13 +418,13 @@ model course_versions {
   effective_to   DateTime?        @db.Date
   created_at     DateTime         @default(now()) @db.Timestamptz(6)
   updated_at     DateTime         @default(now()) @db.Timestamptz(6)
-  class_sections class_sections[]
   courses        courses          @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "course_version_course_id_fkey")
+  class_sections class_sections[]
 
   @@unique([course_id, version], map: "uq_course_version")
   @@index([course_id], map: "idx_cv_course")
   @@index([status], map: "idx_cv_status")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -444,133 +439,15 @@ model courses {
   type               String               @default("theory") @db.VarChar(32)
   created_at         DateTime             @default(now()) @db.Timestamptz(6)
   updated_at         DateTime             @default(now()) @db.Timestamptz(6)
-  class_sections     class_sections[]
   course_versions    course_versions[]
-  org_units          OrgUnit              @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "course_org_unit_id_fkey")
+  org_units          org_units            @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "course_org_unit_id_fkey")
   program_course_map program_course_map[]
+  class_sections     class_sections[]
 
   @@unique([org_unit_id, code], map: "uq_course_code_per_owner")
   @@index([org_unit_id], map: "idx_course_org")
   @@index([type], map: "idx_course_type")
-  @@schema("public")
-}
-
-model employees {
-  id            BigInt    @id @default(autoincrement())
-  user_id       BigInt?
-  employee_no   String?   @db.VarChar(64)
-  employment_ty String?   @db.VarChar(16)
-  status        String?   @db.VarChar(16)
-  hired_at      DateTime? @db.Date
-  terminated_at DateTime? @db.Date
-  created_at    DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime? @default(now()) @db.Timestamptz(6)
-  org_unit_id   BigInt?
-  org_units     OrgUnit?  @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_employees_org_unit")
-
-  @@schema("public")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model enrollments {
-  id          Int       @id(map: "enrollment_pkey") @default(autoincrement())
-  student_id  Int
-  section_id  Int
-  status      String?   @default("enrolled") @db.VarChar(20)
-  enrolled_at DateTime? @default(now()) @db.Timestamp(6)
-  updated_at  DateTime? @default(now()) @db.Timestamp(6)
-  sections    sections  @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "enrollment_section_id_fkey")
-
-  @@unique([student_id, section_id], map: "enrollment_student_id_section_id_key")
-  @@index([section_id], map: "idx_enrollment_section_id")
-  @@index([student_id], map: "idx_enrollment_student_id")
-  @@schema("public")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model exams {
-  id         Int       @id(map: "exam_pkey") @default(autoincrement())
-  section_id Int
-  type       String?   @db.VarChar(20)
-  exam_date  DateTime  @db.Date
-  room_id    Int?
-  paper_code String?   @db.VarChar(50)
-  status     String?   @default("scheduled") @db.VarChar(20)
-  created_at DateTime? @default(now()) @db.Timestamp(6)
-  updated_at DateTime? @default(now()) @db.Timestamp(6)
-  sections   sections  @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "exam_section_id_fkey")
-
-  @@schema("public")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model grade_entries {
-  id            Int         @id(map: "grade_entry_pkey") @default(autoincrement())
-  grade_item_id Int
-  student_id    Int
-  section_id    Int
-  score         Decimal?    @db.Decimal(5, 2)
-  locked        Boolean?    @default(false)
-  created_at    DateTime?   @default(now()) @db.Timestamp(6)
-  updated_at    DateTime?   @default(now()) @db.Timestamp(6)
-  grade_items   grade_items @relation(fields: [grade_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "grade_entry_grade_item_id_fkey")
-  sections      sections    @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "grade_entry_section_id_fkey")
-
-  @@unique([grade_item_id, student_id, section_id], map: "grade_entry_grade_item_id_student_id_section_id_key")
-  @@index([section_id], map: "idx_grade_entry_section_id")
-  @@index([student_id], map: "idx_grade_entry_student_id")
-  @@schema("public")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model grade_items {
-  id               Int                @id(map: "grade_item_pkey") @default(autoincrement())
-  course_id        Int
-  name             String             @db.VarChar(255)
-  weight           Decimal            @db.Decimal(5, 2)
-  min_score        Decimal?           @default(0) @db.Decimal(5, 2)
-  created_at       DateTime?          @default(now()) @db.Timestamp(6)
-  updated_at       DateTime?          @default(now()) @db.Timestamp(6)
-  grade_entries    grade_entries[]
-  regrade_requests regrade_requests[]
-
-  @@schema("public")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model instructor_assignment {
-  id               BigInt         @id @default(autoincrement())
-  employee_id      BigInt
-  class_section_id BigInt
-  role             String?        @default("MAIN") @db.VarChar(16)
-  created_at       DateTime       @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime       @default(now()) @db.Timestamptz(6)
-  class_sections   class_sections @relation(fields: [class_section_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  employees        Employee       @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([employee_id], map: "idx_instructor_assignment_employee")
-  @@index([role], map: "idx_instructor_assignment_role")
-  @@index([class_section_id], map: "idx_instructor_assignment_section")
-  @@schema("public")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model invoices {
-  id         Int       @id(map: "invoice_pkey") @default(autoincrement())
-  student_id Int
-  term_id    Int
-  amount     Decimal   @db.Decimal(10, 2)
-  due_date   DateTime  @db.Date
-  status     String?   @default("pending") @db.VarChar(20)
-  created_at DateTime? @default(now()) @db.Timestamp(6)
-  updated_at DateTime? @default(now()) @db.Timestamp(6)
-
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -587,7 +464,7 @@ model major_accreditation {
   majors     majors    @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([major_id], map: "idx_major_accr_major")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -601,7 +478,7 @@ model major_alias {
   majors     majors    @relation(fields: [major_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([major_id], map: "idx_major_alias_major")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -614,7 +491,7 @@ model major_campus {
   majors     majors   @relation(fields: [major_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([major_id, campus_id], map: "uq_major_campus")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -631,7 +508,7 @@ model major_document {
   majors    majors    @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([major_id], map: "idx_major_doc_major")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -643,7 +520,7 @@ model major_language {
   majors   majors  @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([major_id, language], map: "uq_major_language")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -655,7 +532,7 @@ model major_modality {
   majors   majors  @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([major_id, modality], map: "uq_major_modality")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -669,7 +546,7 @@ model major_outcome {
   majors    majors   @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([major_id, code, version])
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -680,10 +557,10 @@ model major_owner_history {
   start_date  DateTime  @db.Date
   end_date    DateTime? @db.Date
   majors      majors    @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  org_units   OrgUnit   @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  org_units   org_units @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([major_id], map: "idx_moh_major")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -697,7 +574,7 @@ model major_quota_year {
   majors   majors  @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([major_id, year])
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -711,11 +588,12 @@ model major_tuition {
   majors        majors  @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([major_id, year, tuition_group])
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model majors {
   id                   BigInt                @id(map: "major_pkey") @default(autoincrement())
   code                 String                @db.VarChar(32)
@@ -760,7 +638,7 @@ model majors {
   major_owner_history  major_owner_history[]
   major_quota_year     major_quota_year[]
   major_tuition        major_tuition[]
-  org_units            OrgUnit               @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_major_owner")
+  org_units            org_units             @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_major_owner")
   majors               majors?               @relation("majorsTomajors", fields: [parent_major_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_major_parent")
   other_majors         majors[]              @relation("majorsTomajors")
   programs             programs[]
@@ -770,96 +648,7 @@ model majors {
   @@index([org_unit_id], map: "idx_major_owner")
   @@index([slug], map: "idx_major_slug")
   @@index([status], map: "idx_major_status")
-  @@schema("public")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model org_structure_request {
-  id                 BigInt    @id @default(autoincrement())
-  requester_id       BigInt?
-  request_type       String
-  target_org_unit_id BigInt?
-  payload            Json
-  status             String    @default("SUBMITTED")
-  workflow_step      Int       @default(1)
-  created_at         DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime? @default(now()) @db.Timestamptz(6)
-  org_units          OrgUnit?  @relation(fields: [target_org_unit_id], references: [id], onUpdate: NoAction)
-
-  @@schema("public")
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model org_unit_backups {
-  id         Int?
-  parent_id  Int?
-  type       String?   @db.VarChar(1)
-  code       String?   @db.VarChar(50)
-  name       String?   @db.VarChar(255)
-  created_at DateTime? @db.Timestamp(6)
-  updated_at DateTime? @db.Timestamp(6)
-
-  @@ignore
-  @@schema("public")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model org_unit_history {
-  id          BigInt    @id @default(autoincrement())
-  org_unit_id BigInt
-  old_name    String?
-  new_name    String?
-  change_type String
-  details     Json?
-  changed_at  DateTime? @default(now()) @db.Timestamptz(6)
-  org_units   OrgUnit   @relation(fields: [org_unit_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@schema("public")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model org_unit_relation {
-  parent_id                                        BigInt
-  child_id                                         BigInt
-  relation_type                                    org_relation_type
-  effective_from                                   DateTime          @default(dbgenerated("CURRENT_DATE")) @db.Date
-  effective_to                                     DateTime?         @db.Date
-  note                                             String?
-  created_at                                       DateTime          @default(now()) @db.Timestamptz(6)
-  updated_at                                       DateTime          @default(now()) @db.Timestamptz(6)
-  org_units_org_unit_relation_child_idToorg_units  OrgUnit           @relation("org_unit_relation_child_idToorg_units", fields: [child_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  org_units_org_unit_relation_parent_idToorg_units OrgUnit           @relation("org_unit_relation_parent_idToorg_units", fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@id([parent_id, child_id, relation_type, effective_from])
-  @@index([child_id], map: "idx_org_unit_relation_child")
-  @@index([effective_from, effective_to], map: "idx_org_unit_relation_effective")
-  @@index([parent_id], map: "idx_org_unit_relation_parent")
-  @@index([relation_type], map: "idx_org_unit_relation_type")
-  @@schema("public")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model org_unit_role {
-  id          BigInt    @id @default(autoincrement())
-  org_unit_id BigInt?
-  role_code   String
-  title       String?
-  created_at  DateTime? @default(now()) @db.Timestamptz(6)
-  org_units   OrgUnit?  @relation(fields: [org_unit_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@schema("public")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model permissions {
-  id              BigInt            @id(map: "permission_pkey") @default(autoincrement())
-  code            String            @unique(map: "permission_code_key") @db.VarChar(64)
-  name            String?           @db.VarChar(255)
-  role_permission role_permission[]
-
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -874,7 +663,7 @@ model program_block_group_rule {
   program_block_groups program_block_groups @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([group_id], map: "idx_program_block_group_rule_group")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -891,7 +680,7 @@ model program_block_groups {
 
   @@unique([block_id, code], map: "program_block_group_block_id_code_key")
   @@index([block_id], map: "idx_program_block_group_block")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -908,7 +697,7 @@ model program_blocks {
 
   @@unique([program_id, code], map: "program_block_program_id_code_key")
   @@index([program_id], map: "idx_program_block_program")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -928,17 +717,17 @@ model program_course_map {
   @@unique([program_id, course_id])
   @@index([course_id], map: "idx_program_course_map_course")
   @@index([program_id], map: "idx_program_course_map_program")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model programs {
   id                 BigInt               @id(map: "program_pkey") @default(autoincrement())
-  major_id           BigInt
+  major_id           BigInt?
   org_unit_id        BigInt?
-  version            String
-  total_credits      Int
+  version            String               @default("2024")
+  total_credits      Int                  @default(120)
   plo                Json?
   status             String               @default("DRAFT")
   effective_from     DateTime?            @db.Date
@@ -947,89 +736,32 @@ model programs {
   updated_by         BigInt?
   created_at         DateTime?            @default(now()) @db.Timestamptz(6)
   updated_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  code               String?              @unique(map: "uq_program_code") @db.VarChar(32)
+  name_vi            String?              @db.VarChar(255)
+  name_en            String?              @db.VarChar(255)
+  description        String?
   program_blocks     program_blocks[]
   program_course_map program_course_map[]
-  majors             majors               @relation(fields: [major_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "program_major_id_fkey")
-  org_units          OrgUnit?             @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "program_org_unit_id_fkey")
+  majors             majors?              @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "program_major_id_fkey")
+  org_units          org_units?           @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "program_org_unit_id_fkey")
 
   @@unique([major_id, version], map: "uq_program_major_version")
-  @@schema("public")
+  @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model regrade_requests {
-  id            Int         @id(map: "regrade_request_pkey") @default(autoincrement())
-  grade_item_id Int
-  student_id    Int
-  reason        String
-  status        String?     @default("pending") @db.VarChar(20)
-  created_at    DateTime?   @default(now()) @db.Timestamp(6)
-  updated_at    DateTime?   @default(now()) @db.Timestamp(6)
-  grade_items   grade_items @relation(fields: [grade_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "regrade_request_grade_item_id_fkey")
+model invoices {
+  id         Int       @id(map: "invoice_pkey") @default(autoincrement())
+  student_id Int
+  term_id    Int
+  amount     Decimal   @db.Decimal(10, 2)
+  due_date   DateTime  @db.Date
+  status     String?   @default("pending") @db.VarChar(20)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
 
-  @@schema("public")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model role_permission {
-  id            BigInt      @id @default(autoincrement())
-  role_id       BigInt
-  permission_id BigInt
-  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  roles         roles       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([role_id, permission_id])
-  @@schema("public")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model roles {
-  id              BigInt            @id(map: "role_pkey") @default(autoincrement())
-  code            String            @unique(map: "role_code_key") @db.VarChar(64)
-  name            String            @db.VarChar(255)
-  role_permission role_permission[]
-  user_role       user_role[]
-
-  @@schema("public")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model section_schedules {
-  id          Int       @id(map: "section_schedule_pkey") @default(autoincrement())
-  section_id  Int
-  day_of_week Int?
-  start_time  DateTime  @db.Time(6)
-  end_time    DateTime  @db.Time(6)
-  room_id     Int?
-  created_at  DateTime? @default(now()) @db.Timestamp(6)
-  sections    sections  @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "section_schedule_section_id_fkey")
-
-  @@schema("public")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model sections {
-  id                Int                 @id(map: "section_pkey") @default(autoincrement())
-  course_id         Int
-  term_id           Int
-  org_unit_id       BigInt
-  code              String              @db.VarChar(50)
-  capacity          Int                 @default(30)
-  instructor_id     Int?
-  status            String?             @default("active") @db.VarChar(20)
-  created_at        DateTime?           @default(now()) @db.Timestamp(6)
-  updated_at        DateTime?           @default(now()) @db.Timestamp(6)
-  enrollments       enrollments[]
-  exams             exams[]
-  grade_entries     grade_entries[]
-  section_schedules section_schedules[]
-  org_units         OrgUnit             @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "section_org_unit_id_fkey")
-
-  @@index([course_id], map: "idx_section_course_id")
-  @@index([instructor_id], map: "idx_section_instructor_id")
-  @@schema("public")
+  @@schema("finance")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -1046,19 +778,204 @@ model tuition_rules {
   created_at     DateTime? @default(now()) @db.Timestamp(6)
   updated_at     DateTime? @default(now()) @db.Timestamp(6)
 
-  @@schema("public")
+  @@schema("finance")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model approval_tasks {
+  id            Int       @id(map: "approval_task_pkey") @default(autoincrement())
+  entity_type   String    @db.VarChar(50)
+  entity_id     Int
+  step          Int       @default(1)
+  assignee_role String    @db.VarChar(50)
+  org_scope     String?   @db.VarChar(1)
+  status        String?   @default("pending") @db.VarChar(20)
+  due_at        DateTime? @db.Timestamp(6)
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  updated_at    DateTime? @default(now()) @db.Timestamp(6)
+
+  @@schema("report")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model user_role {
-  id      BigInt @id @default(autoincrement())
-  user_id BigInt
-  role_id BigInt
-  roles   roles  @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  users   User   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+model academic_terms {
+  id             BigInt           @id(map: "term_academic_pkey") @default(autoincrement())
+  code           String           @unique(map: "term_academic_code_key") @db.VarChar(32)
+  title          String?          @db.VarChar(128)
+  start_date     DateTime?        @db.Date
+  end_date       DateTime?        @db.Date
+  created_at     DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime         @default(now()) @db.Timestamptz(6)
+  class_sections class_sections[]
 
-  @@unique([user_id, role_id])
-  @@schema("public")
+  @@index([code], map: "idx_term_academic_code")
+  @@index([start_date, end_date], map: "idx_term_academic_dates")
+  @@schema("schedule")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model class_sections {
+  id                    BigInt                  @id(map: "class_section_pkey") @default(autoincrement())
+  course_id             BigInt
+  course_version_id     BigInt?
+  term_academic_id      BigInt
+  section_code          String?                 @db.VarChar(32)
+  capacity              Int?
+  org_unit_id           BigInt?
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
+  courses               courses                 @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_course_id_fkey")
+  course_versions       course_versions?        @relation(fields: [course_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_course_version_id_fkey")
+  org_units             org_units?              @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_org_unit_id_fkey")
+  academic_terms        academic_terms          @relation(fields: [term_academic_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_term_academic_id_fkey")
+  instructor_assignment instructor_assignment[]
+
+  @@index([section_code], map: "idx_class_section_code")
+  @@index([course_id], map: "idx_class_section_course")
+  @@index([org_unit_id], map: "idx_class_section_org")
+  @@index([term_academic_id], map: "idx_class_section_term")
+  @@schema("schedule")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model exams {
+  id         Int       @id(map: "exam_pkey") @default(autoincrement())
+  section_id Int
+  type       String?   @db.VarChar(20)
+  exam_date  DateTime  @db.Date
+  room_id    Int?
+  paper_code String?   @db.VarChar(50)
+  status     String?   @default("scheduled") @db.VarChar(20)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  sections   sections  @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "exam_section_id_fkey")
+
+  @@schema("schedule")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model instructor_assignment {
+  id               BigInt         @id @default(autoincrement())
+  employee_id      BigInt
+  class_section_id BigInt
+  role             String?        @default("MAIN") @db.VarChar(16)
+  created_at       DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime       @default(now()) @db.Timestamptz(6)
+  class_sections   class_sections @relation(fields: [class_section_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employees        Employee       @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([employee_id], map: "idx_instructor_assignment_employee")
+  @@index([role], map: "idx_instructor_assignment_role")
+  @@index([class_section_id], map: "idx_instructor_assignment_section")
+  @@schema("schedule")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model section_schedules {
+  id          Int       @id(map: "section_schedule_pkey") @default(autoincrement())
+  section_id  Int
+  day_of_week Int?
+  start_time  DateTime  @db.Time(6)
+  end_time    DateTime  @db.Time(6)
+  room_id     Int?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  sections    sections  @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "section_schedule_section_id_fkey")
+
+  @@schema("schedule")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sections {
+  id                Int                 @id(map: "section_pkey") @default(autoincrement())
+  course_id         Int
+  term_id           Int
+  org_unit_id       BigInt
+  code              String              @db.VarChar(50)
+  capacity          Int                 @default(30)
+  instructor_id     Int?
+  status            String?             @default("active") @db.VarChar(20)
+  created_at        DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at        DateTime?           @default(now()) @db.Timestamp(6)
+  exams             exams[]
+  section_schedules section_schedules[]
+  org_units         org_units           @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "section_org_unit_id_fkey")
+  enrollments       enrollments[]
+  grade_entries     grade_entries[]
+
+  @@index([course_id], map: "idx_section_course_id")
+  @@index([instructor_id], map: "idx_section_instructor_id")
+  @@schema("schedule")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model enrollments {
+  id          Int       @id(map: "enrollment_pkey") @default(autoincrement())
+  student_id  Int
+  section_id  Int
+  status      String?   @default("enrolled") @db.VarChar(20)
+  enrolled_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+  sections    sections  @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "enrollment_section_id_fkey")
+
+  @@unique([student_id, section_id], map: "enrollment_student_id_section_id_key")
+  @@index([section_id], map: "idx_enrollment_section_id")
+  @@index([student_id], map: "idx_enrollment_student_id")
+  @@schema("student")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model grade_entries {
+  id            Int         @id(map: "grade_entry_pkey") @default(autoincrement())
+  grade_item_id Int
+  student_id    Int
+  section_id    Int
+  score         Decimal?    @db.Decimal(5, 2)
+  locked        Boolean?    @default(false)
+  created_at    DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at    DateTime?   @default(now()) @db.Timestamp(6)
+  grade_items   grade_items @relation(fields: [grade_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "grade_entry_grade_item_id_fkey")
+  sections      sections    @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "grade_entry_section_id_fkey")
+
+  @@unique([grade_item_id, student_id, section_id], map: "grade_entry_grade_item_id_student_id_section_id_key")
+  @@index([section_id], map: "idx_grade_entry_section_id")
+  @@index([student_id], map: "idx_grade_entry_student_id")
+  @@schema("student")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model grade_items {
+  id               Int                @id(map: "grade_item_pkey") @default(autoincrement())
+  course_id        Int
+  name             String             @db.VarChar(255)
+  weight           Decimal            @db.Decimal(5, 2)
+  min_score        Decimal?           @default(0) @db.Decimal(5, 2)
+  created_at       DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamp(6)
+  grade_entries    grade_entries[]
+  regrade_requests regrade_requests[]
+
+  @@schema("student")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model regrade_requests {
+  id            Int         @id(map: "regrade_request_pkey") @default(autoincrement())
+  grade_item_id Int
+  student_id    Int
+  reason        String
+  status        String?     @default("pending") @db.VarChar(20)
+  created_at    DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at    DateTime?   @default(now()) @db.Timestamp(6)
+  grade_items   grade_items @relation(fields: [grade_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "regrade_request_grade_item_id_fkey")
+
+  @@schema("student")
 }
 
 /// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
