@@ -17,7 +17,6 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
     '/hr/role-permissions/new': ['hr.role_permissions.create'],
     '/hr/user-roles': ['hr.user_roles.view'],
     '/hr/user-roles/new': ['hr.user_roles.create'],
-    '/hr/rbac-test': ['hr.dashboard.view'],
     '/hr/employee-logs': ['hr.employee_logs.view'],
     '/hr/performance-reviews': ['hr.performance_reviews.view'],
     '/hr/performance-reviews/new': ['hr.performance_reviews.create'],

@@ -16,10 +16,6 @@ export const HR_ROUTES = {
     ORG_TREE: '/hr/org-tree',
     ORG_TREE_DETAIL: (id: string) => `/hr/org-tree/${id}`,
     ORG_TREE_EMPLOYEES: (id: string) => `/hr/org-tree/${id}/employees`,
-    ORG_UNITS: '/hr/org-units',
-    ORG_UNITS_NEW: '/hr/org-units/new',
-    ORG_UNITS_DETAIL: (id: string) => `/hr/org-units/${id}`,
-    ORG_UNITS_EDIT: (id: string) => `/hr/org-units/${id}/edit`,
     FACULTY: '/hr/faculty',
     QUALIFICATIONS: '/hr/qualifications',
     EMPLOYEE_QUALIFICATIONS: '/hr/employee-qualifications',
@@ -34,7 +30,6 @@ export const HR_ROUTES = {
     PERMISSIONS: '/hr/permissions',
     ROLE_PERMISSIONS: '/hr/role-permissions',
     USER_ROLES: '/hr/user-roles',
-    RBAC_TEST: '/hr/rbac-test',
     REPORTS: '/hr/reports',
 };
 
