@@ -13,7 +13,7 @@ export async function GET() {
         assignments: {
           include: {
             org_unit: true,
-            position: true
+            job_positions: true
           }
         }
       },
@@ -45,9 +45,9 @@ export async function GET() {
           ...assignment.org_unit,
           id: assignment.org_unit.id.toString()
         } : null,
-        position: assignment.position ? {
-          ...assignment.position,
-          id: assignment.position.id.toString()
+        job_positions: assignment.job_positions ? {
+          ...assignment.job_positions,
+          id: assignment.job_positions.id.toString()
         } : null
       })) || []
     }));
