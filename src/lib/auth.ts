@@ -95,6 +95,22 @@ export const authOptions: NextAuthOptions = {
                 session.user.permissions = token.permissions as string[]
             }
             return session
+        },
+        async redirect({ url, baseUrl }) {
+            // Nếu đăng nhập thành công, redirect về /hr/dashboard
+            if (url === baseUrl || url === `${baseUrl}/`) {
+                return `${baseUrl}/hr/dashboard`
+            }
+            // Nếu có callbackUrl, sử dụng nó
+            if (url.startsWith('/')) {
+                return `${baseUrl}${url}`
+            }
+            // Nếu là URL đầy đủ, kiểm tra xem có phải cùng domain không
+            if (url.startsWith(baseUrl)) {
+                return url
+            }
+            // Mặc định redirect về /hr/dashboard
+            return `${baseUrl}/hr/dashboard`
         }
     },
     pages: {

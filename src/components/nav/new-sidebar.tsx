@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
     Drawer,
     List,
@@ -41,6 +42,7 @@ interface MenuItem {
     icon: React.ReactNode;
     href?: string;
     children?: MenuItem[];
+    permission?: string;
 }
 
 const menuItems: MenuItem[] = [
@@ -49,107 +51,138 @@ const menuItems: MenuItem[] = [
         label: 'Dashboard',
         icon: <DashboardIcon />,
         href: '/hr/dashboard',
+        permission: 'hr.dashboard.view',
     },
     {
         key: 'overview',
         label: 'Tổng quan Đại học',
         icon: <BusinessIcon />,
         href: '/hr/university-overview',
+        permission: 'hr.university_overview.view',
     },
     {
         key: 'org-structure',
         label: 'Cơ cấu Tổ chức',
         icon: <AccountTreeIcon />,
         href: '/hr/org-structure',
+        permission: 'hr.org_structure.view',
     },
     {
         key: 'faculty',
         label: 'Giảng viên',
         icon: <SupervisorAccountIcon />,
         href: '/hr/faculty',
+        permission: 'hr.faculty.view',
     },
     {
         key: 'hr-management',
         label: 'Quản lý Nhân sự',
         icon: <GroupIcon />,
+        permission: 'hr.employees.view',
         children: [
             {
                 key: 'employees',
                 label: 'Nhân viên',
                 icon: <PeopleIcon />,
                 href: '/hr/employees',
+                permission: 'hr.employees.view',
             },
             {
                 key: 'qualifications',
                 label: 'Bằng cấp',
                 icon: <SchoolIcon />,
                 href: '/hr/qualifications',
+                permission: 'hr.qualifications.view',
             },
             {
                 key: 'employments',
                 label: 'Hợp đồng',
                 icon: <WorkIcon />,
                 href: '/hr/employments',
+                permission: 'hr.employments.view',
             },
             {
                 key: 'performance-reviews',
                 label: 'Đánh giá hiệu suất',
                 icon: <AssessmentIcon />,
                 href: '/hr/performance-reviews',
+                permission: 'hr.performance_reviews.view',
             },
             {
                 key: 'employee-logs',
                 label: 'Log nhân viên',
                 icon: <HistoryIcon />,
                 href: '/hr/employee-logs',
-            },
+                permission: 'hr.employee_logs.view',
+            }
         ],
     },
     {
         key: 'rbac',
         label: 'Phân quyền',
         icon: <SecurityIcon />,
+        permission: 'hr.roles.view',
         children: [
             {
                 key: 'roles',
                 label: 'Vai trò',
                 icon: <AdminPanelSettingsIcon />,
                 href: '/hr/roles',
+                permission: 'hr.roles.view',
             },
             {
                 key: 'permissions',
                 label: 'Quyền hạn',
                 icon: <VpnKeyIcon />,
                 href: '/hr/permissions',
+                permission: 'hr.permissions.view',
             },
             {
                 key: 'role-permissions',
                 label: 'Vai trò - Quyền hạn',
                 icon: <AssignmentIcon />,
                 href: '/hr/role-permissions',
+                permission: 'hr.role_permissions.view',
             },
             {
                 key: 'user-roles',
                 label: 'Người dùng - Vai trò',
                 icon: <PersonIcon />,
                 href: '/hr/user-roles',
+                permission: 'hr.user_roles.view',
             },
         ],
+    },
+    {
+        key: 'reports',
+        label: 'Báo cáo',
+        icon: <AssessmentIcon />,
+        href: '/hr/reports',
+        permission: 'hr.reports.view',
     },
     {
         key: 'profile',
         label: 'Hồ sơ',
         icon: <PersonIcon />,
         href: '/hr/profile',
+        permission: 'hr.profile.view',
     },
 ];
 
 export function NewSidebar() {
     const pathname = usePathname();
+    const { data: session } = useSession();
+    const permissions = session?.user?.permissions || [];
+
     const [openSections, setOpenSections] = useState<Record<string, boolean>>({
         'hr-management': true,
         'rbac': false,
     });
+
+    // Function to check if user has permission
+    const hasPermission = (requiredPermission: string) => {
+        return permissions.includes(requiredPermission);
+    };
 
     const handleToggleSection = (key: string) => {
         setOpenSections(prev => ({
@@ -159,6 +192,11 @@ export function NewSidebar() {
     };
 
     const renderMenuItem = (item: MenuItem, level: number = 0) => {
+        // Check permission first
+        if (item.permission && !hasPermission(item.permission)) {
+            return null;
+        }
+
         const isActive = item.href ? pathname === item.href : false;
         const hasChildren = item.children && item.children.length > 0;
 
@@ -210,7 +248,7 @@ export function NewSidebar() {
                                 overflow: 'hidden',
                             }}
                         >
-                            {item.children?.map(child => renderMenuItem(child, level + 1))}
+                            {item.children?.map(child => renderMenuItem(child, level + 1)).filter(Boolean)}
                         </Box>
                     </Collapse>
                 </React.Fragment>
@@ -285,7 +323,7 @@ export function NewSidebar() {
 
                 {/* Menu Items */}
                 <List sx={{ flexGrow: 1, paddingTop: 1 }}>
-                    {menuItems.map(item => renderMenuItem(item))}
+                    {menuItems.map(item => renderMenuItem(item)).filter(Boolean)}
                 </List>
             </Box>
         </Drawer>

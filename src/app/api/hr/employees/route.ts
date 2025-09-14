@@ -7,7 +7,64 @@ import { getToken } from 'next-auth/jwt';
 
 export async function GET() {
   try {
+    // Get current user session and permissions
+    const session = await getServerSession(authOptions);
+    const currentUserId = session?.user?.id ? BigInt(session.user.id) : null;
+    const userPermissions = session?.user?.permissions || [];
+
+    // Check if user has admin permissions (can see all employees)
+    const isAdmin = userPermissions.includes('hr.employees.view') &&
+      (userPermissions.includes('hr.employees.create') ||
+        userPermissions.includes('hr.employees.update') ||
+        userPermissions.includes('hr.employees.delete'));
+
+    let whereClause = {};
+
+    if (!isAdmin && currentUserId) {
+      // Get current user's organizational assignments
+      const currentUserEmployee = await db.employee.findFirst({
+        where: { user_id: currentUserId },
+        include: {
+          assignments: {
+            include: {
+              org_unit: true
+            }
+          }
+        }
+      });
+
+      if (currentUserEmployee && currentUserEmployee.assignments.length > 0) {
+        // Get all org units that current user manages (including sub-units)
+        const userOrgUnitIds = currentUserEmployee.assignments.map(a => a.org_unit_id);
+
+        // Find all sub-units of user's org units
+        const subOrgUnits = await db.orgUnit.findMany({
+          where: {
+            parent_id: { in: userOrgUnitIds }
+          }
+        });
+
+        const allOrgUnitIds = [
+          ...userOrgUnitIds,
+          ...subOrgUnits.map(unit => unit.id)
+        ];
+
+        // Filter employees to only those in user's organizational scope
+        whereClause = {
+          assignments: {
+            some: {
+              org_unit_id: { in: allOrgUnitIds }
+            }
+          }
+        };
+      } else {
+        // If user has no org assignments, they can only see themselves
+        whereClause = { user_id: currentUserId };
+      }
+    }
+
     const employees = await db.employee.findMany({
+      where: whereClause,
       include: {
         user: true,
         assignments: {
