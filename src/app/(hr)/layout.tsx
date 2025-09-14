@@ -44,6 +44,9 @@ import {
     Assessment as AssessmentIcon,
     Business as BusinessIcon,
     History as HistoryIcon,
+    Settings as SettingsIcon,
+    Security as SecurityIcon,
+    Link as LinkIcon,
 } from '@mui/icons-material';
 import { ThemeToggle } from '@/components/theme-toggle';
 import Sidebar from '@/components/nav/sidebar-simple';
@@ -169,36 +172,29 @@ export default function HrLayout({
             ],
         },
         {
-            key: 'org-management',
-            icon: <BusinessIcon />,
-            label: 'Quản lý Đơn vị',
+            key: 'rbac',
+            icon: <SettingsIcon />,
+            label: 'Phân quyền',
             children: [
                 {
-                    key: HR_ROUTES.ORG_UNITS,
-                    icon: <BusinessIcon />,
-                    label: 'Danh sách Đơn vị',
-                },
-                {
-                    key: HR_ROUTES.ORG_UNITS_NEW,
-                    icon: <PersonAddIcon />,
-                    label: 'Thêm Đơn vị',
-                },
-            ],
-        },
-        {
-            key: 'assignments',
-            icon: <WorkIcon />,
-            label: 'Phân công',
-            children: [
-                {
-                    key: HR_ROUTES.ASSIGNMENTS,
+                    key: HR_ROUTES.ROLES,
                     icon: <WorkIcon />,
-                    label: 'Danh sách Phân công',
+                    label: 'Vai trò',
                 },
                 {
-                    key: HR_ROUTES.ASSIGNMENTS_NEW,
-                    icon: <PersonAddIcon />,
-                    label: 'Thêm Phân công',
+                    key: HR_ROUTES.PERMISSIONS,
+                    icon: <SecurityIcon />,
+                    label: 'Quyền hạn',
+                },
+                {
+                    key: HR_ROUTES.ROLE_PERMISSIONS,
+                    icon: <LinkIcon />,
+                    label: 'Phân quyền Vai trò',
+                },
+                {
+                    key: HR_ROUTES.USER_ROLES,
+                    icon: <PersonIcon />,
+                    label: 'Phân quyền Người dùng',
                 },
             ],
         },

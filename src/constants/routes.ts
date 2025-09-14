@@ -30,6 +30,10 @@ export const HR_ROUTES = {
     TRAININGS: '/hr/trainings',
     EMPLOYEE_TRAININGS: '/hr/employee-trainings',
     EMPLOYEE_LOGS: '/hr/employee-logs',
+    ROLES: '/hr/roles',
+    PERMISSIONS: '/hr/permissions',
+    ROLE_PERMISSIONS: '/hr/role-permissions',
+    USER_ROLES: '/hr/user-roles',
     REPORTS: '/hr/reports',
 };
 
@@ -59,6 +63,15 @@ export const API_ROUTES = {
         EMPLOYEE_TRAININGS: '/api/hr/employee-trainings',
         EMPLOYEE_TRAININGS_BY_ID: (id: string) => `/api/hr/employee-trainings/${id}`,
         EMPLOYEE_LOGS: '/api/hr/employee-logs',
+        ROLES: '/api/hr/roles',
+        ROLES_BY_ID: (id: string) => `/api/hr/roles/${id}`,
+        PERMISSIONS: '/api/hr/permissions',
+        PERMISSIONS_BY_ID: (id: string) => `/api/hr/permissions/${id}`,
+        ROLE_PERMISSIONS: '/api/hr/role-permissions',
+        ROLE_PERMISSIONS_BY_ID: (id: string) => `/api/hr/role-permissions/${id}`,
+        USER_ROLES: '/api/hr/user-roles',
+        USER_ROLES_BY_ID: (id: string) => `/api/hr/user-roles/${id}`,
+        USERS: '/api/hr/users',
         ME: '/api/hr/me',
     },
     ORG: {
