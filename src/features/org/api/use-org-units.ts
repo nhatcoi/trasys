@@ -83,7 +83,16 @@ export function useOrgUnits(params?: {
   });
 }
 
-
-
-
+// Hook để lấy danh sách đơn vị cha cho dropdown
+export function useParentUnits() {
+  return useQuery({
+    queryKey: ['org', 'parent-units'],
+    queryFn: async () => {
+      const response = await fetcher<OrgUnitsResponse>('/org/units?status=active&size=100&sort=name&order=asc');
+      return response || [];
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchOnWindowFocus: false,
+  });
+}
 

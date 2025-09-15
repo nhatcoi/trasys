@@ -47,8 +47,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // Simple validation
-    validateRequired(body, ['request_type', 'org_unit_id']);
+    // Simple validation - request_type is required, other fields are optional
+    validateRequired(body, ['request_type']);
     
     const result = await orgStructureRequestRepo.create(body);
     

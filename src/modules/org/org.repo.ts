@@ -73,6 +73,7 @@ export class OrgUnitRepository {
       ...item,
       id: item.id.toString(),
       parent_id: item.parent_id?.toString(),
+      campus_id: item.campus_id?.toString(),
       // Serialize nested BigInt fields in OrgAssignment
       org_assignment: item.OrgAssignment?.map((assignment: any) => ({
         ...assignment,
@@ -138,12 +139,13 @@ export class OrgUnitRepository {
       ...result,
       id: result.id.toString(),
       parent_id: result.parent_id?.toString(),
+      campus_id: result.campus_id?.toString(),
     };
   }
 
   // Create new organization unit
   async create(data: CreateOrgUnitInput) {
-    return await db.orgUnit.create({
+    const result = await db.orgUnit.create({
       data: {
         name: data.name,
         code: data.code,
@@ -153,8 +155,18 @@ export class OrgUnitRepository {
         status: data.status,
         effective_from: data.effective_from ? new Date(data.effective_from) : null,
         effective_to: data.effective_to ? new Date(data.effective_to) : null,
+        campus_id: data.campus_id ? BigInt(data.campus_id) : null,
+        planned_establishment_date: data.planned_establishment_date ? new Date(data.planned_establishment_date) : null,
       },
     });
+
+    // Serialize BigInt fields
+    return {
+      ...result,
+      id: result.id.toString(),
+      parent_id: result.parent_id?.toString(),
+      campus_id: result.campus_id?.toString(),
+    };
   }
 
   // Update organization unit
@@ -170,6 +182,7 @@ export class OrgUnitRepository {
         status: data.status,
         effective_from: data.effective_from ? new Date(data.effective_from) : undefined,
         effective_to: data.effective_to ? new Date(data.effective_to) : undefined,
+        campus_id: data.campus_id ? BigInt(data.campus_id) : undefined,
       },
     });
 
@@ -178,6 +191,7 @@ export class OrgUnitRepository {
       ...result,
       id: result.id.toString(),
       parent_id: result.parent_id?.toString(),
+      campus_id: result.campus_id?.toString(),
     };
   }
 
@@ -193,6 +207,7 @@ export class OrgUnitRepository {
       ...result,
       id: result.id.toString(),
       parent_id: result.parent_id?.toString(),
+      campus_id: result.campus_id?.toString(),
     };
   }
 
@@ -205,6 +220,24 @@ export class OrgUnitRepository {
         employees: true,
       },
     });
+  }
+
+  // Get status counts for statistics
+  async getStatusCounts() {
+    const counts = await db.orgUnit.groupBy({
+      by: ['status'],
+      _count: {
+        status: true,
+      },
+    });
+
+    // Transform to object with status as key
+    const statusCounts: Record<string, number> = {};
+    counts.forEach(count => {
+      statusCounts[count.status || 'unknown'] = count._count.status;
+    });
+
+    return statusCounts;
   }
 
 }

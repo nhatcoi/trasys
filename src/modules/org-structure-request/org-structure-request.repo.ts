@@ -47,8 +47,8 @@ export class OrgStructureRequestRepository {
       db.orgStructureRequest.findMany({
         where,
         skip,
-        take: size,
-        orderBy: { [sort]: order },
+        take: parseInt(size.toString()),
+        orderBy: { [sort || 'created_at']: order || 'desc' },
       }),
       db.orgStructureRequest.count({ where }),
     ]);
@@ -59,6 +59,7 @@ export class OrgStructureRequestRepository {
       id: item.id.toString(),
       requester_id: item.requester_id?.toString(),
       target_org_unit_id: item.target_org_unit_id?.toString(),
+      owner_org_id: item.owner_org_id?.toString(),
       created_at: item.created_at?.toISOString(),
       updated_at: item.updated_at?.toISOString(),
     }));
@@ -89,6 +90,7 @@ export class OrgStructureRequestRepository {
       id: item.id.toString(),
       requester_id: item.requester_id?.toString(),
       target_org_unit_id: item.target_org_unit_id?.toString(),
+      owner_org_id: item.owner_org_id?.toString(),
       created_at: item.created_at?.toISOString(),
       updated_at: item.updated_at?.toISOString(),
     };
@@ -101,6 +103,8 @@ export class OrgStructureRequestRepository {
         requester_id: data.requester_id ? BigInt(data.requester_id) : null,
         request_type: data.request_type,
         target_org_unit_id: data.target_org_unit_id ? BigInt(data.target_org_unit_id) : null,
+        owner_org_id: data.owner_org_id ? BigInt(data.owner_org_id) : null,
+        attachments: data.attachments,
         payload: data.payload,
         status: data.status,
         workflow_step: data.workflow_step,
@@ -112,6 +116,7 @@ export class OrgStructureRequestRepository {
       id: created.id.toString(),
       requester_id: created.requester_id?.toString(),
       target_org_unit_id: created.target_org_unit_id?.toString(),
+      owner_org_id: created.owner_org_id?.toString(),
       created_at: created.created_at?.toISOString(),
       updated_at: created.updated_at?.toISOString(),
     };
@@ -136,6 +141,7 @@ export class OrgStructureRequestRepository {
       id: updated.id.toString(),
       requester_id: updated.requester_id?.toString(),
       target_org_unit_id: updated.target_org_unit_id?.toString(),
+      owner_org_id: updated.owner_org_id?.toString(),
       created_at: updated.created_at?.toISOString(),
       updated_at: updated.updated_at?.toISOString(),
     };

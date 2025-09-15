@@ -6,6 +6,8 @@ export const CreateOrgStructureRequestSchema = z.object({
   request_type: z.string().min(1, 'Request type is required'),
   requester_id: z.string().optional(),
   target_org_unit_id: z.string().optional(),
+  owner_org_id: z.string().optional(),
+  attachments: z.any().optional(),
   payload: z.any(), // JSON field - required
   status: z.string().default('SUBMITTED'),
   workflow_step: z.number().default(1),

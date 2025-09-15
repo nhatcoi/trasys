@@ -54,6 +54,7 @@ export default function OrgLayout({
   const [collapsed, setCollapsed] = useState(false);
   const [unitManagementOpen, setUnitManagementOpen] = useState(false);
   const [treeManagementOpen, setTreeManagementOpen] = useState(false);
+  const [createUnitOpen, setCreateUnitOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -71,6 +72,10 @@ export default function OrgLayout({
 
   const handleTreeManagementToggle = () => {
     setTreeManagementOpen(!treeManagementOpen);
+  };
+
+  const handleCreateUnitToggle = () => {
+    setCreateUnitOpen(!createUnitOpen);
   };
 
   const menuItems = [
@@ -109,19 +114,42 @@ export default function OrgLayout({
           label: 'Danh sách đơn vị',
         },
         {
-          key: '/org/unit/create',
+          key: 'create-unit',
           icon: <AddIcon />,
           label: 'Tạo đơn vị mới',
-        },
-        {
-          key: '/org/unit/workflow',
-          icon: <ApprovalIcon />,
-          label: 'Yêu cầu phê duyệt',
+          hasSubmenu: true,
+          submenu: [
+            {
+              key: '/org/unit/create/draft',
+              icon: <AddIcon />,
+              label: '① Khởi tạo (Draft)',
+            },
+            {
+              key: '/org/unit/create/review',
+              icon: <VisibilityIcon />,
+              label: '② Xem xét/Thẩm định (Review)',
+            },
+            {
+              key: '/org/unit/create/approve',
+              icon: <ApprovalIcon />,
+              label: '③ Phê duyệt (Approve)',
+            },
+            {
+              key: '/org/unit/create/activate',
+              icon: <PublishIcon />,
+              label: '④ Kích hoạt (Activate)',
+            },
+            {
+              key: '/org/unit/create/audit',
+              icon: <StorageIcon />,
+              label: '⑤ Theo dõi biến đổi (Audit/History)',
+            },
+          ],
         },
       ],
     },
     {
-      key: '/org/audit',
+      key: '/org/unit/create/audit',
       icon: <HistoryIcon />,
       label: 'Lịch sử thay đổi',
     },
@@ -150,6 +178,8 @@ export default function OrgLayout({
         handleUnitManagementToggle();
       } else if (item.key === 'tree-management') {
         handleTreeManagementToggle();
+      } else if (item.key === 'create-unit') {
+        handleCreateUnitToggle();
       }
     } else {
       handleMenuClick(item.key);
@@ -241,25 +271,74 @@ export default function OrgLayout({
               } timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
                   {item.submenu.map((subItem) => (
-                    <ListItem key={subItem.key} disablePadding>
-                      <ListItemButton
-                        selected={pathname === subItem.key}
-                        onClick={() => handleMenuClick(subItem.key)}
-                        sx={{
-                          mx: 1,
-                          ml: 3,
-                          borderRadius: 1,
-                          '&.Mui-selected': {
-                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                          },
-                        }}
-                      >
-                        <ListItemIcon>
-                          {subItem.icon}
-                        </ListItemIcon>
-                        <ListItemText primary={subItem.label} />
-                      </ListItemButton>
-                    </ListItem>
+                    <React.Fragment key={subItem.key}>
+                      <ListItem disablePadding>
+                        <ListItemButton
+                          selected={pathname === subItem.key}
+                          onClick={() => subItem.hasSubmenu ? handleMenuItemClick(subItem) : handleMenuClick(subItem.key)}
+                          sx={{
+                            mx: 1,
+                            ml: 3,
+                            borderRadius: 1,
+                            '&.Mui-selected': {
+                              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            },
+                          }}
+                        >
+                          <ListItemIcon>
+                            {subItem.icon}
+                          </ListItemIcon>
+                          <ListItemText primary={subItem.label} />
+                          {subItem.hasSubmenu && (
+                            subItem.key === 'create-unit' ? (
+                              createUnitOpen ? (
+                                <ChevronRightIcon sx={{ 
+                                  transform: 'rotate(90deg)',
+                                  transition: 'transform 0.2s ease-in-out'
+                                }} />
+                              ) : (
+                                <ChevronRightIcon sx={{ 
+                                  transition: 'transform 0.2s ease-in-out'
+                                }} />
+                              )
+                            ) : (
+                              <ChevronRightIcon />
+                            )
+                          )}
+                        </ListItemButton>
+                      </ListItem>
+                      
+                      {/* Sub-submenu */}
+                      {subItem.hasSubmenu && subItem.submenu && (
+                        <Collapse in={
+                          (subItem.key === 'create-unit' && createUnitOpen)
+                        } timeout="auto" unmountOnExit>
+                          <List component="div" disablePadding>
+                            {subItem.submenu.map((subSubItem) => (
+                              <ListItem key={subSubItem.key} disablePadding>
+                                <ListItemButton
+                                  selected={pathname === subSubItem.key}
+                                  onClick={() => handleMenuClick(subSubItem.key)}
+                                  sx={{
+                                    mx: 1,
+                                    ml: 5,
+                                    borderRadius: 1,
+                                    '&.Mui-selected': {
+                                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    },
+                                  }}
+                                >
+                                  <ListItemIcon>
+                                    {subSubItem.icon}
+                                  </ListItemIcon>
+                                  <ListItemText primary={subSubItem.label} />
+                                </ListItemButton>
+                              </ListItem>
+                            ))}
+                          </List>
+                        </Collapse>
+                      )}
+                    </React.Fragment>
                   ))}
                 </List>
               </Collapse>

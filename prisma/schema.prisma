@@ -9,25 +9,25 @@ datasource db {
 }
 
 model Employee {
-  id                      BigInt                    @id(map: "employee_pkey") @default(autoincrement())
-  user_id                 BigInt                    @map("user_id")
-  employee_no             String?                   @unique(map: "employee_employee_no_key") @map("employee_no") @db.VarChar(64)
-  employment_type         String                    @db.VarChar(16)
-  status                  String                    @default("ACTIVE") @db.VarChar(16)
-  hired_at                DateTime?                 @map("hired_at") @db.Date
-  terminated_at           DateTime?                 @map("terminated_at") @db.Date
-  created_at              DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updated_at              DateTime                  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                    BigInt                  @id(map: "employee_pkey") @default(autoincrement())
+  user_id               BigInt                  @map("user_id")
+  employee_no           String?                 @unique(map: "employee_employee_no_key") @map("employee_no") @db.VarChar(64)
+  employment_type       String                  @db.VarChar(16)
+  status                String                  @default("ACTIVE") @db.VarChar(16)
+  hired_at              DateTime?               @map("hired_at") @db.Date
+  terminated_at         DateTime?               @map("terminated_at") @db.Date
+  created_at            DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at            DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   EmployeeAcademicTitle EmployeeAcademicTitle[]
-  EmployeeLog            EmployeeLog[]
-  EmployeeQualification  EmployeeQualification[]
-  EmployeeTraining       EmployeeTraining[]
-  User                   User                     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "employee_user_id_fkey")
-  Employment             Employment[]
+  EmployeeLog           EmployeeLog[]
+  EmployeeQualification EmployeeQualification[]
+  EmployeeTraining      EmployeeTraining[]
+  User                  User                    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "employee_user_id_fkey")
+  Employment            Employment[]
   LeaveRequest          LeaveRequest[]
-  OrgAssignment          OrgAssignment[]
+  OrgAssignment         OrgAssignment[]
   PerformanceReview     PerformanceReview[]
-  InstructorAssignment   InstructorAssignment[]
+  InstructorAssignment  InstructorAssignment[]
 
   @@index([status], map: "idx_hr_employee_status")
   @@index([employment_type], map: "idx_hr_employee_type")
@@ -38,26 +38,26 @@ model Employee {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model AcademicTitle {
-  id                      BigInt                    @id(map: "academic_title_pkey") @default(autoincrement())
-  code                    String?                   @unique(map: "academic_title_code_key") @db.VarChar(32)
-  title                   String                    @db.VarChar(128)
+  id                    BigInt                  @id(map: "academic_title_pkey") @default(autoincrement())
+  code                  String?                 @unique(map: "academic_title_code_key") @db.VarChar(32)
+  title                 String                  @db.VarChar(128)
   EmployeeAcademicTitle EmployeeAcademicTitle[]
 
-    @@map("academic_titles")
+  @@map("academic_titles")
   @@schema("hr")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model EmployeeAcademicTitle {
-  id                BigInt          @id @default(autoincrement())
+  id                BigInt        @id @default(autoincrement())
   employee_id       BigInt
   academic_title_id BigInt
-  awarded_date      DateTime?       @db.Date
-  AcademicTitle   AcademicTitle @relation(fields: [academic_title_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Employee         Employee        @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  awarded_date      DateTime?     @db.Date
+  AcademicTitle     AcademicTitle @relation(fields: [academic_title_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Employee          Employee      @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([employee_id], map: "idx_hr_emp_academic_title")
-    @@map("employee_academic_title")
+  @@map("employee_academic_title")
   @@schema("hr")
 }
 
@@ -78,8 +78,8 @@ model EmployeeLog {
   ip_address  String?  @db.Inet
   user_agent  String?
   created_at  DateTime @default(now()) @db.Timestamptz(6)
-  User       User?   @relation(fields: [actor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Employee   Employee @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  User        User?    @relation(fields: [actor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Employee    Employee @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([action], map: "idx_hr_employee_log_action")
   @@index([actor_id], map: "idx_hr_employee_log_actor")
@@ -87,23 +87,23 @@ model EmployeeLog {
   @@index([employee_id], map: "idx_hr_employee_log_employee")
   @@index([entity_id], map: "idx_hr_employee_log_entity_id")
   @@index([entity_type], map: "idx_hr_employee_log_entity_type")
-    @@map("employee_log")
+  @@map("employee_log")
   @@schema("hr")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model EmployeeQualification {
-  id               BigInt         @id @default(autoincrement())
+  id               BigInt        @id @default(autoincrement())
   employee_id      BigInt
   qualification_id BigInt
-  major_field      String?        @db.VarChar(255)
-  institution      String?        @db.VarChar(255)
-  awarded_date     DateTime?      @db.Date
-  Employee        Employee       @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Qualification   Qualification @relation(fields: [qualification_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  major_field      String?       @db.VarChar(255)
+  institution      String?       @db.VarChar(255)
+  awarded_date     DateTime?     @db.Date
+  Employee         Employee      @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Qualification    Qualification @relation(fields: [qualification_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([employee_id], map: "idx_hr_emp_qualification")
-    @@map("employee_qualification")
+  @@map("employee_qualification")
   @@schema("hr")
 }
 
@@ -118,12 +118,12 @@ model EmployeeTraining {
   certificate_url String?
   created_at      DateTime  @default(now()) @db.Timestamptz(6)
   updated_at      DateTime  @default(now()) @db.Timestamptz(6)
-  Employee       Employee  @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Training       Training @relation(fields: [training_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Employee        Employee  @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Training        Training  @relation(fields: [training_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([employee_id], map: "idx_hr_emp_training_employee")
   @@index([status], map: "idx_hr_emp_training_status")
-    @@map("employee_training")
+  @@map("employee_training")
   @@schema("hr")
 }
 
@@ -139,26 +139,26 @@ model Employment {
   salary_band   String?   @db.VarChar(32)
   created_at    DateTime  @default(now()) @db.Timestamptz(6)
   updated_at    DateTime  @default(now()) @db.Timestamptz(6)
-  Employee     Employee  @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "employment_employee_id_fkey")
+  Employee      Employee  @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "employment_employee_id_fkey")
 
   @@index([employee_id], map: "idx_hr_employment_emp")
   @@index([start_date, end_date], map: "idx_hr_employment_time")
-    @@map("employments")
+  @@map("employments")
   @@schema("hr")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model JobPosition {
-  id             BigInt           @id(map: "job_position_pkey") @default(autoincrement())
-  code           String           @unique(map: "job_position_code_key") @db.VarChar(64)
-  title          String           @db.VarChar(255)
-  grade          String?          @db.VarChar(32)
-  job_family     String?          @db.VarChar(64)
+  id            BigInt          @id(map: "job_position_pkey") @default(autoincrement())
+  code          String          @unique(map: "job_position_code_key") @db.VarChar(64)
+  title         String          @db.VarChar(255)
+  grade         String?         @db.VarChar(32)
+  job_family    String?         @db.VarChar(64)
   OrgAssignment OrgAssignment[]
 
   @@index([job_family], map: "idx_hr_job_position_family")
   @@index([title], map: "idx_hr_job_position_title")
-    @@map("job_positions")
+  @@map("job_positions")
   @@schema("hr")
 }
 
@@ -174,37 +174,37 @@ model LeaveRequest {
   reason      String?
   created_at  DateTime @default(now()) @db.Timestamptz(6)
   updated_at  DateTime @default(now()) @db.Timestamptz(6)
-  Employee   Employee @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "leave_request_employee_id_fkey")
+  Employee    Employee @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "leave_request_employee_id_fkey")
 
   @@index([start_date, end_date], map: "idx_hr_leave_dates")
   @@index([employee_id], map: "idx_hr_leave_employee")
   @@index([status], map: "idx_hr_leave_status")
-    @@map("leave_requests")
+  @@map("leave_requests")
   @@schema("hr")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model OrgAssignment {
-  id              BigInt         @id @default(autoincrement())
+  id              BigInt       @id @default(autoincrement())
   employee_id     BigInt
   org_unit_id     BigInt
   position_id     BigInt?
-  is_primary      Boolean        @default(true)
-  assignment_type String         @default("admin") @db.VarChar(16)
-  allocation      Decimal        @default(1.00) @db.Decimal(4, 2)
-  start_date      DateTime       @db.Date
-  end_date        DateTime?      @db.Date
-  created_at      DateTime       @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime       @default(now()) @db.Timestamptz(6)
-  Employee       Employee       @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  OrgUnit       OrgUnit      @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  JobPosition   JobPosition? @relation(fields: [position_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  is_primary      Boolean      @default(true)
+  assignment_type String       @default("admin") @db.VarChar(16)
+  allocation      Decimal      @default(1.00) @db.Decimal(4, 2)
+  start_date      DateTime     @db.Date
+  end_date        DateTime?    @db.Date
+  created_at      DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime     @default(now()) @db.Timestamptz(6)
+  Employee        Employee     @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  OrgUnit         OrgUnit      @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  JobPosition     JobPosition? @relation(fields: [position_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([employee_id], map: "idx_hr_assign_emp")
   @@index([start_date, end_date], map: "idx_hr_assign_period")
   @@index([org_unit_id], map: "idx_hr_assign_unit")
-    @@map("org_assignment")
+  @@map("org_assignment")
   @@schema("hr")
 }
 
@@ -217,41 +217,41 @@ model PerformanceReview {
   comments      String?
   created_at    DateTime @default(now()) @db.Timestamptz(6)
   updated_at    DateTime @default(now()) @db.Timestamptz(6)
-  Employee     Employee @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "performance_review_employee_id_fkey")
+  Employee      Employee @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "performance_review_employee_id_fkey")
 
   @@index([employee_id], map: "idx_hr_performance_employee")
   @@index([review_period], map: "idx_hr_performance_period")
-    @@map("performance_reviews")
+  @@map("performance_reviews")
   @@schema("hr")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model Qualification {
-  id                     BigInt                   @id(map: "qualification_pkey") @default(autoincrement())
-  code                   String?                  @unique(map: "qualification_code_key") @db.VarChar(32)
-  title                  String                   @db.VarChar(128)
+  id                    BigInt                  @id(map: "qualification_pkey") @default(autoincrement())
+  code                  String?                 @unique(map: "qualification_code_key") @db.VarChar(32)
+  title                 String                  @db.VarChar(128)
   EmployeeQualification EmployeeQualification[]
 
-    @@map("qualifications")
+  @@map("qualifications")
   @@schema("hr")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model Training {
-  id                BigInt              @id(map: "training_pkey") @default(autoincrement())
-  title             String              @db.VarChar(255)
-  provider          String?             @db.VarChar(255)
-  start_date        DateTime?           @db.Date
-  end_date          DateTime?           @db.Date
-  training_type     String?             @db.VarChar(32)
-  description       String?
-  created_at        DateTime            @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
+  id               BigInt             @id(map: "training_pkey") @default(autoincrement())
+  title            String             @db.VarChar(255)
+  provider         String?            @db.VarChar(255)
+  start_date       DateTime?          @db.Date
+  end_date         DateTime?          @db.Date
+  training_type    String?            @db.VarChar(32)
+  description      String?
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
   EmployeeTraining EmployeeTraining[]
 
   @@index([start_date, end_date], map: "idx_hr_training_dates")
   @@index([provider], map: "idx_hr_training_provider")
-    @@map("trainings")
+  @@map("trainings")
   @@schema("hr")
 }
 
@@ -259,29 +259,30 @@ model Training {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model User {
-  id                                     BigInt            @id(map: "user_pkey") @default(autoincrement())
-  username                               String            @unique(map: "user_username_key") @db.VarChar(64)
-  email                                  String?           @unique(map: "user_email_key") @db.VarChar(255)
+  id                                     BigInt                 @id(map: "user_pkey") @default(autoincrement())
+  username                               String                 @unique(map: "user_username_key") @db.VarChar(64)
+  email                                  String?                @unique(map: "user_email_key") @db.VarChar(255)
   password_hash                          String
-  status                                 String?           @default("ACTIVE") @db.VarChar(16)
-  last_login_at                          DateTime?         @db.Timestamptz(6)
-  created_at                             DateTime?         @default(now()) @db.Timestamptz(6)
-  updated_at                             DateTime?         @default(now()) @db.Timestamptz(6)
-  full_name                              String            @db.VarChar(255)
-  dob                                    DateTime?         @db.Date
-  gender                                 String?           @db.VarChar(16)
-  phone                                  String?           @db.VarChar(32)
+  status                                 String?                @default("ACTIVE") @db.VarChar(16)
+  last_login_at                          DateTime?              @db.Timestamptz(6)
+  created_at                             DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at                             DateTime?              @default(now()) @db.Timestamptz(6)
+  full_name                              String                 @db.VarChar(255)
+  dob                                    DateTime?              @db.Date
+  gender                                 String?                @db.VarChar(16)
+  phone                                  String?                @db.VarChar(32)
   address                                String?
-  AuditLog                             AuditLog[]
-  RolePermission                        RolePermission[]
-  user_role_user_role_assigned_byTousers UserRole[]       @relation("user_role_assigned_byTousers")
-  user_role_user_role_user_idTousers     UserRole[]       @relation("user_role_user_idTousers")
-  EmployeeLog                           EmployeeLog[]
-  Employee                              Employee[]
+  AuditLog                               AuditLog[]
+  RolePermission                         RolePermission[]
+  user_role_user_role_assigned_byTousers UserRole[]             @relation("user_role_assigned_byTousers")
+  user_role_user_role_user_idTousers     UserRole[]             @relation("user_role_user_idTousers")
+  EmployeeLog                            EmployeeLog[]
+  Employee                               Employee[]
+  org_unit_attachments                   OrgUnitAttachments[]
 
   @@index([full_name], map: "idx_user_full_name")
   @@index([phone], map: "idx_user_phone")
-    @@map("users")
+  @@map("users")
   @@schema("auth")
 }
 
@@ -296,8 +297,14 @@ model OrgStructureRequest {
   workflow_step      Int       @default(1)
   created_at         DateTime? @default(now()) @db.Timestamptz(6)
   updated_at         DateTime? @default(now()) @db.Timestamptz(6)
+  owner_org_id       BigInt?
+  attachments        Json?     @default("[]")
+  org_units          OrgUnit?  @relation(fields: [owner_org_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-    @@map("org_structure_request")
+  @@index([attachments], map: "idx_org_structure_request_attachments", type: Gin)
+  @@index([owner_org_id], map: "idx_org_structure_request_owner")
+  @@index([requester_id], map: "idx_org_structure_request_requester")
+  @@map("org_structure_request")
   @@schema("org")
 }
 
@@ -312,8 +319,8 @@ model OrgUnitBackup {
   created_at DateTime? @db.Timestamp(6)
   updated_at DateTime? @db.Timestamp(6)
 
+  @@map("org_unit_backups")
   @@ignore
-    @@map("org_unit_backups")
   @@schema("org")
 }
 
@@ -327,7 +334,7 @@ model OrgUnitHistory {
   details     Json?
   changed_at  DateTime? @default(now()) @db.Timestamptz(6)
 
-    @@map("org_unit_history")
+  @@map("org_unit_history")
   @@schema("org")
 }
 
@@ -348,7 +355,7 @@ model OrgUnitRelation {
   @@index([effective_from, effective_to], map: "idx_org_unit_relation_effective")
   @@index([parent_id], map: "idx_org_unit_relation_parent")
   @@index([relation_type], map: "idx_org_unit_relation_type")
-    @@map("org_unit_relation")
+  @@map("org_unit_relation")
   @@schema("org")
 }
 
@@ -360,7 +367,7 @@ model OrgUnitRole {
   title       String?
   created_at  DateTime? @default(now()) @db.Timestamptz(6)
 
-    @@map("org_unit_role")
+  @@map("org_unit_role")
   @@schema("org")
 }
 
@@ -368,102 +375,109 @@ model OrgUnitRole {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model OrgUnit {
-  id                  BigInt                @id(map: "org_unit_pkey") @default(autoincrement())
-  parent_id           BigInt?
-  type                String?               @db.VarChar(10)
-  code                String                @db.VarChar(50)
-  name                String                @db.VarChar(255)
-  created_at          DateTime?             @default(now()) @db.Timestamp(6)
-  updated_at          DateTime?             @default(now()) @db.Timestamp(6)
-  description         String?
-  status              String?               @default("active") @db.VarChar(20)
-  effective_from      DateTime?             @default(dbgenerated("CURRENT_DATE")) @db.Date
-  effective_to        DateTime?             @db.Date
-  Course             Course[]
-  MajorOwnerHistory MajorOwnerHistory[]
-  Major              Major[]
-  Program            Program[]
-  OrgAssignment      OrgAssignment[]
-  ClassSection      ClassSection[]
-  Section            Section[]
+  id                         BigInt                 @id(map: "org_unit_pkey") @default(autoincrement())
+  parent_id                  BigInt?
+  type                       String?                @db.VarChar(10)
+  code                       String                 @db.VarChar(50)
+  name                       String                 @db.VarChar(255)
+  created_at                 DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at                 DateTime?              @default(now()) @db.Timestamp(6)
+  description                String?
+  status                     String?                @default("active") @db.VarChar(20)
+  effective_from             DateTime?              @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_to               DateTime?              @db.Date
+  campus_id                  BigInt?
+  planned_establishment_date DateTime?              @db.Date
+  Course                     Course[]
+  MajorOwnerHistory          MajorOwnerHistory[]
+  Major                      Major[]
+  Program                    Program[]
+  OrgAssignment              OrgAssignment[]
+  org_structure_request      OrgStructureRequest[]
+  org_unit_attachments       OrgUnitAttachments[]
+  campus                     campus?                @relation(fields: [campus_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  ClassSection               ClassSection[]
+  Section                    Section[]
 
   @@index([effective_from, effective_to], map: "idx_org_unit_effective_dates")
   @@index([parent_id], map: "idx_org_unit_parent_id")
   @@index([status], map: "idx_org_unit_status")
   @@index([type], map: "idx_org_unit_type")
-    @@map("org_units")
+  @@index([campus_id], map: "idx_org_units_campus_id")
+  @@index([planned_establishment_date], map: "idx_org_units_planned_date")
+  @@map("org_units")
   @@schema("org")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model Campus {
-  id             BigInt         @id(map: "campus_pkey") @default(autoincrement())
-  code           String         @unique(map: "campus_code_key") @db.VarChar(32)
-  name_vi        String         @db.VarChar(255)
-  name_en        String?        @db.VarChar(255)
-  short_name     String?        @db.VarChar(100)
-  slug           String?        @db.VarChar(255)
+  id             BigInt        @id(map: "campus_pkey") @default(autoincrement())
+  code           String        @unique(map: "campus_code_key") @db.VarChar(32)
+  name_vi        String        @db.VarChar(255)
+  name_en        String?       @db.VarChar(255)
+  short_name     String?       @db.VarChar(100)
+  slug           String?       @db.VarChar(255)
   address        String?
-  district       String?        @db.VarChar(128)
-  province       String?        @db.VarChar(128)
-  country        String?        @default("Việt Nam") @db.VarChar(128)
-  postal_code    String?        @db.VarChar(20)
-  latitude       Decimal?       @db.Decimal(10, 6)
-  longitude      Decimal?       @db.Decimal(10, 6)
-  campus_type    String?        @default("main") @db.VarChar(32)
-  established_at DateTime?      @db.Date
-  closed_at      DateTime?      @db.Date
-  is_active      Boolean?       @default(true)
+  district       String?       @db.VarChar(128)
+  province       String?       @db.VarChar(128)
+  country        String?       @default("Việt Nam") @db.VarChar(128)
+  postal_code    String?       @db.VarChar(20)
+  latitude       Decimal?      @db.Decimal(10, 6)
+  longitude      Decimal?      @db.Decimal(10, 6)
+  campus_type    String?       @default("main") @db.VarChar(32)
+  established_at DateTime?     @db.Date
+  closed_at      DateTime?     @db.Date
+  is_active      Boolean?      @default(true)
   note           String?
   created_by     BigInt?
   updated_by     BigInt?
-  created_at     DateTime?      @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime?      @default(now()) @db.Timestamptz(6)
-  MajorCampus   MajorCampus[]
+  created_at     DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?     @default(now()) @db.Timestamptz(6)
+  MajorCampus    MajorCampus[]
 
   @@index([is_active], map: "idx_campus_is_active")
   @@index([name_vi], map: "idx_campus_name")
   @@index([province], map: "idx_campus_province")
-    @@map("campuses")
+  @@map("campuses")
   @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model CourseVersion {
-  id             BigInt           @id(map: "course_version_pkey") @default(autoincrement())
+  id             BigInt         @id(map: "course_version_pkey") @default(autoincrement())
   course_id      BigInt
   version        String
   clo            Json?
   syllabus       Json?
-  status         String           @default("DRAFT")
-  effective_from DateTime?        @db.Date
-  effective_to   DateTime?        @db.Date
-  created_at     DateTime         @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime         @default(now()) @db.Timestamptz(6)
-  Course        Course          @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "course_version_course_id_fkey")
-  ClassSection ClassSection[]
+  status         String         @default("DRAFT")
+  effective_from DateTime?      @db.Date
+  effective_to   DateTime?      @db.Date
+  created_at     DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime       @default(now()) @db.Timestamptz(6)
+  Course         Course         @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "course_version_course_id_fkey")
+  ClassSection   ClassSection[]
 
   @@unique([course_id, version], map: "uq_course_version")
   @@index([course_id], map: "idx_cv_course")
   @@index([status], map: "idx_cv_status")
-    @@map("course_versions")
+  @@map("course_versions")
   @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model Course {
-  id                 BigInt               @id(map: "course_pkey") @default(autoincrement())
-  code               String               @db.VarChar(32)
-  name_vi            String               @db.VarChar(255)
-  name_en            String?              @db.VarChar(255)
-  credits            Decimal              @db.Decimal(4, 1)
-  org_unit_id        BigInt
-  type               String               @default("theory") @db.VarChar(32)
-  created_at         DateTime             @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  id               BigInt             @id(map: "course_pkey") @default(autoincrement())
+  code             String             @db.VarChar(32)
+  name_vi          String             @db.VarChar(255)
+  name_en          String?            @db.VarChar(255)
+  credits          Decimal            @db.Decimal(4, 1)
+  org_unit_id      BigInt
+  type             String             @default("theory") @db.VarChar(32)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
   CourseVersion    CourseVersion[]
   OrgUnit          OrgUnit            @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "course_org_unit_id_fkey")
   ProgramCourseMap ProgramCourseMap[]
@@ -472,7 +486,7 @@ model Course {
   @@unique([org_unit_id, code], map: "uq_course_code_per_owner")
   @@index([org_unit_id], map: "idx_course_org")
   @@index([type], map: "idx_course_type")
-    @@map("courses")
+  @@map("courses")
   @@schema("academic")
 }
 
@@ -487,10 +501,10 @@ model MajorAccreditation {
   cert_no    String?   @db.VarChar(128)
   agency     String?   @db.VarChar(128)
   note       String?
-  Major     Major    @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Major      Major     @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([major_id], map: "idx_major_accr_major")
-    @@map("major_accreditation")
+  @@map("major_accreditation")
   @@schema("academic")
 }
 
@@ -502,10 +516,10 @@ model MajorAlias {
   lang       String?   @default("vi") @db.VarChar(16)
   valid_from DateTime? @db.Date
   valid_to   DateTime? @db.Date
-  Major     Major    @relation(fields: [major_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  Major      Major     @relation(fields: [major_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([major_id], map: "idx_major_alias_major")
-    @@map("major_alias")
+  @@map("major_alias")
   @@schema("academic")
 }
 
@@ -515,11 +529,11 @@ model MajorCampus {
   major_id   BigInt
   campus_id  BigInt
   is_primary Boolean? @default(false)
-  Campus   Campus @relation(fields: [campus_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  Major     Major   @relation(fields: [major_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  Campus     Campus   @relation(fields: [campus_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  Major      Major    @relation(fields: [major_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([major_id, campus_id], map: "uq_major_campus")
-    @@map("major_campus")
+  @@map("major_campus")
   @@schema("academic")
 }
 
@@ -534,10 +548,10 @@ model MajorDocument {
   issued_at DateTime? @db.Date
   file_url  String?
   note      String?
-  Major    Major    @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Major     Major     @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([major_id], map: "idx_major_doc_major")
-    @@map("major_document")
+  @@map("major_document")
   @@schema("academic")
 }
 
@@ -547,10 +561,10 @@ model MajorLanguage {
   major_id BigInt
   language String  @db.VarChar(32)
   level    String? @default("main") @db.VarChar(32)
-  Major   Major  @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Major    Major   @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([major_id, language], map: "uq_major_language")
-    @@map("major_language")
+  @@map("major_language")
   @@schema("academic")
 }
 
@@ -560,10 +574,10 @@ model MajorModality {
   major_id BigInt
   modality String  @db.VarChar(32)
   note     String?
-  Major   Major  @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Major    Major   @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([major_id, modality], map: "uq_major_modality")
-    @@map("major_modality")
+  @@map("major_modality")
   @@schema("academic")
 }
 
@@ -575,10 +589,10 @@ model MajorOutcome {
   content   String
   version   String?  @default("v1") @db.VarChar(32)
   is_active Boolean? @default(true)
-  Major    Major   @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Major     Major    @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([major_id, code, version])
-    @@map("major_outcome")
+  @@map("major_outcome")
   @@schema("academic")
 }
 
@@ -589,11 +603,11 @@ model MajorOwnerHistory {
   org_unit_id BigInt
   start_date  DateTime  @db.Date
   end_date    DateTime? @db.Date
-  Major      Major    @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  OrgUnit   OrgUnit @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Major       Major     @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  OrgUnit     OrgUnit   @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([major_id], map: "idx_moh_major")
-    @@map("major_owner_history")
+  @@map("major_owner_history")
   @@schema("academic")
 }
 
@@ -605,10 +619,10 @@ model MajorQuotaYear {
   year     Int     @db.SmallInt
   quota    Int
   note     String?
-  Major   Major  @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Major    Major   @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([major_id, year])
-    @@map("major_quota_year")
+  @@map("major_quota_year")
   @@schema("academic")
 }
 
@@ -620,10 +634,10 @@ model MajorTuition {
   tuition_group String  @db.VarChar(64)
   amount_vnd    Decimal @db.Decimal(14, 2)
   note          String?
-  Major        Major  @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Major         Major   @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([major_id, year, tuition_group])
-    @@map("major_tuition")
+  @@map("major_tuition")
   @@schema("academic")
 }
 
@@ -631,163 +645,163 @@ model MajorTuition {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model Major {
-  id                   BigInt                @id(map: "major_pkey") @default(autoincrement())
-  code                 String                @db.VarChar(32)
-  name_vi              String                @db.VarChar(255)
-  name_en              String?               @db.VarChar(255)
-  short_name           String?               @db.VarChar(100)
-  slug                 String?               @db.VarChar(255)
-  national_code        String?               @db.VarChar(32)
-  is_moet_standard     Boolean?              @default(false)
-  degree_level         String                @db.VarChar(32)
-  field_cluster        String?               @db.VarChar(64)
-  specialization_model String?               @default("none") @db.VarChar(32)
+  id                   BigInt               @id(map: "major_pkey") @default(autoincrement())
+  code                 String               @db.VarChar(32)
+  name_vi              String               @db.VarChar(255)
+  name_en              String?              @db.VarChar(255)
+  short_name           String?              @db.VarChar(100)
+  slug                 String?              @db.VarChar(255)
+  national_code        String?              @db.VarChar(32)
+  is_moet_standard     Boolean?             @default(false)
+  degree_level         String               @db.VarChar(32)
+  field_cluster        String?              @db.VarChar(64)
+  specialization_model String?              @default("none") @db.VarChar(32)
   org_unit_id          BigInt
   parent_major_id      BigInt?
-  duration_years       Decimal?              @default(4.0) @db.Decimal(3, 1)
-  total_credits_min    Int?                  @db.SmallInt
-  total_credits_max    Int?                  @db.SmallInt
-  language_main        String?               @default("vi") @db.VarChar(32)
-  modality             String?               @default("fulltime") @db.VarChar(32)
-  semesters_per_year   Int?                  @default(2) @db.SmallInt
-  start_terms          String?               @default("Fall") @db.VarChar(64)
+  duration_years       Decimal?             @default(4.0) @db.Decimal(3, 1)
+  total_credits_min    Int?                 @db.SmallInt
+  total_credits_max    Int?                 @db.SmallInt
+  language_main        String?              @default("vi") @db.VarChar(32)
+  modality             String?              @default("fulltime") @db.VarChar(32)
+  semesters_per_year   Int?                 @default(2) @db.SmallInt
+  start_terms          String?              @default("Fall") @db.VarChar(64)
   default_quota        Int?
-  tuition_group        String?               @db.VarChar(64)
-  status               String                @default("active") @db.VarChar(32)
-  established_at       DateTime?             @db.Date
-  closed_at            DateTime?             @db.Date
-  accreditation        String?               @db.VarChar(64)
+  tuition_group        String?              @db.VarChar(64)
+  status               String               @default("active") @db.VarChar(32)
+  established_at       DateTime?            @db.Date
+  closed_at            DateTime?            @db.Date
+  accreditation        String?              @db.VarChar(64)
   accreditation_note   String?
   description          String?
   notes                String?
   created_by           BigInt?
   updated_by           BigInt?
-  created_at           DateTime?             @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime?             @default(now()) @db.Timestamptz(6)
-  MajorAccreditation  MajorAccreditation[]
-  MajorAlias          MajorAlias[]
-  MajorCampus         MajorCampus[]
-  MajorDocument       MajorDocument[]
-  MajorLanguage       MajorLanguage[]
-  MajorModality       MajorModality[]
-  MajorOutcome        MajorOutcome[]
-  MajorOwnerHistory  MajorOwnerHistory[]
-  MajorQuotaYear     MajorQuotaYear[]
-  MajorTuition        MajorTuition[]
-  OrgUnit            OrgUnit             @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_major_owner")
-  Major               Major?               @relation("majorsTomajors", fields: [parent_major_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_major_parent")
+  created_at           DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?            @default(now()) @db.Timestamptz(6)
+  MajorAccreditation   MajorAccreditation[]
+  MajorAlias           MajorAlias[]
+  MajorCampus          MajorCampus[]
+  MajorDocument        MajorDocument[]
+  MajorLanguage        MajorLanguage[]
+  MajorModality        MajorModality[]
+  MajorOutcome         MajorOutcome[]
+  MajorOwnerHistory    MajorOwnerHistory[]
+  MajorQuotaYear       MajorQuotaYear[]
+  MajorTuition         MajorTuition[]
+  OrgUnit              OrgUnit              @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_major_owner")
+  Major                Major?               @relation("majorsTomajors", fields: [parent_major_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_major_parent")
   other_majors         Major[]              @relation("majorsTomajors")
-  Program             Program[]
+  Program              Program[]
 
   @@unique([org_unit_id, code], map: "uq_major_code_per_owner")
   @@index([degree_level], map: "idx_major_degree_level")
   @@index([org_unit_id], map: "idx_major_owner")
   @@index([slug], map: "idx_major_slug")
   @@index([status], map: "idx_major_status")
-    @@map("majors")
+  @@map("majors")
   @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model ProgramBlockGroupRule {
-  id                   BigInt               @id @default(autoincrement())
-  group_id             BigInt
-  min_credits          Decimal?             @db.Decimal(5, 1)
-  max_credits          Decimal?             @db.Decimal(5, 1)
-  min_courses          Int?                 @db.SmallInt
-  max_courses          Int?                 @db.SmallInt
+  id                BigInt            @id @default(autoincrement())
+  group_id          BigInt
+  min_credits       Decimal?          @db.Decimal(5, 1)
+  max_credits       Decimal?          @db.Decimal(5, 1)
+  min_courses       Int?              @db.SmallInt
+  max_courses       Int?              @db.SmallInt
   ProgramBlockGroup ProgramBlockGroup @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([group_id], map: "idx_program_block_group_rule_group")
-    @@map("program_block_group_rule")
+  @@map("program_block_group_rule")
   @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model ProgramBlockGroup {
-  id                       BigInt                     @id(map: "program_block_group_pkey") @default(autoincrement())
-  block_id                 BigInt
-  code                     String                     @db.VarChar(32)
-  title                    String                     @db.VarChar(255)
-  group_type               String                     @db.VarChar(32)
-  display_order            Int                        @default(1) @db.SmallInt
+  id                    BigInt                  @id(map: "program_block_group_pkey") @default(autoincrement())
+  block_id              BigInt
+  code                  String                  @db.VarChar(32)
+  title                 String                  @db.VarChar(255)
+  group_type            String                  @db.VarChar(32)
+  display_order         Int                     @default(1) @db.SmallInt
   ProgramBlockGroupRule ProgramBlockGroupRule[]
-  ProgramBlock           ProgramBlock             @relation(fields: [block_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "program_block_group_block_id_fkey")
-  ProgramCourseMap       ProgramCourseMap[]
+  ProgramBlock          ProgramBlock            @relation(fields: [block_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "program_block_group_block_id_fkey")
+  ProgramCourseMap      ProgramCourseMap[]
 
   @@unique([block_id, code], map: "program_block_group_block_id_code_key")
   @@index([block_id], map: "idx_program_block_group_block")
-    @@map("program_block_groups")
+  @@map("program_block_groups")
   @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model ProgramBlock {
-  id                   BigInt                 @id(map: "program_block_pkey") @default(autoincrement())
-  program_id           BigInt
-  code                 String                 @db.VarChar(32)
-  title                String                 @db.VarChar(255)
-  block_type           String                 @db.VarChar(32)
-  display_order        Int                    @default(1) @db.SmallInt
+  id                BigInt              @id(map: "program_block_pkey") @default(autoincrement())
+  program_id        BigInt
+  code              String              @db.VarChar(32)
+  title             String              @db.VarChar(255)
+  block_type        String              @db.VarChar(32)
+  display_order     Int                 @default(1) @db.SmallInt
   ProgramBlockGroup ProgramBlockGroup[]
-  Program             Program               @relation(fields: [program_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "program_block_program_id_fkey")
-  ProgramCourseMap   ProgramCourseMap[]
+  Program           Program             @relation(fields: [program_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "program_block_program_id_fkey")
+  ProgramCourseMap  ProgramCourseMap[]
 
   @@unique([program_id, code], map: "program_block_program_id_code_key")
   @@index([program_id], map: "idx_program_block_program")
-    @@map("program_blocks")
+  @@map("program_blocks")
   @@schema("academic")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model ProgramCourseMap {
-  id                   BigInt                @id @default(autoincrement())
-  program_id           BigInt
-  course_id            BigInt
-  block_id             BigInt?
-  group_id             BigInt?
-  is_required          Boolean?              @default(true)
-  display_order        Int?                  @default(1) @db.SmallInt
-  ProgramBlock       ProgramBlock?       @relation(fields: [block_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Course              Course               @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                BigInt             @id @default(autoincrement())
+  program_id        BigInt
+  course_id         BigInt
+  block_id          BigInt?
+  group_id          BigInt?
+  is_required       Boolean?           @default(true)
+  display_order     Int?               @default(1) @db.SmallInt
+  ProgramBlock      ProgramBlock?      @relation(fields: [block_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Course            Course             @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   ProgramBlockGroup ProgramBlockGroup? @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Program             Program              @relation(fields: [program_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  Program           Program            @relation(fields: [program_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([program_id, course_id])
   @@index([course_id], map: "idx_program_course_map_course")
   @@index([program_id], map: "idx_program_course_map_program")
-    @@map("program_course_map")
+  @@map("program_course_map")
   @@schema("academic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model Program {
-  id                 BigInt               @id(map: "program_pkey") @default(autoincrement())
-  major_id           BigInt?
-  org_unit_id        BigInt?
-  version            String               @default("2024")
-  total_credits      Int                  @default(120)
-  plo                Json?
-  status             String               @default("DRAFT")
-  effective_from     DateTime?            @db.Date
-  effective_to       DateTime?            @db.Date
-  created_by         BigInt?
-  updated_by         BigInt?
-  created_at         DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime?            @default(now()) @db.Timestamptz(6)
-  code               String?              @unique(map: "uq_program_code") @db.VarChar(32)
-  name_vi            String?              @db.VarChar(255)
-  name_en            String?              @db.VarChar(255)
-  description        String?
+  id               BigInt             @id(map: "program_pkey") @default(autoincrement())
+  major_id         BigInt?
+  org_unit_id      BigInt?
+  version          String             @default("2024")
+  total_credits    Int                @default(120)
+  plo              Json?
+  status           String             @default("DRAFT")
+  effective_from   DateTime?          @db.Date
+  effective_to     DateTime?          @db.Date
+  created_by       BigInt?
+  updated_by       BigInt?
+  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  code             String?            @unique(map: "uq_program_code") @db.VarChar(32)
+  name_vi          String?            @db.VarChar(255)
+  name_en          String?            @db.VarChar(255)
+  description      String?
   ProgramBlock     ProgramBlock[]
   ProgramCourseMap ProgramCourseMap[]
-  Major             Major?              @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "program_major_id_fkey")
+  Major            Major?             @relation(fields: [major_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "program_major_id_fkey")
   OrgUnit          OrgUnit?           @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "program_org_unit_id_fkey")
 
   @@unique([major_id, version], map: "uq_program_major_version")
-    @@map("programs")
+  @@map("programs")
   @@schema("academic")
 }
 
@@ -802,59 +816,52 @@ model AuditLog {
   ip_address String?   @db.Inet
   user_agent String?
   created_at DateTime? @default(now()) @db.Timestamptz(6)
-  User      User?    @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+  User       User?     @relation(fields: [user_id], references: [id], onUpdate: NoAction)
 
-  @@index([created_at], map: "idx_audit_logs_created_at")
-  @@index([table_name, record_id], map: "idx_audit_logs_table_record")
-  @@index([user_id], map: "idx_audit_logs_user_id")
-    @@map("audit_logs")
+  @@map("audit_logs")
   @@schema("auth")
 }
 
 model Permission {
-  id              BigInt            @id @default(autoincrement())
-  name            String            @unique @db.VarChar(100)
-  description     String?
-  resource        String            @db.VarChar(100)
-  action          String            @db.VarChar(50)
-  created_at      DateTime?         @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime?         @default(now()) @db.Timestamptz(6)
+  id             BigInt           @id @default(autoincrement())
+  name           String           @unique @db.VarChar(100)
+  description    String?
+  resource       String           @db.VarChar(100)
+  action         String           @db.VarChar(50)
+  created_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
   RolePermission RolePermission[]
 
-  @@index([resource, action], map: "idx_permissions_resource_action")
-    @@map("permissions")
+  @@map("permissions")
   @@schema("auth")
 }
 
 model RolePermission {
-  id            BigInt      @id @default(autoincrement())
+  id            BigInt     @id @default(autoincrement())
   role_id       BigInt
   permission_id BigInt
-  granted_at    DateTime?   @default(now()) @db.Timestamptz(6)
+  granted_at    DateTime?  @default(now()) @db.Timestamptz(6)
   granted_by    BigInt?
-  User         User?      @relation(fields: [granted_by], references: [id], onUpdate: NoAction)
-  Permission   Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  Role         Role       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  User          User?      @relation(fields: [granted_by], references: [id], onUpdate: NoAction)
+  Permission    Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  Role          Role       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([role_id, permission_id])
-  @@index([permission_id], map: "idx_role_permission_permission_id")
-  @@index([role_id], map: "idx_role_permission_role_id")
-    @@map("role_permission")
+  @@map("role_permission")
   @@schema("auth")
 }
 
 model Role {
-  id              BigInt            @id @default(autoincrement())
-  name            String            @unique @db.VarChar(100)
-  description     String?
-  is_system_role  Boolean?          @default(false)
-  created_at      DateTime?         @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime?         @default(now()) @db.Timestamptz(6)
+  id             BigInt           @id @default(autoincrement())
+  name           String           @unique @db.VarChar(100)
+  description    String?
+  is_system_role Boolean?         @default(false)
+  created_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
   RolePermission RolePermission[]
   UserRole       UserRole[]
 
-  @@index([name], map: "idx_roles_name")
-    @@map("roles")
+  @@map("roles")
   @@schema("auth")
 }
 
@@ -866,15 +873,12 @@ model UserRole {
   assigned_by                        BigInt?
   expires_at                         DateTime? @db.Timestamptz(6)
   is_active                          Boolean?  @default(true)
-  users_user_role_assigned_byTousers User?    @relation("user_role_assigned_byTousers", fields: [assigned_by], references: [id], onUpdate: NoAction)
-  Role                              Role     @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  users_user_role_user_idTousers     User     @relation("user_role_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_user_role_assigned_byTousers User?     @relation("user_role_assigned_byTousers", fields: [assigned_by], references: [id], onUpdate: NoAction)
+  Role                               Role      @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_user_role_user_idTousers     User      @relation("user_role_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([user_id, role_id])
-  @@index([is_active], map: "idx_user_role_active")
-  @@index([role_id], map: "idx_user_role_role_id")
-  @@index([user_id], map: "idx_user_role_user_id")
-    @@map("user_role")
+  @@map("user_role")
   @@schema("auth")
 }
 
@@ -890,7 +894,7 @@ model Invoice {
   created_at DateTime? @default(now()) @db.Timestamp(6)
   updated_at DateTime? @default(now()) @db.Timestamp(6)
 
-    @@map("invoices")
+  @@map("invoices")
   @@schema("finance")
 }
 
@@ -908,7 +912,7 @@ model TuitionRule {
   created_at     DateTime? @default(now()) @db.Timestamp(6)
   updated_at     DateTime? @default(now()) @db.Timestamp(6)
 
-    @@map("tuition_rules")
+  @@map("tuition_rules")
   @@schema("finance")
 }
 
@@ -926,49 +930,49 @@ model ApprovalTask {
   created_at    DateTime? @default(now()) @db.Timestamp(6)
   updated_at    DateTime? @default(now()) @db.Timestamp(6)
 
-    @@map("approval_tasks")
+  @@map("approval_tasks")
   @@schema("report")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model AcademicTerm {
-  id             BigInt           @id(map: "term_academic_pkey") @default(autoincrement())
-  code           String           @unique(map: "term_academic_code_key") @db.VarChar(32)
-  title          String?          @db.VarChar(128)
-  start_date     DateTime?        @db.Date
-  end_date       DateTime?        @db.Date
-  created_at     DateTime         @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime         @default(now()) @db.Timestamptz(6)
+  id           BigInt         @id(map: "term_academic_pkey") @default(autoincrement())
+  code         String         @unique(map: "term_academic_code_key") @db.VarChar(32)
+  title        String?        @db.VarChar(128)
+  start_date   DateTime?      @db.Date
+  end_date     DateTime?      @db.Date
+  created_at   DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime       @default(now()) @db.Timestamptz(6)
   ClassSection ClassSection[]
 
   @@index([code], map: "idx_term_academic_code")
   @@index([start_date, end_date], map: "idx_term_academic_dates")
-    @@map("academic_terms")
+  @@map("academic_terms")
   @@schema("schedule")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model ClassSection {
-  id                    BigInt                  @id(map: "class_section_pkey") @default(autoincrement())
-  course_id             BigInt
-  course_version_id     BigInt?
-  term_academic_id      BigInt
-  section_code          String?                 @db.VarChar(32)
-  capacity              Int?
-  org_unit_id           BigInt?
-  created_at            DateTime                @default(now()) @db.Timestamptz(6)
-  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
+  id                   BigInt                 @id(map: "class_section_pkey") @default(autoincrement())
+  course_id            BigInt
+  course_version_id    BigInt?
+  term_academic_id     BigInt
+  section_code         String?                @db.VarChar(32)
+  capacity             Int?
+  org_unit_id          BigInt?
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
   Course               Course                 @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_course_id_fkey")
-  CourseVersion       CourseVersion?        @relation(fields: [course_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_course_version_id_fkey")
-  OrgUnit             OrgUnit?              @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_org_unit_id_fkey")
-  AcademicTerm        AcademicTerm          @relation(fields: [term_academic_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_term_academic_id_fkey")
+  CourseVersion        CourseVersion?         @relation(fields: [course_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_course_version_id_fkey")
+  OrgUnit              OrgUnit?               @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_org_unit_id_fkey")
+  AcademicTerm         AcademicTerm           @relation(fields: [term_academic_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "class_section_term_academic_id_fkey")
   InstructorAssignment InstructorAssignment[]
 
   @@index([section_code], map: "idx_class_section_code")
   @@index([course_id], map: "idx_class_section_course")
   @@index([org_unit_id], map: "idx_class_section_org")
   @@index([term_academic_id], map: "idx_class_section_term")
-    @@map("class_sections")
+  @@map("class_sections")
   @@schema("schedule")
 }
 
@@ -984,28 +988,28 @@ model Exam {
   status     String?   @default("scheduled") @db.VarChar(20)
   created_at DateTime? @default(now()) @db.Timestamp(6)
   updated_at DateTime? @default(now()) @db.Timestamp(6)
-  Section   Section  @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "exam_section_id_fkey")
+  Section    Section   @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "exam_section_id_fkey")
 
-    @@map("exams")
+  @@map("exams")
   @@schema("schedule")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model InstructorAssignment {
-  id               BigInt         @id @default(autoincrement())
+  id               BigInt       @id @default(autoincrement())
   employee_id      BigInt
   class_section_id BigInt
-  role             String?        @default("MAIN") @db.VarChar(16)
-  created_at       DateTime       @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime       @default(now()) @db.Timestamptz(6)
-  ClassSection   ClassSection @relation(fields: [class_section_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Employee        Employee       @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  role             String?      @default("MAIN") @db.VarChar(16)
+  created_at       DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime     @default(now()) @db.Timestamptz(6)
+  ClassSection     ClassSection @relation(fields: [class_section_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Employee         Employee     @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([employee_id], map: "idx_instructor_assignment_employee")
   @@index([role], map: "idx_instructor_assignment_role")
   @@index([class_section_id], map: "idx_instructor_assignment_section")
-    @@map("instructor_assignment")
+  @@map("instructor_assignment")
   @@schema("schedule")
 }
 
@@ -1019,33 +1023,33 @@ model SectionSchedule {
   end_time    DateTime  @db.Time(6)
   room_id     Int?
   created_at  DateTime? @default(now()) @db.Timestamp(6)
-  Section    Section  @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "section_schedule_section_id_fkey")
+  Section     Section   @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "section_schedule_section_id_fkey")
 
-    @@map("section_schedules")
+  @@map("section_schedules")
   @@schema("schedule")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model Section {
-  id                Int                 @id(map: "section_pkey") @default(autoincrement())
-  course_id         Int
-  term_id           Int
-  org_unit_id       BigInt
-  code              String              @db.VarChar(50)
-  capacity          Int                 @default(30)
-  instructor_id     Int?
-  status            String?             @default("active") @db.VarChar(20)
-  created_at        DateTime?           @default(now()) @db.Timestamp(6)
-  updated_at        DateTime?           @default(now()) @db.Timestamp(6)
-  Exam             Exam[]
+  id              Int               @id(map: "section_pkey") @default(autoincrement())
+  course_id       Int
+  term_id         Int
+  org_unit_id     BigInt
+  code            String            @db.VarChar(50)
+  capacity        Int               @default(30)
+  instructor_id   Int?
+  status          String?           @default("active") @db.VarChar(20)
+  created_at      DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?         @default(now()) @db.Timestamp(6)
+  Exam            Exam[]
   SectionSchedule SectionSchedule[]
   OrgUnit         OrgUnit           @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "section_org_unit_id_fkey")
-  Enrollment       Enrollment[]
-  GradeEntry     GradeEntry[]
+  Enrollment      Enrollment[]
+  GradeEntry      GradeEntry[]
 
   @@index([course_id], map: "idx_section_course_id")
   @@index([instructor_id], map: "idx_section_instructor_id")
-    @@map("sections")
+  @@map("sections")
   @@schema("schedule")
 }
 
@@ -1058,66 +1062,112 @@ model Enrollment {
   status      String?   @default("enrolled") @db.VarChar(20)
   enrolled_at DateTime? @default(now()) @db.Timestamp(6)
   updated_at  DateTime? @default(now()) @db.Timestamp(6)
-  Section    Section  @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "enrollment_section_id_fkey")
+  Section     Section   @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "enrollment_section_id_fkey")
 
   @@unique([student_id, section_id], map: "enrollment_student_id_section_id_key")
   @@index([section_id], map: "idx_enrollment_section_id")
   @@index([student_id], map: "idx_enrollment_student_id")
-    @@map("enrollments")
+  @@map("enrollments")
   @@schema("student")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model GradeEntry {
-  id            Int         @id(map: "grade_entry_pkey") @default(autoincrement())
+  id            Int       @id(map: "grade_entry_pkey") @default(autoincrement())
   grade_item_id Int
   student_id    Int
   section_id    Int
-  score         Decimal?    @db.Decimal(5, 2)
-  locked        Boolean?    @default(false)
-  created_at    DateTime?   @default(now()) @db.Timestamp(6)
-  updated_at    DateTime?   @default(now()) @db.Timestamp(6)
-  GradeItem   GradeItem @relation(fields: [grade_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "grade_entry_grade_item_id_fkey")
-  Section      Section    @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "grade_entry_section_id_fkey")
+  score         Decimal?  @db.Decimal(5, 2)
+  locked        Boolean?  @default(false)
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  updated_at    DateTime? @default(now()) @db.Timestamp(6)
+  GradeItem     GradeItem @relation(fields: [grade_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "grade_entry_grade_item_id_fkey")
+  Section       Section   @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "grade_entry_section_id_fkey")
 
   @@unique([grade_item_id, student_id, section_id], map: "grade_entry_grade_item_id_student_id_section_id_key")
   @@index([section_id], map: "idx_grade_entry_section_id")
   @@index([student_id], map: "idx_grade_entry_student_id")
-    @@map("grade_entries")
+  @@map("grade_entries")
   @@schema("student")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model GradeItem {
-  id               Int                @id(map: "grade_item_pkey") @default(autoincrement())
-  course_id        Int
-  name             String             @db.VarChar(255)
-  weight           Decimal            @db.Decimal(5, 2)
-  min_score        Decimal?           @default(0) @db.Decimal(5, 2)
-  created_at       DateTime?          @default(now()) @db.Timestamp(6)
-  updated_at       DateTime?          @default(now()) @db.Timestamp(6)
-  GradeEntry    GradeEntry[]
+  id             Int              @id(map: "grade_item_pkey") @default(autoincrement())
+  course_id      Int
+  name           String           @db.VarChar(255)
+  weight         Decimal          @db.Decimal(5, 2)
+  min_score      Decimal?         @default(0) @db.Decimal(5, 2)
+  created_at     DateTime?        @default(now()) @db.Timestamp(6)
+  updated_at     DateTime?        @default(now()) @db.Timestamp(6)
+  GradeEntry     GradeEntry[]
   RegradeRequest RegradeRequest[]
 
-    @@map("grade_items")
+  @@map("grade_items")
   @@schema("student")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model RegradeRequest {
-  id            Int         @id(map: "regrade_request_pkey") @default(autoincrement())
+  id            Int       @id(map: "regrade_request_pkey") @default(autoincrement())
   grade_item_id Int
   student_id    Int
   reason        String
-  status        String?     @default("pending") @db.VarChar(20)
-  created_at    DateTime?   @default(now()) @db.Timestamp(6)
-  updated_at    DateTime?   @default(now()) @db.Timestamp(6)
-  GradeItem   GradeItem @relation(fields: [grade_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "regrade_request_grade_item_id_fkey")
+  status        String?   @default("pending") @db.VarChar(20)
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  updated_at    DateTime? @default(now()) @db.Timestamp(6)
+  GradeItem     GradeItem @relation(fields: [grade_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "regrade_request_grade_item_id_fkey")
 
-    @@map("regrade_requests")
+  @@map("regrade_requests")
   @@schema("student")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model campus {
+  id               BigInt    @id(map: "campus_pkey1") @default(autoincrement())
+  code             String    @unique(map: "campus_code_key1") @db.VarChar(20)
+  name             String    @db.VarChar(255)
+  name_en          String?   @db.VarChar(255)
+  location         String?   @db.VarChar(255)
+  address          String?
+  phone            String?   @db.VarChar(20)
+  email            String?   @db.VarChar(100)
+  website          String?   @db.VarChar(255)
+  established_date DateTime? @db.Date
+  status           String?   @default("active") @db.VarChar(20)
+  description      String?
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime? @default(now()) @db.Timestamptz(6)
+  org_units        OrgUnit[]
+
+  @@schema("academic")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model OrgUnitAttachments {
+  id              BigInt    @id @default(autoincrement())
+  org_unit_id     BigInt
+  attachment_type String    @db.VarChar(50)
+  file_name       String    @db.VarChar(255)
+  file_path       String    @db.VarChar(500)
+  file_size       BigInt?
+  mime_type       String?   @db.VarChar(100)
+  description     String?
+  uploaded_by     BigInt?
+  uploaded_at     DateTime? @default(now()) @db.Timestamptz(6)
+  is_active       Boolean?  @default(true)
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime? @default(now()) @db.Timestamptz(6)
+  org_units       OrgUnit   @relation(fields: [org_unit_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users           User?     @relation(fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([org_unit_id], map: "idx_org_unit_attachments_org_unit")
+  @@index([attachment_type], map: "idx_org_unit_attachments_type")
+  @@index([uploaded_by], map: "idx_org_unit_attachments_uploaded_by")
+  @@map("org_unit_attachments")
+  @@schema("org")
 }
 
 enum OrgRelationType {
