@@ -62,7 +62,7 @@ interface Employee {
     status: string | null;
     hired_at: string | null;
     terminated_at: string | null;
-    user: User | null;
+    User: User | null;
 }
 
 interface PerformanceReview {
@@ -73,7 +73,7 @@ interface PerformanceReview {
     comments: string | null;
     created_at: string;
     updated_at: string;
-    employees: Employee | null;
+    Employee: Employee | null;
 }
 
 export default function PerformanceReviewsPage() {

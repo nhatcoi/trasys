@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_ROUTES } from '@/constants/routes';
 import {
   Box,
   Typography,
@@ -125,7 +126,7 @@ export default function CreateApprovePage() {
         for (const request of requestsData) {
           if (request.target_org_unit_id) {
             try {
-              const unitResponse = await fetch(`/api/org/units/${request.target_org_unit_id}`);
+              const unitResponse = await fetch(API_ROUTES.ORG.UNITS_BY_ID(request.target_org_unit_id));
               if (unitResponse.ok) {
                 const unitData = await unitResponse.json();
                 if (unitData.success) {
