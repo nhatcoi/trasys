@@ -103,6 +103,8 @@ export const ORG_ROUTES = {
     TREE: '/org/tree',
     DIAGRAM: '/org/diagram',
     REPORTS: '/org/reports',
+    HISTORY: '/org/unit/create/audit',
+
     
     // Unit management
     UNIT: '/org/unit',

@@ -141,10 +141,6 @@ export default function UnitDetailPage() {
   };
 
 
-  const handleEdit = () => {
-    console.log('Edit unit:', unit?.id);
-  };
-
   const handleDelete = () => {
     console.log('Delete unit:', unit?.id);
   };
@@ -219,22 +215,7 @@ export default function UnitDetailPage() {
         </Button>
         <Box sx={{ flexGrow: 1 }} />
         <Stack direction="row" spacing={1}>
-          <Button
-            variant="contained"
-            startIcon={<EditIcon />}
-            onClick={handleEdit}
-            sx={{ backgroundColor: '#2e4c92' }}
-          >
-            Chỉnh sửa
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<DeleteIcon />}
-            onClick={handleDelete}
-            color="error"
-          >
-            Xóa
-          </Button>
+
         </Stack>
       </Stack>
 

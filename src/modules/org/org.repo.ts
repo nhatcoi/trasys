@@ -85,13 +85,14 @@ export class OrgUnitRepository {
     }
     
     if (options.fromDate || options.toDate) {
-      where.effective_from = {};
+      const effectiveFromFilter: any = {};
       if (options.fromDate) {
-        where.effective_from.gte = new Date(options.fromDate);
+        effectiveFromFilter.gte = new Date(options.fromDate);
       }
       if (options.toDate) {
-        where.effective_from.lte = new Date(options.toDate);
+        effectiveFromFilter.lte = new Date(options.toDate);
       }
+      where.effective_from = effectiveFromFilter;
     }
 
     // Build include clause
@@ -108,7 +109,7 @@ export class OrgUnitRepository {
     const skip = (options.page - 1) * options.size;
 
     // Build query options
-    const queryOptions: { [key: string]: unknown } = {
+    const queryOptions: any = {
       where,
       orderBy,
       skip,
@@ -120,25 +121,52 @@ export class OrgUnitRepository {
     }
 
     const [items, total] = await Promise.all([
-      db.OrgUnit.findMany(queryOptions),
-      db.OrgUnit.count({ where })
+      db.orgUnit.findMany(queryOptions),
+      db.orgUnit.count({ where })
     ]);
     
     // Serialize BigInt fields
-    const serializedItems = items.map(item => ({
-      ...item,
-      id: item.id.toString(),
-      parent_id: item.parent_id?.toString(),
-      campus_id: item.campus_id?.toString(),
+    const serializedItems = items.map((item: any) => {
+      const serializedItem: any = {
+        ...item,
+        id: item.id.toString(),
+        parent_id: item.parent_id?.toString(),
+        campus_id: item.campus_id?.toString(),
+      };
+
       // Serialize nested BigInt fields in OrgAssignment
-      org_assignment: item.OrgAssignment?.map((assignment: { id: bigint; [key: string]: unknown }) => ({
-        ...assignment,
-        id: assignment.id?.toString(),
-        employee_id: assignment.employee_id?.toString(),
-        org_unit_id: assignment.org_unit_id?.toString(),
-        position_id: assignment.position_id?.toString(),
-      })) || [],
-    }));
+      if (item.OrgAssignment) {
+        serializedItem.OrgAssignment = item.OrgAssignment.map((assignment: any) => ({
+          ...assignment,
+          id: assignment.id?.toString(),
+          employee_id: assignment.employee_id?.toString(),
+          org_unit_id: assignment.org_unit_id?.toString(),
+          position_id: assignment.position_id?.toString(),
+        }));
+      }
+
+      // Serialize nested BigInt fields in children
+      if (item.children) {
+        serializedItem.children = item.children.map((child: any) => ({
+          ...child,
+          id: child.id.toString(),
+          parent_id: child.parent_id?.toString(),
+          campus_id: child.campus_id?.toString(),
+        }));
+      }
+
+      // Serialize nested BigInt fields in parent
+      if (item.parent) {
+        serializedItem.parent = {
+          ...item.parent,
+          id: item.parent.id.toString(),
+          parent_id: item.parent.parent_id?.toString(),
+          campus_id: item.parent.campus_id?.toString(),
+        };
+      }
+
+      return serializedItem;
+    });
 
     return {
       items: serializedItems,
@@ -170,21 +198,22 @@ export class OrgUnitRepository {
     }
     
     if (options.fromDate || options.toDate) {
-      where.effective_from = {};
+      const effectiveFromFilter: any = {};
       if (options.fromDate) {
-        where.effective_from.gte = new Date(options.fromDate);
+        effectiveFromFilter.gte = new Date(options.fromDate);
       }
       if (options.toDate) {
-        where.effective_from.lte = new Date(options.toDate);
+        effectiveFromFilter.lte = new Date(options.toDate);
       }
+      where.effective_from = effectiveFromFilter;
     }
 
-    return await db.OrgUnit.count({ where });
+    return await db.orgUnit.count({ where });
   }
 
   // Get organization unit by ID
   async findById(id: number) {
-    const result = await db.OrgUnit.findUnique({
+    const result = await db.orgUnit.findUnique({
       where: { id },
     });
 
@@ -201,7 +230,7 @@ export class OrgUnitRepository {
 
   // Create new organization unit
   async create(data: CreateOrgUnitInput) {
-    const result = await db.OrgUnit.create({
+    const result = await db.orgUnit.create({
       data: {
         name: data.name,
         code: data.code,
@@ -226,20 +255,31 @@ export class OrgUnitRepository {
   }
 
   // Update organization unit
-  async update(id: number, data: { [key: string]: unknown }) {
-    const result = await db.OrgUnit.update({
+  async update(id: number, data: UpdateOrgUnitInput) {
+    const updateData: any = {};
+    
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.code !== undefined) updateData.code = data.code;
+    if (data.type !== undefined) updateData.type = data.type;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.status !== undefined) updateData.status = data.status;
+    
+    if (data.parent_id !== undefined) {
+      updateData.parent_id = data.parent_id ? BigInt(data.parent_id) : null;
+    }
+    if (data.campus_id !== undefined) {
+      updateData.campus_id = data.campus_id ? BigInt(data.campus_id) : null;
+    }
+    if (data.effective_from !== undefined) {
+      updateData.effective_from = data.effective_from ? new Date(data.effective_from) : null;
+    }
+    if (data.effective_to !== undefined) {
+      updateData.effective_to = data.effective_to ? new Date(data.effective_to) : null;
+    }
+
+    const result = await db.orgUnit.update({
       where: { id },
-      data: {
-        name: data.name,
-        code: data.code,
-        parent_id: data.parent_id ? BigInt(data.parent_id) : undefined,
-        type: data.type,
-        description: data.description,
-        status: data.status,
-        effective_from: data.effective_from ? new Date(data.effective_from) : undefined,
-        effective_to: data.effective_to ? new Date(data.effective_to) : undefined,
-        campus_id: data.campus_id ? BigInt(data.campus_id) : undefined,
-      },
+      data: updateData,
     });
 
     // Serialize BigInt fields
@@ -253,7 +293,7 @@ export class OrgUnitRepository {
 
   // "Delete" organization unit: update status to 'deleted'
   async delete(id: number) {
-    const result = await db.OrgUnit.update({
+    const result = await db.orgUnit.update({
       where: { id },
       data: { status: 'deleted' },
     });
@@ -269,18 +309,17 @@ export class OrgUnitRepository {
 
   // Get organization units by parent ID
   async findByParentId(parentId: number) {
-    return await db.OrgUnit.findMany({
+    return await db.orgUnit.findMany({
       where: { parent_id: parentId },
       include: {
-        children: true,
-        employees: true,
+        OrgAssignment: true,
       },
     });
   }
 
   // Get status counts for statistics
   async getStatusCounts() {
-    const counts = await db.OrgUnit.groupBy({
+    const counts = await db.orgUnit.groupBy({
       by: ['status'],
       _count: {
         status: true,
@@ -289,7 +328,7 @@ export class OrgUnitRepository {
 
     // Transform to object with status as key
     const statusCounts: Record<string, number> = {};
-    counts.forEach(count => {
+    counts.forEach((count: any) => {
       statusCounts[count.status || 'unknown'] = count._count.status;
     });
 
