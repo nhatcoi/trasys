@@ -32,13 +32,13 @@ export async function GET(request: NextRequest) {
             id: review.id.toString(),
             employee_id: review.employee_id.toString(),
             score: review.score?.toString() || null,
-            Employee: review.employees ? {
-                ...review.employees,
-                id: review.employees.id.toString(),
-                user_id: review.employees.user_id.toString(),
-                User: review.employees.user ? {
-                    ...review.employees.user,
-                    id: review.employees.user.id.toString()
+            Employee: review.Employee ? {
+                ...review.Employee,
+                id: review.Employee.id.toString(),
+                user_id: review.Employee.user_id.toString(),
+                User: review.Employee.User ? {
+                    ...review.Employee.User,
+                    id: review.Employee.User.id.toString()
                 } : null
             } : null
         }));
@@ -92,13 +92,13 @@ export async function POST(request: NextRequest) {
             id: performanceReview.id.toString(),
             employee_id: performanceReview.employee_id.toString(),
             score: performanceReview.score?.toString() || null,
-            Employee: performanceReview.employees ? {
-                ...performanceReview.employees,
-                id: performanceReview.employees.id.toString(),
-                user_id: performanceReview.employees.user_id.toString(),
-                User: performanceReview.employees.user ? {
-                    ...performanceReview.employees.user,
-                    id: performanceReview.employees.user.id.toString()
+            Employee: performanceReview.Employee ? {
+                ...performanceReview.Employee,
+                id: performanceReview.Employee.id.toString(),
+                user_id: performanceReview.Employee.user_id.toString(),
+                User: performanceReview.Employee.User ? {
+                    ...performanceReview.Employee.User,
+                    id: performanceReview.Employee.User.id.toString()
                 } : null
             } : null
         };

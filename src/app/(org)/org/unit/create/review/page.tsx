@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_ROUTES } from '@/constants/routes';
 import {
   Box,
   Typography,
@@ -108,7 +109,7 @@ export default function CreateReviewPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await fetch('/api/org/structure-requests?request_type=created&status=SUBMITTED');
+      const response = await fetch(`${API_ROUTES.ORG.STRUCTURE_REQUESTS}?request_type=created&status=SUBMITTED`);
       const data = await response.json();
       if (data.success) {
         const requestsData = data.data.items || [];
@@ -119,7 +120,7 @@ export default function CreateReviewPage() {
         for (const request of requestsData) {
           if (request.target_org_unit_id) {
             try {
-              const unitResponse = await fetch(`/api/org/units/${request.target_org_unit_id}`);
+              const unitResponse = await fetch(API_ROUTES.ORG.UNITS_BY_ID(request.target_org_unit_id));
               if (unitResponse.ok) {
                 const unitData = await unitResponse.json();
                 if (unitData.success) {
@@ -212,7 +213,7 @@ export default function CreateReviewPage() {
         workflow_step: 2
       };
 
-      const reviewResponse = await fetch('/api/org/structure-requests', {
+      const reviewResponse = await fetch(API_ROUTES.ORG.STRUCTURE_REQUESTS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reviewPayload)
@@ -223,7 +224,7 @@ export default function CreateReviewPage() {
       }
 
       // 2. Update original request status
-      const updateResponse = await fetch(`/api/org/structure-requests/${selectedRequest.id}`, {
+      const updateResponse = await fetch(API_ROUTES.ORG.STRUCTURE_REQUESTS_BY_ID(selectedRequest.id), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'REVIEWED' })
@@ -234,7 +235,7 @@ export default function CreateReviewPage() {
       }
 
       // 3. Update org unit status
-      const unitStatusResponse = await fetch(`/api/org/units/${selectedRequest.target_org_unit_id}/status`, {
+      const unitStatusResponse = await fetch(API_ROUTES.ORG.UNITS_STATUS(selectedRequest.target_org_unit_id), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'review' })
@@ -281,7 +282,7 @@ export default function CreateReviewPage() {
         workflow_step: 2
       };
 
-      const reviewResponse = await fetch('/api/org/structure-requests', {
+      const reviewResponse = await fetch(API_ROUTES.ORG.STRUCTURE_REQUESTS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reviewPayload)
@@ -292,7 +293,7 @@ export default function CreateReviewPage() {
       }
 
       // 2. Update original request status
-      const updateResponse = await fetch(`/api/org/structure-requests/${selectedRequest.id}`, {
+      const updateResponse = await fetch(API_ROUTES.ORG.STRUCTURE_REQUESTS_BY_ID(selectedRequest.id), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'REJECTED' })
@@ -303,7 +304,7 @@ export default function CreateReviewPage() {
       }
 
       // 3. Update org unit status
-      const unitStatusResponse = await fetch(`/api/org/units/${selectedRequest.target_org_unit_id}/status`, {
+      const unitStatusResponse = await fetch(API_ROUTES.ORG.UNITS_STATUS(selectedRequest.target_org_unit_id), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'rejected' })

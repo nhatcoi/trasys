@@ -67,12 +67,30 @@ export const API_ROUTES = {
         ROLE_PERMISSIONS_BY_ID: (id: string) => `/api/hr/role-permissions/${id}`,
         USER_ROLES: '/api/hr/user-roles',
         USER_ROLES_BY_ID: (id: string) => `/api/hr/user-roles/${id}`,
-        USERS: '/api/hr/users',
         ME: '/api/hr/me',
     },
     ORG: {
+        // Stats and overview
+        STATS: '/api/org/stats',
+        
+        // Units
         UNITS: '/api/org/units',
         UNITS_BY_ID: (id: string) => `/api/org/units/${id}`,
+        UNITS_AUDIT: '/api/org/units/audit',
+        UNITS_HISTORY: (id: string) => `/api/org/units/${id}/history`,
+        UNITS_STATUS: (id: string) => `/api/org/units/${id}/status`,
+        
+        // Structure requests
+        STRUCTURE_REQUESTS: '/api/org/structure-requests',
+        STRUCTURE_REQUESTS_BY_ID: (id: string) => `/api/org/structure-requests/${id}`,
+        
+        // Initial units
+        INITIAL_UNITS: '/api/org/initial-units',
+        
+        // History
+        HISTORY: '/api/org/history',
+        
+        // KPI
         KPI: {
             HEADCOUNT: '/api/org/kpi/headcount',
         },
@@ -83,5 +101,19 @@ export const API_ROUTES = {
 export const ORG_ROUTES = {
     DASHBOARD: '/org/dashboard',
     TREE: '/org/tree',
+    DIAGRAM: '/org/diagram',
+    REPORTS: '/org/reports',
+    
+    // Unit management
     UNIT: '/org/unit',
+    UNIT_DETAIL: (id: string) => `/org/unit/${id}`,
+    
+    // Unit creation workflow
+    UNIT_CREATE: {
+        DRAFT: '/org/unit/create/draft',
+        REVIEW: '/org/unit/create/review',
+        APPROVE: '/org/unit/create/approve',
+        ACTIVATE: '/org/unit/create/activate',
+        AUDIT: '/org/unit/create/audit',
+    },
 };
