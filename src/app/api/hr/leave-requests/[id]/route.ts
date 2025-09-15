@@ -16,7 +16,7 @@ export async function GET(
 
         const leaveRequestId = BigInt(params.id);
 
-        const leaveRequest = await db.leave_requests.findUnique({
+        const leaveRequest = await db.leaveRequest.findUnique({
             where: { id: leaveRequestId },
             include: {
                 employees: {
@@ -120,7 +120,7 @@ export async function PUT(
         const { leave_type, start_date, end_date, reason } = body;
 
         // Lấy đơn xin nghỉ hiện tại
-        const currentRequest = await db.leave_requests.findUnique({
+        const currentRequest = await db.leaveRequest.findUnique({
             where: { id: leaveRequestId },
             include: {
                 employees: true
@@ -167,7 +167,7 @@ export async function PUT(
         }
 
         // Cập nhật đơn xin nghỉ
-        const updatedRequest = await db.leave_requests.update({
+        const updatedRequest = await db.leaveRequest.update({
             where: { id: leaveRequestId },
             data: {
                 ...(leave_type && { leave_type }),
@@ -192,7 +192,7 @@ export async function PUT(
         });
 
         // Tạo lịch sử trong employee_log
-        await db.employee_log.create({
+        await db.employeeLog.create({
             data: {
                 employee_id: currentRequest.employee_id,
                 action: 'UPDATE',
@@ -242,7 +242,7 @@ export async function DELETE(
         const leaveRequestId = BigInt(params.id);
 
         // Lấy đơn xin nghỉ hiện tại
-        const currentRequest = await db.leave_requests.findUnique({
+        const currentRequest = await db.leaveRequest.findUnique({
             where: { id: leaveRequestId },
             include: {
                 employees: true
@@ -279,7 +279,7 @@ export async function DELETE(
         }
 
         // Xóa đơn xin nghỉ (cascade sẽ xóa history)
-        await db.leave_requests.delete({
+        await db.leaveRequest.delete({
             where: { id: leaveRequestId }
         });
 

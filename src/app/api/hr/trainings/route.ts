@@ -4,7 +4,7 @@ import { logEmployeeActivity, getActorInfo } from '@/lib/audit-logger';
 
 export async function GET(request: NextRequest) {
     try {
-        const trainings = await db.trainings.findMany({
+        const trainings = await db.training.findMany({
             orderBy: {
                 start_date: 'desc',
             },
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
         }
 
-        const newTraining = await db.trainings.create({
+        const newTraining = await db.training.create({
             data: {
                 title,
                 provider,

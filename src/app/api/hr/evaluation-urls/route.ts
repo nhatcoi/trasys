@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Get evaluation records for the period
-        const evaluations = await db.performance_reviews.findMany({
+        const evaluations = await db.performanceReview.findMany({
             where: {
                 review_period: period
             },
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Get evaluation records for the period
-        const evaluations = await db.performance_reviews.findMany({
+        const evaluations = await db.performanceReview.findMany({
             where: {
                 review_period: period
             },

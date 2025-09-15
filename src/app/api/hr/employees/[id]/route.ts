@@ -13,7 +13,7 @@ export async function GET(
     const { id } = await params;
     const employeeId = BigInt(id);
 
-    const employee = await db.Employee.findUnique({
+    const employee = await db.employee.findUnique({
       where: { id: employeeId as any },
       include: {
         user: true,
@@ -118,7 +118,7 @@ export async function PUT(
     console.log('Current User ID:', currentUserId);
 
     // Get old data for logging
-    const oldEmployee = await db.Employee.findUnique({
+    const oldEmployee = await db.employee.findUnique({
       where: { id: employeeId as any },
     });
 
@@ -135,7 +135,7 @@ export async function PUT(
       updateData.user = { connect: { id: BigInt(user_id) } };
     }
 
-    const employee = await db.Employee.update({
+    const employee = await db.employee.update({
       where: { id: employeeId as any },
       data: updateData,
     });
@@ -193,11 +193,11 @@ export async function DELETE(
     const currentUserId = token?.sub ? BigInt(token.sub) : undefined;
 
     // Get old data for logging
-    const oldEmployee = await db.Employee.findUnique({
+    const oldEmployee = await db.employee.findUnique({
       where: { id: employeeId as any },
     });
 
-    await db.Employee.delete({
+    await db.employee.delete({
       where: { id: employeeId as any },
     });
 

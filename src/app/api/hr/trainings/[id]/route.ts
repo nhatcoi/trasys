@@ -5,7 +5,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     try {
         const trainingId = params.id;
 
-        const training = await db.trainings.findUnique({
+        const training = await db.training.findUnique({
             where: { id: BigInt(trainingId) },
         });
 
@@ -41,7 +41,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         const body = await request.json();
         const { title, provider, start_date, end_date, training_type, description } = body;
 
-        const updatedTraining = await db.trainings.update({
+        const updatedTraining = await db.training.update({
             where: { id: BigInt(trainingId) },
             data: {
                 title,
@@ -79,7 +79,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     try {
         const trainingId = params.id;
 
-        await db.trainings.delete({
+        await db.training.delete({
             where: { id: BigInt(trainingId) },
         });
 
