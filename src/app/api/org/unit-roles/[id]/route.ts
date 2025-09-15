@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OrgUnitRoleService } from '@/modules/org-unit-role/org-unit-role.service';
+import { OrgUnitRoleRepository } from '@/modules/org/unit-role/org-unit-role.repo';
 
-const orgUnitRoleService = new OrgUnitRoleService();
+const orgUnitRoleRepo = new OrgUnitRoleRepository();
 
 // GET /api/org-unit-roles/[id] - Get org unit role by ID
 export async function GET(

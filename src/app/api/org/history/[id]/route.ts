@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { HistoryService } from '@/modules/history/history.service';
+import { HistoryRepository } from '@/modules/org/history/history.repo';
 
-const historyService = new HistoryService();
+const historyRepo = new HistoryRepository();
 
 // GET /api/org/history/[id]
 export async function GET(
@@ -21,8 +21,8 @@ export async function GET(
       );
     }
     
-    // Call service
-    const result = await historyService.getById(id);
+    // Call repository
+    const result = await historyRepo.findById(id);
     
     return NextResponse.json(result, { 
       status: result.success ? 200 : (result.error?.includes('not found') ? 404 : 500)

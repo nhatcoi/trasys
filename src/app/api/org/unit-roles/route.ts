@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OrgUnitRoleService } from '@/modules/org-unit-role/org-unit-role.service';
-import { OrgUnitRoleQuerySchema } from '@/modules/org-unit-role/org-unit-role.schema';
+import { OrgUnitRoleRepository } from '@/modules/org/unit-role/org-unit-role.repo';
 
-const orgUnitRoleService = new OrgUnitRoleService();
+const orgUnitRoleRepo = new OrgUnitRoleRepository();
 
 // GET /api/org-unit-roles - Get all org unit roles with pagination and filters
 export async function GET(request: NextRequest) {

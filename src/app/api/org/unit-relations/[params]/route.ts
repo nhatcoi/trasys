@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OrgUnitRelationService } from '@/modules/org-unit-relation/org-unit-relation.service';
+import { OrgUnitRelationRepository } from '@/modules/org/unit-relation/org-unit-relation.repo';
 
-const orgUnitRelationService = new OrgUnitRelationService();
+const orgUnitRelationRepo = new OrgUnitRelationRepository();
 
 // GET /api/org-unit-relations/[params] - Get org unit relation by composite key
 export async function GET(

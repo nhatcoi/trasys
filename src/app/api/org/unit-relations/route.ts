@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OrgUnitRelationRepository } from '@/modules/org-unit-relation/org-unit-relation.repo';
+import { OrgUnitRelationRepository } from '@/modules/org/unit-relation/org-unit-relation.repo';
 
 const orgUnitRelationRepo = new OrgUnitRelationRepository();
 

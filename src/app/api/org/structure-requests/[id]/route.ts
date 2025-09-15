@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OrgStructureRequestRepository } from '@/modules/org-structure-request/org-structure-request.repo';
+import { OrgStructureRequestRepository } from '@/modules/org/structure-request/org-structure-request.repo';
 
 const orgStructureRequestRepo = new OrgStructureRequestRepository();
 

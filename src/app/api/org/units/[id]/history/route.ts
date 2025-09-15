@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { HistoryRepository } from '@/modules/history/history.repo';
+import { HistoryRepository } from '@/modules/org/history/history.repo';
 
 const historyRepo = new HistoryRepository();
 
