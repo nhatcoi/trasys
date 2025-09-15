@@ -102,7 +102,7 @@ export default function HistoryTab({ unitId }: HistoryTabProps) {
   });
 
   // State for history data
-  const [historyResponse, setHistoryResponse] = useState<any>(null);
+  const [historyResponse, setHistoryResponse] = useState<{ [key: string]: unknown } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

@@ -43,7 +43,7 @@ export class OrgUnitRoleRepository {
     const skip = (page - 1) * size;
 
     // Build where clause
-    const where: any = {};
+    const where: { [key: string]: unknown } = {};
     
     if (search) {
       where.OR = [

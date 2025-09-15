@@ -47,7 +47,7 @@ export interface UsePaginationReturn {
     sort: string;
     order: 'asc' | 'desc';
     search?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   
   // Utilities

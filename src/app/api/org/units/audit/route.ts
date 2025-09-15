@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const order = searchParams.get('order') as 'asc' | 'desc' || 'desc';
 
     // Build where clause
-    const where: any = {};
+    const where: { [key: string]: unknown } = {};
     
     if (status) {
       where.status = status;
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build orderBy clause
-    const orderBy: any = {};
+    const orderBy: { [key: string]: unknown } = {};
     orderBy[sort] = order;
 
     // Calculate pagination

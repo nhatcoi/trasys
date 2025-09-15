@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         });
 
         // Serialize BigInt and Decimal values
-        const serializedReviews = performanceReviews.map((review: any) => ({
+        const serializedReviews = performanceReviews.map((review: { id: bigint; [key: string]: unknown }) => ({
             ...review,
             id: review.id.toString(),
             employee_id: review.employee_id.toString(),

@@ -4,7 +4,7 @@ export interface TreeNode {
   id: string | number;
   parent_id: string | number | null;
   children?: TreeNode[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**

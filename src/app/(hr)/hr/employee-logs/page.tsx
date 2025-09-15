@@ -415,7 +415,7 @@ export default function EmployeeLogsPage() {
                                 <TableCell>
                                     <Chip
                                         label={log.action}
-                                        color={ACTION_COLORS[log.action as keyof typeof ACTION_COLORS] as any || 'default'}
+                                        color={ACTION_COLORS[log.action as keyof typeof ACTION_COLORS] as string || 'default'}
                                         variant="outlined"
                                         size="small"
                                     />

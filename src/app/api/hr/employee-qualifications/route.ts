@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         });
 
         // Convert BigInt to string for JSON serialization
-        const serializedData = employeeQualifications.map((eq: any) => ({
+        const serializedData = employeeQualifications.map((eq: { id: bigint; [key: string]: unknown }) => ({
             ...eq,
             id: eq.id.toString(),
             employee_id: eq.employee_id.toString(),

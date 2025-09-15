@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
         // Tạm thời set isAdmin = true để test
         const isAdmin = true;
 
-        let whereClause: any = {};
+        let whereClause: { [key: string]: unknown } = {};
 
         // Nếu không phải admin, chỉ xem được lịch sử của mình hoặc nhân viên trong đơn vị
         if (!isAdmin) {

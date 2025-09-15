@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
         const isAdmin = session.user.permissions?.includes('leave_request.update') ||
             session.user.permissions?.includes('employee.update');
 
-        let whereClause: any = {};
+        let whereClause: { [key: string]: unknown } = {};
 
         // Nếu không phải admin, chỉ xem được đơn của mình hoặc đơn của nhân viên trong đơn vị
         if (!isAdmin) {
@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function để kiểm tra quyền cấp trên
-async function checkSupervisorPermission(supervisor: any, Employee: any): Promise<boolean> {
+async function checkSupervisorPermission(supervisor: { id: string; [key: string]: unknown }, Employee: { id: string; [key: string]: unknown }): Promise<boolean> {
     // Logic kiểm tra quyền cấp trên
     // Có thể dựa vào org_unit hierarchy hoặc role-based permission
 

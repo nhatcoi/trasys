@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
         const offset = (page - 1) * limit;
 
         // Build where clause
-        const where: any = {};
+        const where: { [key: string]: unknown } = {};
 
         if (employeeId) {
             where.employee_id = BigInt(employeeId);

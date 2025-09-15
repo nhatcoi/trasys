@@ -86,7 +86,7 @@ export async function GET() {
     });
 
     // Convert BigInt to string for JSON serialization
-    const serializedEmployees = employees.map((employee: any) => ({
+    const serializedEmployees = employees.map((employee: { id: bigint; [key: string]: unknown }) => ({
       ...employee,
       id: employee.id.toString(),
       user_id: employee.user_id?.toString() || null,
@@ -98,7 +98,7 @@ export async function GET() {
         created_at: employee.User.created_at?.toString() || null,
         updated_at: employee.User.updated_at?.toString() || null
       } : null,
-      OrgAssignment: employee.OrgAssignment?.map((assignment: any) => ({
+      OrgAssignment: employee.OrgAssignment?.map((assignment: { id: bigint; [key: string]: unknown }) => ({
         ...assignment,
         id: assignment.id.toString(),
         employee_id: assignment.employee_id?.toString() || null,

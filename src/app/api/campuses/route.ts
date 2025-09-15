@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     
     // Build where clause
-    const where: any = {};
+    const where: { [key: string]: unknown } = {};
     
     if (search) {
       where.OR = [

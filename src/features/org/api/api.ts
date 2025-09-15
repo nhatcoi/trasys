@@ -23,7 +23,7 @@ export interface OrgUnitHistory {
   old_name: string | null;
   new_name: string | null;
   change_type: string;
-  details: any;
+  details: { [key: string]: unknown };
   changed_at: string | null;
 }
 
@@ -238,7 +238,7 @@ export const orgUnitHistoryApi = {
     old_name?: string;
     new_name?: string;
     change_type: string;
-    details?: any;
+    details?: { [key: string]: unknown };
   }): Promise<ApiResponse<OrgUnitHistory>> {
     return apiFetch<ApiResponse<OrgUnitHistory>>('/api/org/history', {
       method: 'POST',

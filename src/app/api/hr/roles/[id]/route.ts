@@ -42,7 +42,7 @@ export async function GET(
         const serializedRole = {
             ...role,
             id: role.id.toString(),
-            role_permission: role.role_permission?.map((rp: any) => ({
+            role_permission: role.role_permission?.map((rp: { id: bigint; [key: string]: unknown }) => ({
                 ...rp,
                 id: rp.id.toString(),
                 role_id: rp.role_id.toString(),
@@ -52,7 +52,7 @@ export async function GET(
                     id: rp.permissions.id.toString()
                 } : null
             })) || [],
-            user_role: role.user_role?.map((ur: any) => ({
+            user_role: role.user_role?.map((ur: { id: bigint; [key: string]: unknown }) => ({
                 ...ur,
                 id: ur.id.toString(),
                 user_id: ur.user_id.toString(),

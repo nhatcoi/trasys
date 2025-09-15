@@ -71,11 +71,11 @@ interface DraftUnitFormData {
   
   // SECTION 4: THÔNG TIN BỔ SUNG WORKFLOW
   request_details: string;
-  attachments: any[];
+  attachments: Array<{ id: string; name: string; url: string; [key: string]: unknown }>;
 }
 
 export default function CreateDraftPage() {
-  const [editingUnit, setEditingUnit] = useState<any>(null);
+  const [editingUnit, setEditingUnit] = useState<{ [key: string]: unknown } | null>(null);
   const [formData, setFormData] = useState<DraftUnitFormData>({
     code: '',
     name: '',
@@ -131,7 +131,7 @@ export default function CreateDraftPage() {
     }
   }, [parentUnitsResponse, formData.owner_org_id]);
 
-  const handleInputChange = (field: keyof DraftUnitFormData, value: string | null | any[]) => {
+  const handleInputChange = (field: keyof DraftUnitFormData, value: string | null | Array<{ [key: string]: unknown }>) => {
     setFormData(prev => ({
       ...prev,
       [field]: value,
@@ -217,7 +217,7 @@ export default function CreateDraftPage() {
     }
   };
 
-  const handleEditUnit = (unit: any) => {
+  const handleEditUnit = (unit: { id: string; name: string; [key: string]: unknown }) => {
     setEditingUnit(unit);
     setFormData({
       code: unit.code || '',
@@ -395,7 +395,7 @@ export default function CreateDraftPage() {
                 label="Campus *"
                 disabled={campusesLoading}
               >
-                {campusesResponse?.map((campus: any) => (
+                {campusesResponse?.map((campus: { id: string; name: string; [key: string]: unknown }) => (
                   <MenuItem key={campus.id} value={campus.id}>
                     <Box>
                       <Typography variant="body2" fontWeight="bold">
@@ -445,7 +445,7 @@ export default function CreateDraftPage() {
                     </Box>
                   </MenuItem>
                 ) : (
-                  parentUnitsResponse?.map((unit: any) => (
+                  parentUnitsResponse?.map((unit: { id: string; name: string; [key: string]: unknown }) => (
                     <MenuItem key={unit.id} value={unit.id}>
                       <Box>
                         <Typography variant="body2" fontWeight="medium">
@@ -501,7 +501,7 @@ export default function CreateDraftPage() {
                     </Box>
                   </MenuItem>
                 ) : (
-                  parentUnitsResponse?.map((unit: any) => (
+                  parentUnitsResponse?.map((unit: { id: string; name: string; [key: string]: unknown }) => (
                     <MenuItem key={unit.id} value={unit.id}>
                       <Box>
                         <Typography variant="body2" fontWeight="bold">
@@ -655,7 +655,7 @@ export default function CreateDraftPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              draftUnits.map((unit: any) => (
+              draftUnits.map((unit: { id: string; name: string; [key: string]: unknown }) => (
                 <TableRow key={unit.id}>
                   <TableCell>
                     <Typography variant="body2" fontWeight="bold">
@@ -731,7 +731,7 @@ export default function CreateDraftPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  rejectedUnits.map((unit: any) => (
+                  rejectedUnits.map((unit: { id: string; name: string; [key: string]: unknown }) => (
                     <TableRow key={unit.id}>
                       <TableCell>
                         <Typography variant="body2" fontWeight="bold">

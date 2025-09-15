@@ -23,7 +23,7 @@ export interface OrgUnitHistory {
   old_name: string | null;
   new_name: string | null;
   change_type: string;
-  details: any;
+  details: { [key: string]: unknown };
   changed_at: string;
   changed_by: string | null;
 }
