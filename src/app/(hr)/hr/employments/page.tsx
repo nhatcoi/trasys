@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import React, {useState, useEffect} from 'react';
+import {useSession} from 'next-auth/react';
+import {useRouter} from 'next/navigation';
 import {
     Box,
     Typography,
@@ -37,7 +37,7 @@ import {
     Person as PersonIcon,
     Visibility as ViewIcon
 } from '@mui/icons-material';
-import { HR_ROUTES, API_ROUTES } from '@/constants/routes';
+import {HR_ROUTES, API_ROUTES} from '@/constants/routes';
 
 interface Employee {
     id: string;
@@ -68,7 +68,7 @@ interface Employment {
 }
 
 export default function EmploymentsPage() {
-    const { data: session, status } = useSession();
+    const {data: session, status} = useSession();
     const router = useRouter();
     const [employments, setEmployments] = useState<Employment[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
@@ -90,11 +90,11 @@ export default function EmploymentsPage() {
     const [saving, setSaving] = useState(false);
 
     const contractTypes = [
-        { value: 'permanent', label: 'Hợp đồng không xác định thời hạn' },
-        { value: 'temporary', label: 'Hợp đồng có thời hạn' },
-        { value: 'internship', label: 'Thực tập sinh' },
-        { value: 'consultant', label: 'Tư vấn' },
-        { value: 'part_time', label: 'Bán thời gian' }
+        {value: 'permanent', label: 'Hợp đồng không xác định thời hạn'},
+        {value: 'temporary', label: 'Hợp đồng có thời hạn'},
+        {value: 'internship', label: 'Thực tập sinh'},
+        {value: 'consultant', label: 'Tư vấn'},
+        {value: 'part_time', label: 'Bán thời gian'}
     ];
 
     const salaryBands = [
@@ -117,7 +117,7 @@ export default function EmploymentsPage() {
         const urlParams = new URLSearchParams(window.location.search);
         const employeeId = urlParams.get('employee_id');
         if (employeeId) {
-            setFormData(prev => ({ ...prev, employee_id: employeeId }));
+            setFormData(prev => ({...prev, employee_id: employeeId}));
         }
     }, []);
 
@@ -134,7 +134,7 @@ export default function EmploymentsPage() {
             const employeesUrl = API_ROUTES.HR.EMPLOYEES;
             const employmentsUrl = employeeId ? `${API_ROUTES.HR.EMPLOYMENTS}?employee_id=${employeeId}` : API_ROUTES.HR.EMPLOYMENTS;
 
-            console.log('Fetching from URLs:', { employeesUrl, employmentsUrl });
+            console.log('Fetching from URLs:', {employeesUrl, employmentsUrl});
 
             const [employeesRes, employmentsRes] = await Promise.all([
                 fetch(employeesUrl, {
@@ -161,7 +161,7 @@ export default function EmploymentsPage() {
                 employmentsRes.json()
             ]);
 
-            console.log('API Results:', { employeesResult, employmentsResult });
+            console.log('API Results:', {employeesResult, employmentsResult});
 
             if (employeesResult.success) {
                 setEmployees(employeesResult.data);
@@ -294,20 +294,26 @@ export default function EmploymentsPage() {
 
     const getContractTypeColor = (type: string) => {
         switch (type) {
-            case 'permanent': return 'success';
-            case 'temporary': return 'warning';
-            case 'internship': return 'info';
-            case 'consultant': return 'secondary';
-            case 'part_time': return 'default';
-            default: return 'default';
+            case 'permanent':
+                return 'success';
+            case 'temporary':
+                return 'warning';
+            case 'internship':
+                return 'info';
+            case 'consultant':
+                return 'secondary';
+            case 'part_time':
+                return 'default';
+            default:
+                return 'default';
         }
     };
 
     if (status === 'loading' || loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-                <CircularProgress />
-                <Typography variant="h6" sx={{ ml: 2 }}>
+                <CircularProgress/>
+                <Typography variant="h6" sx={{ml: 2}}>
                     Đang tải danh sách hợp đồng lao động...
                 </Typography>
             </Box>
@@ -315,10 +321,10 @@ export default function EmploymentsPage() {
     }
 
     return (
-        <Box sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <WorkIcon sx={{ mr: 2, fontSize: 32, color: 'primary.main' }} />
+        <Box sx={{p: 3}}>
+            <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3}}>
+                <Box sx={{display: 'flex', alignItems: 'center'}}>
+                    <WorkIcon sx={{mr: 2, fontSize: 32, color: 'primary.main'}}/>
                     <Box>
                         <Typography variant="h4" component="h1">
                             Quản lý Hợp đồng Lao động
@@ -340,7 +346,7 @@ export default function EmploymentsPage() {
                 </Box>
                 <Button
                     variant="contained"
-                    startIcon={<AddIcon />}
+                    startIcon={<AddIcon/>}
                     onClick={() => handleOpenDialog()}
                 >
                     Thêm hợp đồng
@@ -348,12 +354,12 @@ export default function EmploymentsPage() {
             </Box>
 
             {error && (
-                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+                <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
                     {error}
                 </Alert>
             )}
 
-            <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+            <Paper sx={{width: '100%', overflow: 'hidden'}}>
                 <TableContainer>
                     <Table stickyHeader>
                         <TableHead>
@@ -389,7 +395,7 @@ export default function EmploymentsPage() {
                                     <TableCell>
                                         <Chip
                                             label={getContractTypeLabel(employment.contract_type)}
-                                            color={getContractTypeColor(employment.contract_type) as any}
+                                            color={getContractTypeColor(employment.contract_type) as never}
                                             size="small"
                                             variant="outlined"
                                         />
@@ -459,12 +465,12 @@ export default function EmploymentsPage() {
                         {editingEmployment ? 'Sửa hợp đồng lao động' : 'Thêm hợp đồng lao động mới'}
                     </DialogTitle>
                     <DialogContent>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
+                        <Box sx={{display: 'flex', flexDirection: 'column', gap: 3, mt: 1}}>
                             <FormControl fullWidth required>
                                 <InputLabel>Nhân viên</InputLabel>
                                 <Select
                                     value={formData.employee_id}
-                                    onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+                                    onChange={(e) => setFormData({...formData, employee_id: e.target.value})}
                                     label="Nhân viên"
                                 >
                                     {employees.map((employee) => (
@@ -479,7 +485,7 @@ export default function EmploymentsPage() {
                                 fullWidth
                                 label="Số hợp đồng"
                                 value={formData.contract_no}
-                                onChange={(e) => setFormData({ ...formData, contract_no: e.target.value })}
+                                onChange={(e) => setFormData({...formData, contract_no: e.target.value})}
                                 required
                                 placeholder="VD: HD2024001"
                             />
@@ -488,7 +494,7 @@ export default function EmploymentsPage() {
                                 <InputLabel>Loại hợp đồng</InputLabel>
                                 <Select
                                     value={formData.contract_type}
-                                    onChange={(e) => setFormData({ ...formData, contract_type: e.target.value })}
+                                    onChange={(e) => setFormData({...formData, contract_type: e.target.value})}
                                     label="Loại hợp đồng"
                                 >
                                     {contractTypes.map((type) => (
@@ -504,9 +510,9 @@ export default function EmploymentsPage() {
                                 label="Ngày bắt đầu"
                                 type="date"
                                 value={formData.start_date}
-                                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                                onChange={(e) => setFormData({...formData, start_date: e.target.value})}
                                 required
-                                InputLabelProps={{ shrink: true }}
+                                InputLabelProps={{shrink: true}}
                             />
 
                             <TextField
@@ -514,8 +520,8 @@ export default function EmploymentsPage() {
                                 label="Ngày kết thúc"
                                 type="date"
                                 value={formData.end_date}
-                                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                                InputLabelProps={{ shrink: true }}
+                                onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                                InputLabelProps={{shrink: true}}
                                 helperText="Để trống nếu hợp đồng không xác định thời hạn"
                             />
 
@@ -524,9 +530,9 @@ export default function EmploymentsPage() {
                                 label="FTE (Full-time Equivalent)"
                                 type="number"
                                 value={formData.fte}
-                                onChange={(e) => setFormData({ ...formData, fte: e.target.value })}
+                                onChange={(e) => setFormData({...formData, fte: e.target.value})}
                                 required
-                                inputProps={{ min: 0, max: 1, step: 0.1 }}
+                                inputProps={{min: 0, max: 1, step: 0.1}}
                                 helperText="1.0 = 100%, 0.5 = 50%"
                             />
 
@@ -534,7 +540,7 @@ export default function EmploymentsPage() {
                                 <InputLabel>Bậc lương</InputLabel>
                                 <Select
                                     value={formData.salary_band}
-                                    onChange={(e) => setFormData({ ...formData, salary_band: e.target.value })}
+                                    onChange={(e) => setFormData({...formData, salary_band: e.target.value})}
                                     label="Bậc lương"
                                 >
                                     {salaryBands.map((band) => (
@@ -554,7 +560,7 @@ export default function EmploymentsPage() {
                             type="submit"
                             variant="contained"
                             disabled={saving}
-                            startIcon={saving ? <CircularProgress size={20} /> : null}
+                            startIcon={saving ? <CircularProgress size={20}/> : null}
                         >
                             {saving ? 'Đang lưu...' : (editingEmployment ? 'Cập nhật' : 'Thêm mới')}
                         </Button>
@@ -569,7 +575,7 @@ export default function EmploymentsPage() {
                 </DialogTitle>
                 <DialogContent>
                     {viewingEmployment && (
-                        <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid container spacing={2} sx={{mt: 1}}>
                             <Grid item xs={12} sm={6}>
                                 <Typography variant="subtitle2" color="text.secondary">
                                     Nhân viên
@@ -597,7 +603,10 @@ export default function EmploymentsPage() {
                                 </Typography>
                                 <Chip
                                     label={getContractTypeLabel(viewingEmployment.contract_type)}
-                                    color={getContractTypeColor(viewingEmployment.contract_type) as any}
+                                    color={getContractTypeColor(viewingEmployment.contract_type) as
+                                        never
+
+                                    }
                                     size="small"
                                     variant="outlined"
                                 />

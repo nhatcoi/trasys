@@ -363,7 +363,7 @@ function EmployeeTrainingsPageContent() {
                                 <TableCell>
                                     <Chip
                                         label={TRAINING_STATUS_LABELS[training.status as keyof typeof TRAINING_STATUS_LABELS] || training.status}
-                                        color={TRAINING_STATUS_COLORS[training.status as keyof typeof TRAINING_STATUS_COLORS] as any}
+                                        color={TRAINING_STATUS_COLORS[training.status as keyof typeof TRAINING_STATUS_COLORS] as string}
                                         variant="outlined"
                                         size="small"
                                     />

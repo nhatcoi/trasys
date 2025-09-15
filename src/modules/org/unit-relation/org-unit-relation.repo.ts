@@ -108,7 +108,7 @@ export class OrgUnitRelationRepository {
         parent_id_child_id_relation_type_effective_from: {
           parent_id: BigInt(params.parent_id),
           child_id: BigInt(params.child_id),
-          relation_type: params.relation_type as any,
+          relation_type: params.relation_type as string,
           effective_from: new Date(params.effective_from),
         },
       },
@@ -191,7 +191,7 @@ export class OrgUnitRelationRepository {
         parent_id_child_id_relation_type_effective_from: {
           parent_id: BigInt(params.parent_id),
           child_id: BigInt(params.child_id),
-          relation_type: params.relation_type as any,
+          relation_type: params.relation_type as string,
           effective_from: new Date(params.effective_from),
         },
       },
@@ -240,7 +240,7 @@ export class OrgUnitRelationRepository {
         parent_id_child_id_relation_type_effective_from: {
           parent_id: BigInt(params.parent_id),
           child_id: BigInt(params.child_id),
-          relation_type: params.relation_type as any,
+          relation_type: params.relation_type as string,
           effective_from: new Date(params.effective_from),
         },
       },
