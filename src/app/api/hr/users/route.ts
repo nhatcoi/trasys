@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         // Try direct user table access
         const users = await db.User.findMany({
@@ -177,7 +177,18 @@ export async function PUT(request: NextRequest) {
         }
 
         // Prepare update data
-        const updateData: any = {
+        const updateData: {
+            username?: string;
+            full_name?: string;
+            email?: string;
+            dob?: Date | null;
+            gender?: string;
+            phone?: string;
+            address?: string;
+            status?: string;
+            updated_at: Date;
+            password_hash?: string;
+        } = {
             username,
             full_name,
             email,

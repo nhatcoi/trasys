@@ -15,7 +15,16 @@ export async function GET() {
         });
 
         // Convert BigInt to string for JSON serialization
-        const serializedUserRoles = userRoles.map((userRole: any) => ({
+        const serializedUserRoles = userRoles.map((userRole: {
+            id: bigint;
+            user_id: bigint;
+            role_id: bigint;
+            assigned_by?: bigint;
+            Role?: { id: bigint; [key: string]: unknown };
+            users_user_role_user_idTousers?: { id: bigint; [key: string]: unknown };
+            users_user_role_assigned_byTousers?: { id: bigint; [key: string]: unknown };
+            [key: string]: unknown;
+        }) => ({
             ...userRole,
             id: userRole.id.toString(),
             user_id: userRole.user_id.toString(),

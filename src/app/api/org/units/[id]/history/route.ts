@@ -5,11 +5,12 @@ const historyRepo = new HistoryRepository();
 
 // GET /api/org/units/[id]/history - Get history for a specific unit
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string  }> }
 ) {
   try {
-    const unitId = parseInt(params.id, 10);
+        const resolvedParams = await params;
+        const unitId = parseInt(resolvedParams.id, 10);
     
     if (isNaN(unitId)) {
       return NextResponse.json(

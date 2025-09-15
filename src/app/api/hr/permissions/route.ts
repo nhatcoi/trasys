@@ -17,18 +17,29 @@ export async function GET() {
         });
 
         // Convert BigInt to string for JSON serialization
-        const serializedPermissions = permissions.map((permission: any) => ({
+        const serializedPermissions = permissions.map((permission: {
+            id: bigint;
+            RolePermission?: Array<{
+                id: bigint;
+                role_id: bigint;
+                permission_id: bigint;
+                granted_by?: bigint;
+                Role?: { id: bigint; [key: string]: unknown };
+                [key: string]: unknown;
+            }>;
+            [key: string]: unknown;
+        }) => ({
             ...permission,
             id: permission.id.toString(),
-            RolePermission: permission.role_permission?.map((rp: any) => ({
+            RolePermission: permission.RolePermission?.map((rp) => ({
                 ...rp,
                 id: rp.id.toString(),
                 role_id: rp.role_id.toString(),
                 permission_id: rp.permission_id.toString(),
                 granted_by: rp.granted_by?.toString() || null,
-                Role: rp.roles ? {
-                    ...rp.roles,
-                    id: rp.roles.id.toString()
+                Role: rp.Role ? {
+                    ...rp.Role,
+                    id: rp.Role.id.toString()
                 } : null
             })) || []
         }));

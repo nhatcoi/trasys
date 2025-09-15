@@ -10,7 +10,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+        const resolvedParams = await params;
+        const { id } = await params;
     const employeeId = BigInt(id);
 
     const employee = await db.employee.findUnique({
@@ -98,7 +99,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+        const resolvedParams = await params;
+        const { id } = await params;
     const employeeId = BigInt(id);
     const body = await request.json();
     const {
@@ -185,7 +187,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+        const resolvedParams = await params;
+        const { id } = await params;
     const employeeId = BigInt(id);
 
     // Get current user from token

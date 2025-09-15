@@ -23,10 +23,29 @@ export async function GET() {
         });
 
         // Convert BigInt to string for JSON serialization
-        const serializedRoles = roles.map((role: any) => ({
+        const serializedRoles = roles.map((role: { 
+            id: bigint; 
+            RolePermission?: Array<{
+                id: bigint;
+                role_id: bigint;
+                permission_id: bigint;
+                granted_by?: bigint;
+                Permission?: { id: bigint; [key: string]: unknown };
+                [key: string]: unknown;
+            }>; 
+            UserRole?: Array<{
+                id: bigint;
+                user_id: bigint;
+                role_id: bigint;
+                assigned_by?: bigint;
+                users_user_role_user_idTousers?: { id: bigint; [key: string]: unknown };
+                [key: string]: unknown;
+            }>; 
+            [key: string]: unknown 
+        }) => ({
             ...role,
             id: role.id.toString(),
-            RolePermission: role.RolePermission?.map((rp: any) => ({
+            RolePermission: role.RolePermission?.map((rp) => ({
                 ...rp,
                 id: rp.id.toString(),
                 role_id: rp.role_id.toString(),
@@ -37,7 +56,7 @@ export async function GET() {
                     id: rp.Permission.id.toString()
                 } : null
             })) || [],
-            UserRole: role.UserRole?.map((ur: any) => ({
+            UserRole: role.UserRole?.map((ur) => ({
                 ...ur,
                 id: ur.id.toString(),
                 user_id: ur.user_id.toString(),

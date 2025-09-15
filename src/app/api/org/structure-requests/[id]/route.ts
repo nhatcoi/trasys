@@ -20,7 +20,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+        const resolvedParams = await params;
+        const { id } = await params;
     
     const result = await orgStructureRequestRepo.findById(id);
     
@@ -50,7 +51,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+        const resolvedParams = await params;
+        const { id } = await params;
     const body = await request.json();
     
     // Validate that request exists
@@ -83,7 +85,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+        const resolvedParams = await params;
+        const { id } = await params;
     
     await orgStructureRequestRepo.delete(id);
     

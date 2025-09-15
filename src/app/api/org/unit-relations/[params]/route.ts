@@ -5,12 +5,14 @@ const orgUnitRelationRepo = new OrgUnitRelationRepository();
 
 // GET /api/org-unit-relations/[params] - Get org unit relation by composite key
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { params: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ params: string  }> }
 ) {
   try {
+        const resolvedParams = await params;
+    GET
     // Parse composite key from params (format: parent_id/child_id/relation_type/effective_from)
-    const [parent_id, child_id, relation_type, effective_from] = params.params.split('/');
+    const [parent_id, child_id, relation_type, effective_from] = resolvedParams.resolvedParams.split('/');
     
     if (!parent_id || !child_id || !relation_type || !effective_from) {
       return NextResponse.json(
@@ -47,12 +49,14 @@ export async function GET(
 
 // PUT /api/org-unit-relations/[params] - Update org unit relation
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: { params: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ params: string  }> }
 ) {
   try {
+        const resolvedParams = await params;
+    PUT
     // Parse composite key from params
-    const [parent_id, child_id, relation_type, effective_from] = params.params.split('/');
+    const [parent_id, child_id, relation_type, effective_from] = resolvedParams.resolvedParams.split('/');
     
     if (!parent_id || !child_id || !relation_type || !effective_from) {
       return NextResponse.json(
@@ -91,12 +95,14 @@ export async function PUT(
 
 // DELETE /api/org-unit-relations/[params] - Delete org unit relation
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { params: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ params: string  }> }
 ) {
   try {
+        const resolvedParams = await params;
+    DELETE
     // Parse composite key from params
-    const [parent_id, child_id, relation_type, effective_from] = params.params.split('/');
+    const [parent_id, child_id, relation_type, effective_from] = resolvedParams.resolvedParams.split('/');
     
     if (!parent_id || !child_id || !relation_type || !effective_from) {
       return NextResponse.json(

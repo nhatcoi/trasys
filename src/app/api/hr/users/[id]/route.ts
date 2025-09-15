@@ -6,9 +6,10 @@ import bcrypt from 'bcryptjs';
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string  }> }
 ) {
     try {
+        const resolvedParams = await params;
         const session = await getServerSession(authOptions);
 
         if (!session?.User?.id) {
@@ -23,7 +24,7 @@ export async function PUT(
 
         // Check if user exists
         const existingUser = await db.User.findUnique({
-            where: { id: BigInt(params.id) }
+            where: { id: BigInt(resolvedParams.id) }
         });
 
         if (!existingUser) {
@@ -34,7 +35,15 @@ export async function PUT(
         }
 
         // Prepare update data
-        const updateData: any = {
+        const updateData: {
+            full_name?: string;
+            email?: string;
+            phone?: string;
+            address?: string;
+            dob?: Date | null;
+            gender?: string;
+            password_hash?: string;
+        } = {
             full_name,
             email,
             phone,
@@ -50,7 +59,7 @@ export async function PUT(
 
         // Update user
         const updatedUser = await db.User.update({
-            where: { id: BigInt(params.id) },
+            where: { id: BigInt(resolvedParams.id) },
             data: updateData,
             select: {
                 id: true,

@@ -141,10 +141,10 @@ export default function HRDashboardPage() {
         // Group assignments by org unit
         const assignmentsByUnit = new Map<string, Assignment[]>();
         assignments.forEach(assignment => {
-            if (!assignmentsByUnit.has(assignment.OrgUnit_id)) {
-                assignmentsByUnit.set(assignment.OrgUnit_id, []);
+            if (!assignmentsByUnit.has(assignment.org_unit_id)) {
+                assignmentsByUnit.set(assignment.org_unit_id, []);
             }
-            assignmentsByUnit.get(assignment.OrgUnit_id)!.push(assignment);
+            assignmentsByUnit.get(assignment.org_unit_id)!.push(assignment);
         });
 
         // Build hierarchical structure
@@ -233,7 +233,7 @@ export default function HRDashboardPage() {
                                                 </Avatar>
                                             </ListItemAvatar>
                                             <ListItemText
-                                                primary={employee.User?.full_name || 'N/A'}
+                                                primary={employee.user?.full_name || 'N/A'}
                                                 secondary={
                                                     <Box>
                                                         <Typography variant="body2" color="text.secondary">

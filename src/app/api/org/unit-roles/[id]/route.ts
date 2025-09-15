@@ -9,7 +9,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+        const resolvedParams = await params;
+        const { id } = await params;
     
     const result = await orgUnitRoleService.getOrgUnitRoleById(id);
     
@@ -35,7 +36,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+        const resolvedParams = await params;
+        const { id } = await params;
     const body = await request.json();
     
     const result = await orgUnitRoleService.updateOrgUnitRole(id, body);
@@ -62,7 +64,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+        const resolvedParams = await params;
+        const { id } = await params;
     
     const result = await orgUnitRoleService.deleteOrgUnitRole(id);
     

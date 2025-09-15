@@ -19,6 +19,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+        const resolvedParams = await params;
+    GET
     // Await params
     const { id } = await params;
     
@@ -59,6 +61,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+        const resolvedParams = await params;
+    PUT
     // Await params
     const { id } = await params;
     
@@ -102,6 +106,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+        const resolvedParams = await params;
+    DELETE
     // Await params
     const { id } = await params;
     

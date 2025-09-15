@@ -6,15 +6,16 @@ import { db } from '@/lib/db';
 // POST /api/hr/leave-requests/[id]/approve - Duyệt đơn xin nghỉ
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string  }> }
 ) {
     try {
+        const resolvedParams = await params;
         const session = await getServerSession(authOptions);
         if (!session?.User?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const leaveRequestId = BigInt(params.id);
+        const leaveRequestId = BigInt(resolvedParams.id);
         const body = await request.json();
         const { action, comment } = body; // action: 'APPROVED' hoặc 'REJECTED'
 

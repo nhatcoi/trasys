@@ -7,7 +7,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+        const resolvedParams = await params;
+        const { id } = await params;
     const body = await request.json();
     
     // Validate required fields

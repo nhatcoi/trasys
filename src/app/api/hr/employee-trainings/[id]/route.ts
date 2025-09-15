@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string  }> }
+) {
     try {
-        const trainingId = params.id;
+        const resolvedParams = await params;
+        const trainingId = resolvedParams.id;
 
         const employeeTraining = await db.Employee_training.findUnique({
             where: { id: BigInt(trainingId) },
@@ -61,9 +65,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string  }> }
+) {
     try {
-        const trainingId = params.id;
+        const resolvedParams = await params;
+        const trainingId = resolvedParams.id;
         const body = await request.json();
         const { employee_id, training_id, status, completion_date, certificate_url } = body;
 
@@ -101,9 +109,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string  }> }
+) {
     try {
-        const trainingId = params.id;
+        const resolvedParams = await params;
+        const trainingId = resolvedParams.id;
 
         await db.Employee_training.delete({
             where: { id: BigInt(trainingId) },
