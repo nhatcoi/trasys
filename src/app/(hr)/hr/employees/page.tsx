@@ -357,7 +357,7 @@ export default function EmployeesPage() {
                         Chưa có nhân viên nào
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        Nhấn "Thêm nhân viên" để bắt đầu
+                        Nhấn &quot;Thêm nhân viên&quot; để bắt đầu
                     </Typography>
                 </Box>
             )}

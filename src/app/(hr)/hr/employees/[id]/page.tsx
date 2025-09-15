@@ -531,7 +531,7 @@ export default function EmployeeDetailPage() {
                                 </Button>
                             </Box>
                             <Typography variant="body2" color="text.secondary">
-                                Nhấn "Xem bằng cấp" để xem chi tiết các bằng cấp của nhân viên
+                                Nhấn &quot;Xem bằng cấp&quot; để xem chi tiết các bằng cấp của nhân viên
                             </Typography>
                         </CardContent>
                     </Card>

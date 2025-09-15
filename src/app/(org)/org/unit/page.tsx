@@ -835,7 +835,7 @@ export default function OrgUnitManagementPage() {
         <DialogTitle>Xác nhận vô hiệu hóa</DialogTitle>
         <DialogContent>
           <Typography>
-            Bạn có chắc chắn muốn vô hiệu hóa đơn vị &quot;{selectedUnit?.name}&quot;? 
+            Bạn có chắc chắn muốn vô hiệu hóa đơn vị "{selectedUnit?.name}"? 
             Đơn vị sẽ bị xóa khỏi hệ thống và không thể khôi phục.
           </Typography>
           {selectedUnit?.status === 'active' && (

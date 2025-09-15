@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Box, Typography, Button, CircularProgress, Alert, Breadcrumbs, Link } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -60,7 +60,7 @@ interface OrgUnitStats {
     children: OrgUnitStats[];
 }
 
-export default function FacultyPage() {
+function FacultyPageContent() {
     const [orgUnitStats, setOrgUnitStats] = useState<OrgUnitStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -361,5 +361,14 @@ export default function FacultyPage() {
                 />
             </Box>
         </Box>
+    );
+}
+
+
+export default function FacultyPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <FacultyPageContent />
+        </Suspense>
     );
 }

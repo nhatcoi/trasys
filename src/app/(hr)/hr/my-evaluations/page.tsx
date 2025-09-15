@@ -181,7 +181,7 @@ export default function MyEvaluationsPage() {
                                                 />
                                                 <Chip
                                                     label={getScoreLabel(evaluation.score)}
-                                                    color={getScoreColor(evaluation.score) as any}
+                                                    color={getScoreColor(evaluation.score) as unknown}
                                                     size="small"
                                                 />
                                             </>
