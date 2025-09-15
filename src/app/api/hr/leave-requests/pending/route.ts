@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         }
 
         const [leaveRequests, total] = await Promise.all([
-            db.leave_requests.findMany({
+            db.leaveRequest.findMany({
                 where: whereClause,
                 include: {
                     employees: {
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
                 skip: offset,
                 take: limit
             }),
-            db.leave_requests.count({ where: whereClause })
+            db.leaveRequest.count({ where: whereClause })
         ]);
 
         // Serialize BigInt fields

@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const employeeId = searchParams.get('employee_id');
 
-        const employeeTrainings = await db.employee_training.findMany({
+        const employeeTrainings = await db.employeeTraining.findMany({
             where: employeeId ? { employee_id: BigInt(employeeId) } : {},
             include: {
                 employees: {
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
         }
 
-        const newEmployeeTraining = await db.employee_training.create({
+        const newEmployeeTraining = await db.employeeTraining.create({
             data: {
                 employee_id: BigInt(employee_id),
                 training_id: BigInt(training_id),

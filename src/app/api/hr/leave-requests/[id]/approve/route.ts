@@ -23,7 +23,7 @@ export async function POST(
         }
 
         // Lấy đơn xin nghỉ hiện tại
-        const currentRequest = await db.leave_requests.findUnique({
+        const currentRequest = await db.leaveRequest.findUnique({
             where: { id: leaveRequestId },
             include: {
                 employees: {
@@ -88,7 +88,7 @@ export async function POST(
         }
 
         // Cập nhật trạng thái đơn xin nghỉ
-        const updatedRequest = await db.leave_requests.update({
+        const updatedRequest = await db.leaveRequest.update({
             where: { id: leaveRequestId },
             data: {
                 status: action,
@@ -110,7 +110,7 @@ export async function POST(
         });
 
         // Tạo lịch sử duyệt trong employee_log
-        await db.employee_log.create({
+        await db.employeeLog.create({
             data: {
                 employee_id: currentRequest.employee_id,
                 action: 'UPDATE',

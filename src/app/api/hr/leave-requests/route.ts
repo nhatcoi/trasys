@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         if (!isAdmin) {
             if (employeeId) {
                 // Kiểm tra quyền xem đơn của nhân viên khác
-                const targetEmployee = await db.Employee.findUnique({
+                const targetEmployee = await db.employee.findUnique({
                     where: { id: BigInt(employeeId) },
                     include: {
                         assignments: {
@@ -106,36 +106,29 @@ export async function GET(request: NextRequest) {
             };
         }
 
-        const [leaveRequests, total] = await Promise.all([
-            db.leave_requests.findMany({
-                where: whereClause,
-                include: {
-                    employees: {
-                        include: {
-                            user: {
-                                select: {
-                                    id: true,
-                                    full_name: true,
-                                    email: true
-                                }
-                            },
-                            assignments: {
-                                include: {
-                                    org_unit: true,
-                                    job_positions: true
-                                }
+        const leaveRequests = await db.leaveRequest.findMany({
+            where: whereClause,
+            include: {
+                employees: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                full_name: true,
+                                email: true
                             }
                         }
-                    },
+                    }
                 },
-                orderBy: {
-                    created_at: 'desc'
-                },
-                skip: offset,
-                take: limit
-            }),
-            db.leave_requests.count({ where: whereClause })
-        ]);
+            },
+            orderBy: {
+                created_at: 'desc'
+            },
+            skip: offset,
+            take: limit
+        });
+
+        const total = await db.leaveRequest.count({ where: whereClause });
 
         // Serialize BigInt fields
         const serializedLeaveRequests = serializeBigIntArray(leaveRequests);
@@ -180,7 +173,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Lấy thông tin employee
-        const employee = await db.Employee.findFirst({
+        const employee = await db.employee.findFirst({
             where: { user_id: BigInt(session.user.id) }
         });
 
@@ -189,7 +182,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Tạo đơn xin nghỉ
-        const leaveRequest = await db.leave_requests.create({
+        const leaveRequest = await db.leaveRequest.create({
             data: {
                 employee_id: employee.id,
                 leave_type,
@@ -214,7 +207,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Tạo lịch sử trong employee_log
-        await db.employee_log.create({
+        await db.employeeLog.create({
             data: {
                 employee_id: employee.id,
                 action: 'CREATE',

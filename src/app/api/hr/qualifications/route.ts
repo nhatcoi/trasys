@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 // GET - Lấy danh sách tất cả bằng cấp
 export async function GET() {
     try {
-        const qualifications = await db.qualifications.findMany({
+        const qualifications = await db.qualification.findMany({
             orderBy: {
                 title: 'asc'
             }
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const qualification = await db.qualifications.create({
+        const qualification = await db.qualification.create({
             data: {
                 code,
                 title

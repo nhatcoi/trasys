@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
             };
         }
 
-        const employments = await db.employments.findMany({
+        const employments = await db.employment.findMany({
             where: whereClause,
             include: {
                 employees: {
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const employment = await db.employments.create({
+        const employment = await db.employment.create({
             data: {
                 employee_id: BigInt(employee_id),
                 contract_no,

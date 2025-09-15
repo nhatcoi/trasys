@@ -28,7 +28,7 @@ export async function GET() {
       whereClause = {};
     } else if (isDeanOrManager && currentUserId) {
       // Dean/Manager should see employees in their organizational scope
-      const currentUserEmployee = await db.Employee.findFirst({
+      const currentUserEmployee = await db.employee.findFirst({
         where: { user_id: currentUserId },
         include: {
           assignments: {
@@ -72,7 +72,7 @@ export async function GET() {
       whereClause = { user_id: currentUserId };
     }
 
-    const employees = await db.Employee.findMany({
+    const employees = await db.employee.findMany({
       where: whereClause,
       include: {
         user: true,
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     const currentUserId = session?.user?.id ? BigInt(session.user.id) : undefined;
 
-    const employee = await db.Employee.create({
+    const employee = await db.employee.create({
       data: {
         user: user_id ? { connect: { id: BigInt(user_id) } } : undefined,
         employee_no,
