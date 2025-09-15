@@ -1,9 +1,38 @@
 import { db } from '@/lib/db';
-import {
-  type CreateProgramsInput,
-  type UpdateProgramsInput,
-  type ProgramsQuery
-} from './programs.schema';
+
+// Types
+interface ProgramsQuery {
+  page: number;
+  size: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  search?: string;
+  major_id?: string;
+  org_unit_id?: string;
+  is_active?: boolean;
+}
+
+interface CreateProgramsInput {
+  program_code: string;
+  program_name: string;
+  major_id: string;
+  org_unit_id: string;
+  degree_level: string;
+  duration_years: number;
+  description?: string;
+  is_active?: boolean;
+}
+
+interface UpdateProgramsInput {
+  program_code?: string;
+  program_name?: string;
+  major_id?: string;
+  org_unit_id?: string;
+  degree_level?: string;
+  duration_years?: number;
+  description?: string;
+  is_active?: boolean;
+}
 
 export class ProgramRepository {
   // Simplified find all with pagination

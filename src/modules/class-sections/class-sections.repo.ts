@@ -1,14 +1,46 @@
 import { db } from '@/lib/db';
-import { 
-  ClassSectionSchema, 
-  CreateClassSectionSchema, 
-  UpdateClassSectionSchema,
-  ClassSectionQuerySchema,
-  type ClassSection,
-  type CreateClassSectionInput,
-  type UpdateClassSectionInput,
-  type ClassSectionQuery
-} from './class-sections.schema';
+
+// Types
+interface ClassSectionQuery {
+  page: number;
+  size: number;
+  sort: string;
+  order: 'asc' | 'desc';
+  search?: string;
+  course_id?: string;
+  org_unit_id?: string;
+  term_academic_id?: string;
+}
+
+interface CreateClassSectionInput {
+  course_id: string;
+  org_unit_id: string;
+  term_academic_id: string;
+  section_name: string;
+  section_code: string;
+  max_students?: number;
+  is_active?: boolean;
+}
+
+interface UpdateClassSectionInput {
+  section_name?: string;
+  section_code?: string;
+  max_students?: number;
+  is_active?: boolean;
+}
+
+interface ClassSection {
+  id: string;
+  course_id: string;
+  org_unit_id: string;
+  term_academic_id: string;
+  section_name: string;
+  section_code: string;
+  max_students: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export class ClassSectionRepository {
   // Find all class sections with pagination and filters

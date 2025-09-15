@@ -1,5 +1,24 @@
 import { db } from '@/lib/db';
-import { HistoryQuery } from './history.schema';
+
+// Types
+interface HistoryQuery {
+  org_unit_id?: number;
+  change_type?: string;
+  from_date?: string;
+  to_date?: string;
+  page: number;
+  size: number;
+  sort: string;
+  order: 'asc' | 'desc';
+}
+
+interface CreateHistoryInput {
+  org_unit_id: number;
+  old_name?: string;
+  new_name?: string;
+  change_type: string;
+  details?: any;
+}
 
 export class HistoryRepository {
   // Get history records with filtering and pagination
@@ -104,13 +123,7 @@ export class HistoryRepository {
   }
 
   // Create new history record
-  async create(data: {
-    org_unit_id: number;
-    old_name?: string;
-    new_name?: string;
-    change_type: string;
-    details?: any;
-  }) {
+  async create(data: CreateHistoryInput) {
     return db.orgUnitHistory.create({
         data: {
             org_unit_id: data.org_unit_id,

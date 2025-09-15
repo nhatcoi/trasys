@@ -1,12 +1,27 @@
 import { db } from '@/lib/db';
-import { 
-  CreateOrgUnitRelationSchema, 
-  UpdateOrgUnitRelationSchema,
-  OrgUnitRelationQuerySchema,
-  type CreateOrgUnitRelationInput,
-  type UpdateOrgUnitRelationInput,
-  type OrgUnitRelationQuery
-} from './org-unit-relation.schema';
+
+// Types
+interface OrgUnitRelationQuery {
+  page: number;
+  size: number;
+  sort: string;
+  order: 'asc' | 'desc';
+  parent_id?: string;
+  child_id?: string;
+  relation_type?: string;
+}
+
+interface CreateOrgUnitRelationInput {
+  parent_id: string;
+  child_id: string;
+  relation_type?: string;
+  is_active?: boolean;
+}
+
+interface UpdateOrgUnitRelationInput {
+  relation_type?: string;
+  is_active?: boolean;
+}
 
 export class OrgUnitRelationRepository {
   // Find all org unit relations with pagination and filters

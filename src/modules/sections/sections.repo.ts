@@ -1,9 +1,33 @@
 import { db } from '@/lib/db';
-import { 
-  type CreateSectionsInput,
-  type UpdateSectionsInput,
-  type SectionsQuery
-} from './sections.schema';
+
+// Types
+interface SectionsQuery {
+  page: number;
+  size: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  search?: string;
+  course_id?: string;
+  org_unit_id?: string;
+  term_academic_id?: string;
+}
+
+interface CreateSectionsInput {
+  course_id: string;
+  org_unit_id: string;
+  term_academic_id: string;
+  section_name: string;
+  section_code: string;
+  max_students?: number;
+  is_active?: boolean;
+}
+
+interface UpdateSectionsInput {
+  section_name?: string;
+  section_code?: string;
+  max_students?: number;
+  is_active?: boolean;
+}
 
 export class SectionRepository {
   // Find all sections with pagination and filters

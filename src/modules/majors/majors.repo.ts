@@ -1,12 +1,31 @@
 import { db } from '@/lib/db';
-import { 
-  CreateMajorSchema, 
-  UpdateMajorSchema,
-  MajorQuerySchema,
-  type CreateMajorInput,
-  type UpdateMajorInput,
-  type MajorQuery
-} from './majors.schema';
+
+// Types
+interface MajorQuery {
+  page: number;
+  size: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  search?: string;
+  org_unit_id?: string;
+  is_active?: boolean;
+}
+
+interface CreateMajorInput {
+  major_code: string;
+  major_name: string;
+  org_unit_id: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+interface UpdateMajorInput {
+  major_code?: string;
+  major_name?: string;
+  org_unit_id?: string;
+  description?: string;
+  is_active?: boolean;
+}
 
 export class MajorRepository {
   // Simplified find all with pagination

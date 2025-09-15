@@ -1,14 +1,53 @@
 import { db } from '@/lib/db';
-import { 
-  OrgStructureRequestSchema, 
-  CreateOrgStructureRequestSchema, 
-  UpdateOrgStructureRequestSchema,
-  OrgStructureRequestQuerySchema,
-  type OrgStructureRequest,
-  type CreateOrgStructureRequestInput,
-  type UpdateOrgStructureRequestInput,
-  type OrgStructureRequestQuery
-} from './org-structure-request.schema';
+
+// Types
+interface OrgStructureRequestQuery {
+  page: number;
+  size: number;
+  sort: string;
+  order: 'asc' | 'desc';
+  search?: string;
+  request_type?: string;
+  status?: string;
+  target_org_unit_id?: string;
+  requester_id?: string;
+}
+
+interface CreateOrgStructureRequestInput {
+  request_type: string;
+  requester_id?: string;
+  target_org_unit_id?: string;
+  owner_org_id?: string;
+  attachments?: any;
+  payload: any;
+  status?: string;
+  workflow_step?: number;
+}
+
+interface UpdateOrgStructureRequestInput {
+  request_type?: string;
+  requester_id?: string;
+  target_org_unit_id?: string;
+  owner_org_id?: string;
+  attachments?: any;
+  payload?: any;
+  status?: string;
+  workflow_step?: number;
+}
+
+interface OrgStructureRequest {
+  id: string;
+  requester_id: string | null;
+  request_type: string;
+  target_org_unit_id: string | null;
+  owner_org_id: string | null;
+  attachments: any;
+  payload: any;
+  status: string;
+  workflow_step: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
 
 export class OrgStructureRequestRepository {
   // Find all org structure requests with pagination and filters

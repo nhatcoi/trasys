@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call service
-    const result = await historyService.create({
+    // Call repository directly
+    const result = await historyRepo.create({
       org_unit_id: parseInt(body.org_unit_id, 10),
       old_name: body.old_name,
       new_name: body.new_name,
@@ -75,9 +75,7 @@ export async function POST(request: NextRequest) {
       details: body.details,
     });
     
-    return NextResponse.json(result, { 
-      status: result.success ? 201 : 500
-    });
+    return NextResponse.json({ success: true, data: result }, { status: 201 });
   } catch (error) {
     console.error('History route error:', error);
     return NextResponse.json(

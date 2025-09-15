@@ -1,14 +1,40 @@
 import { db } from '@/lib/db';
-import { 
-  OrgUnitRoleSchema, 
-  CreateOrgUnitRoleSchema, 
-  UpdateOrgUnitRoleSchema,
-  OrgUnitRoleQuerySchema,
-  type OrgUnitRole,
-  type CreateOrgUnitRoleInput,
-  type UpdateOrgUnitRoleInput,
-  type OrgUnitRoleQuery
-} from './org-unit-role.schema';
+
+// Types
+interface OrgUnitRoleQuery {
+  page: number;
+  size: number;
+  sort: string;
+  order: 'asc' | 'desc';
+  search?: string;
+  org_unit_id?: string;
+  role_code?: string;
+}
+
+interface CreateOrgUnitRoleInput {
+  org_unit_id: string;
+  role_code: string;
+  role_name: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+interface UpdateOrgUnitRoleInput {
+  role_name?: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+interface OrgUnitRole {
+  id: string;
+  org_unit_id: string;
+  role_code: string;
+  role_name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export class OrgUnitRoleRepository {
   // Find all org unit roles with pagination and filters

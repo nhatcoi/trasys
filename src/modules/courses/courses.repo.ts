@@ -1,14 +1,49 @@
 import { db } from '@/lib/db';
-import { 
-  CourseSchema, 
-  CreateCourseSchema, 
-  UpdateCourseSchema,
-  CourseQuerySchema,
-  type Course,
-  type CreateCourseInput,
-  type UpdateCourseInput,
-  type CourseQuery
-} from './courses.schema';
+
+// Types
+interface CourseQuery {
+  page: number;
+  size: number;
+  sort: string;
+  order: 'asc' | 'desc';
+  search?: string;
+  major_id?: string;
+  org_unit_id?: string;
+  is_active?: boolean;
+}
+
+interface CreateCourseInput {
+  course_code: string;
+  course_name: string;
+  major_id: string;
+  org_unit_id: string;
+  credits: number;
+  description?: string;
+  is_active?: boolean;
+}
+
+interface UpdateCourseInput {
+  course_code?: string;
+  course_name?: string;
+  major_id?: string;
+  org_unit_id?: string;
+  credits?: number;
+  description?: string;
+  is_active?: boolean;
+}
+
+interface Course {
+  id: string;
+  course_code: string;
+  course_name: string;
+  major_id: string;
+  org_unit_id: string;
+  credits: number;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export class CourseRepository {
   // Find all courses with pagination and filters

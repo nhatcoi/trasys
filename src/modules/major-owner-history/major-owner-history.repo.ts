@@ -1,14 +1,43 @@
 import { db } from '@/lib/db';
-import { 
-  MajorOwnerHistorySchema, 
-  CreateMajorOwnerHistorySchema, 
-  UpdateMajorOwnerHistorySchema,
-  MajorOwnerHistoryQuerySchema,
-  type MajorOwnerHistory,
-  type CreateMajorOwnerHistoryInput,
-  type UpdateMajorOwnerHistoryInput,
-  type MajorOwnerHistoryQuery
-} from './major-owner-history.schema';
+
+// Types
+interface MajorOwnerHistoryQuery {
+  page: number;
+  size: number;
+  sort: string;
+  order: 'asc' | 'desc';
+  search?: string;
+  major_id?: string;
+  org_unit_id?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+interface CreateMajorOwnerHistoryInput {
+  major_id: string;
+  org_unit_id: string;
+  start_date: string;
+  end_date?: string;
+  notes?: string;
+}
+
+interface UpdateMajorOwnerHistoryInput {
+  org_unit_id?: string;
+  start_date?: string;
+  end_date?: string;
+  notes?: string;
+}
+
+interface MajorOwnerHistory {
+  id: string;
+  major_id: string;
+  org_unit_id: string;
+  start_date: string;
+  end_date: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export class MajorOwnerHistoryRepository {
   // Find all major owner histories with pagination and filters

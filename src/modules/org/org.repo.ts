@@ -1,5 +1,61 @@
 import { db } from '@/lib/db';
-import { CreateOrgUnitInput, UpdateOrgUnitInput, OrgUnitQuery } from './org.schema';
+
+// Types
+interface OrgUnitQuery {
+  search?: string;
+  status?: string;
+  type?: string;
+  fromDate?: string;
+  toDate?: string;
+  page: number;
+  size: number;
+  sort: string;
+  order: 'asc' | 'desc';
+  include_children?: boolean;
+  include_employees?: boolean;
+  include_parent?: boolean;
+}
+
+interface CreateOrgUnitInput {
+  name: string;
+  code: string;
+  parent_id?: string;
+  type?: string;
+  description?: string;
+  status?: string;
+  effective_from?: string;
+  effective_to?: string;
+  campus_id?: string;
+  planned_establishment_date?: string;
+}
+
+interface UpdateOrgUnitInput {
+  name?: string;
+  code?: string;
+  parent_id?: string;
+  type?: string;
+  description?: string;
+  status?: string;
+  effective_from?: string;
+  effective_to?: string;
+  campus_id?: string;
+}
+
+interface OrgUnit {
+  id: string;
+  name: string;
+  code: string;
+  type: string | null;
+  description: string | null;
+  status: string | null;
+  effective_from: string | null;
+  effective_to: string | null;
+  campus_id: string | null;
+  parent_id: string | null;
+  planned_establishment_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export class OrgUnitRepository {
   // Get all organization units without relations (lazy)
