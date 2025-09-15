@@ -1,1 +1,0 @@
-// Employee schema - data validation

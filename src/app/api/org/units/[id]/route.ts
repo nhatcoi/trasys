@@ -1,47 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { OrgUnitRepository } from '@/modules/org/org.repo';
+
+const orgUnitRepo = new OrgUnitRepository();
+
+// Simple validation helper
+function validateRequired(data: any, fields: string[]): string[] {
+  const errors: string[] = [];
+  for (const field of fields) {
+    if (!data[field] || (typeof data[field] === 'string' && data[field].trim() === '')) {
+      errors.push(`${field} is required`);
+    }
+  }
+  return errors;
+}
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const unitId = BigInt(params.id);
-
-    const unit = await db.org_units.findUnique({
-      where: { id: unitId as any },
-      include: {
-        assignments: {
-          include: {
-            employee: {
-              include: {
-                user: true
-              }
-            }
-          }
-        }
-      },
-    });
-
-    if (!unit) {
+    // Await params
+    const { id } = await params;
+    
+    // Convert string id to number
+    const unitId = parseInt(id, 10);
+    if (isNaN(unitId)) {
       return NextResponse.json(
-        { success: false, error: 'Organization unit not found' },
+        { success: false, error: 'Invalid unit ID' },
+        { status: 400 }
+      );
+    }
+    
+    // Call repository
+    const result = await orgUnitRepo.findById(unitId);
+    
+    if (!result) {
+      return NextResponse.json(
+        { success: false, error: 'Unit not found' },
         { status: 404 }
       );
     }
-
-    // Convert BigInt to string for JSON serialization
-    const serializedUnit = JSON.parse(JSON.stringify(unit, (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    ));
-
-    return NextResponse.json({ success: true, data: serializedUnit });
+    
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    console.error('Database error:', error);
+    console.error('Route error:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Database connection failed'
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to fetch unit' 
       },
       { status: 500 }
     );
@@ -50,39 +56,41 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const unitId = BigInt(params.id);
+    // Await params
+    const { id } = await params;
+    
+    // Convert string id to number
+    const unitId = parseInt(id, 10);
+    if (isNaN(unitId)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid unit ID' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate body
     const body = await request.json();
-    const { name, code, parent_id, type, description, status, effective_from, effective_to } = body;
-
-    const unit = await db.org_units.update({
-      where: { id: unitId as any },
-      data: {
-        name,
-        code,
-        parent_id: parent_id ? BigInt(parent_id) : null,
-        type,
-        description,
-        status,
-        effective_from: effective_from ? new Date(effective_from) : null,
-        effective_to: effective_to ? new Date(effective_to) : null,
-      },
-    });
-
-    // Convert BigInt to string for JSON serialization
-    const serializedUnit = JSON.parse(JSON.stringify(unit, (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    ));
-
-    return NextResponse.json({ success: true, data: serializedUnit });
+    const errors = validateRequired(body, ['name', 'code']);
+    if (errors.length > 0) {
+      return NextResponse.json(
+        { success: false, error: errors.join(', ') },
+        { status: 400 }
+      );
+    }
+    
+    // Call repository
+    const result = await orgUnitRepo.update(unitId, body);
+    
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    console.error('Database error:', error);
+    console.error('Route error:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to update organization unit'
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to update unit' 
       },
       { status: 500 }
     );
@@ -91,22 +99,31 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const unitId = BigInt(params.id);
-
-    await db.org_units.delete({
-      where: { id: unitId as any },
-    });
-
-    return NextResponse.json({ success: true, message: 'Organization unit deleted successfully' });
+    // Await params
+    const { id } = await params;
+    
+    // Convert string id to number
+    const unitId = parseInt(id, 10);
+    if (isNaN(unitId)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid unit ID' },
+        { status: 400 }
+      );
+    }
+    
+    // Call repository
+    const result = await orgUnitRepo.delete(unitId);
+    
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    console.error('Database error:', error);
+    console.error('Route error:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to delete organization unit'
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to delete unit' 
       },
       { status: 500 }
     );

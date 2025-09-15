@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { orgApi, type OrgUnit, type OrgStats } from '@/features/org/api/api';
 import {
   Box,
   Typography,
@@ -11,7 +12,6 @@ import {
   CircularProgress,
   Alert,
   AlertTitle,
-  Paper,
   LinearProgress,
   Avatar,
   List,
@@ -25,7 +25,6 @@ import {
   People as PeopleIcon,
   TrendingUp as TrendingUpIcon,
   Business as BusinessIcon,
-  Group as GroupIcon,
   Assessment as AssessmentIcon,
   Refresh as RefreshIcon,
   CheckCircle as CheckCircleIcon,
@@ -33,16 +32,9 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 
-interface OrgStats {
-  totalUnits: number;
-  totalEmployees: number;
-  activeUnits: number;
-  inactiveUnits: number;
-  departments: number;
-  divisions: number;
-  teams: number;
-  branches: number;
-}
+// Using OrgStats type from centralized API
+
+// Using OrgUnit type from centralized API
 
 interface RecentActivity {
   id: string;
@@ -54,7 +46,7 @@ interface RecentActivity {
 }
 
 interface TopUnit {
-  id: number;
+  id: string | number;
   name: string;
   code: string;
   employeeCount: number;
@@ -63,90 +55,75 @@ interface TopUnit {
 
 export default function OrgDashboardPage() {
   const [stats, setStats] = useState<OrgStats | null>(null);
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
-  const [topUnits, setTopUnits] = useState<TopUnit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
 
-  const fetchDashboardData = async () => {
+  // Top units from stats data
+  const topUnits: TopUnit[] = stats?.topUnits || [];
+
+  // Fetch stats data using centralized API
+  const fetchStats = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Fetch organization units
-      const unitsResponse = await fetch('/api/org/units');
-      const unitsResult = await unitsResponse.json();
+      console.log('Fetching stats using direct fetch...');
       
-      if (unitsResult.success) {
-        const units = unitsResult.data;
-        
-        // Calculate stats
-        const statsData: OrgStats = {
-          totalUnits: units.length,
-          totalEmployees: units.reduce((sum: number, unit: any) => sum + (unit.employees?.length || 0), 0),
-          activeUnits: units.filter((unit: any) => unit.status === 'active').length,
-          inactiveUnits: units.filter((unit: any) => unit.status === 'inactive').length,
-          departments: units.filter((unit: any) => unit.type === 'department').length,
-          divisions: units.filter((unit: any) => unit.type === 'division').length,
-          teams: units.filter((unit: any) => unit.type === 'team').length,
-          branches: units.filter((unit: any) => unit.type === 'branch').length,
-        };
-        
-        setStats(statsData);
-        
-        // Mock recent activities
-        const mockActivities: RecentActivity[] = [
-          {
-            id: '1',
-            type: 'unit_created',
-            description: 'Đơn vị mới được tạo',
-            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            unitName: 'Phòng Marketing',
-          },
-          {
-            id: '2',
-            type: 'employee_added',
-            description: 'Nhân viên mới được thêm',
-            timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-            employeeName: 'Nguyễn Văn A',
-            unitName: 'Phòng IT',
-          },
-          {
-            id: '3',
-            type: 'unit_updated',
-            description: 'Thông tin đơn vị được cập nhật',
-            timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-            unitName: 'Phòng Nhân sự',
-          },
-        ];
-        
-        setRecentActivities(mockActivities);
-        
-        // Top units by employee count
-        const topUnitsData = units
-          .map((unit: any) => ({
-            id: unit.id,
-            name: unit.name,
-            code: unit.code,
-            employeeCount: unit.employees?.length || 0,
-            type: unit.type || 'unknown',
-          }))
-          .sort((a: TopUnit, b: TopUnit) => b.employeeCount - a.employeeCount)
-          .slice(0, 5);
-        
-        setTopUnits(topUnitsData);
+      const response = await fetch('/api/org/stats');
+      const result = await response.json();
+      
+      console.log('Stats API response:', result);
+      
+      if (result.success) {
+        setStats(result.data);
+        console.log('Stats set:', result.data);
       } else {
-        setError(unitsResult.error || 'Failed to fetch dashboard data');
+        setError(result.error || 'Failed to fetch stats');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error');
+      console.error('Fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch stats');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleRefresh = () => {
+    fetchStats();
+  };
+
   useEffect(() => {
-    fetchDashboardData();
+    fetchStats();
+    
+    // Mock recent activities
+    const mockActivities: RecentActivity[] = [
+      {
+        id: '1',
+        type: 'unit_created',
+        description: 'Đơn vị mới được tạo',
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        unitName: 'Phòng Marketing',
+      },
+      {
+        id: '2',
+        type: 'employee_added',
+        description: 'Nhân viên mới được thêm',
+        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+        employeeName: 'Nguyễn Văn A',
+        unitName: 'Phòng IT',
+      },
+      {
+        id: '3',
+        type: 'unit_updated',
+        description: 'Thông tin đơn vị được cập nhật',
+        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+        unitName: 'Phòng Nhân sự',
+      },
+    ];
+    
+    setRecentActivities(mockActivities);
+
   }, []);
 
   const getActivityIcon = (type: string) => {
@@ -179,10 +156,13 @@ export default function OrgDashboardPage() {
     }
   };
 
+  console.log('Dashboard render - loading:', loading, 'error:', error, 'stats:', stats);
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <CircularProgress size={60} />
+        <Typography sx={{ ml: 2 }}>Đang tải dữ liệu...</Typography>
       </Box>
     );
   }
@@ -213,11 +193,12 @@ export default function OrgDashboardPage() {
           </Typography>
         </Box>
       </Stack>
+        
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           <AlertTitle>Lỗi</AlertTitle>
-          {error}
+          {String(error) || 'Có lỗi xảy ra khi tải dữ liệu'}
         </Alert>
       )}
 
@@ -323,7 +304,7 @@ export default function OrgDashboardPage() {
                   </Stack>
                   <LinearProgress
                     variant="determinate"
-                    value={stats ? (stats.departments / stats.totalUnits) * 100 : 0}
+                    value={stats && stats.totalUnits > 0 ? (stats.departments / stats.totalUnits) * 100 : 0}
                     sx={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(46, 76, 146, 0.1)' }}
                   />
                 </Box>
@@ -337,7 +318,7 @@ export default function OrgDashboardPage() {
                   </Stack>
                   <LinearProgress
                     variant="determinate"
-                    value={stats ? (stats.divisions / stats.totalUnits) * 100 : 0}
+                    value={stats && stats.totalUnits > 0 ? (stats.divisions / stats.totalUnits) * 100 : 0}
                     sx={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(46, 76, 146, 0.1)' }}
                   />
                 </Box>
@@ -351,7 +332,7 @@ export default function OrgDashboardPage() {
                   </Stack>
                   <LinearProgress
                     variant="determinate"
-                    value={stats ? (stats.teams / stats.totalUnits) * 100 : 0}
+                    value={stats && stats.totalUnits > 0 ? (stats.teams / stats.totalUnits) * 100 : 0}
                     sx={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(255, 140, 0, 0.1)' }}
                   />
                 </Box>
@@ -365,7 +346,7 @@ export default function OrgDashboardPage() {
                   </Stack>
                   <LinearProgress
                     variant="determinate"
-                    value={stats ? (stats.branches / stats.totalUnits) * 100 : 0}
+                    value={stats && stats.totalUnits > 0 ? (stats.branches / stats.totalUnits) * 100 : 0}
                     sx={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(255, 140, 0, 0.1)' }}
                   />
                 </Box>
@@ -391,10 +372,11 @@ export default function OrgDashboardPage() {
                           {index + 1}
                         </Avatar>
                       </ListItemAvatar>
-                      <ListItemText
-                        primary={unit.name}
-                        secondary={
-                          <Stack direction="row" spacing={1} alignItems="center">
+                      <Box sx={{ flex: 1 }}>
+                        <ListItemText
+                          primary={unit.name}
+                          secondary={
+                            <Stack direction="row" spacing={1} alignItems="center">
                             <Chip
                               label={unit.code}
                               size="small"
@@ -413,6 +395,7 @@ export default function OrgDashboardPage() {
                           </Stack>
                         }
                       />
+                      </Box>
                       <Box sx={{ textAlign: 'right' }}>
                         <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#2e4c92' }}>
                           {unit.employeeCount}
@@ -440,7 +423,7 @@ export default function OrgDashboardPage() {
                 </Typography>
                 <RefreshIcon
                   sx={{ cursor: 'pointer', color: '#2e4c92' }}
-                  onClick={fetchDashboardData}
+                  onClick={handleRefresh}
                 />
               </Stack>
               

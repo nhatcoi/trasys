@@ -49,8 +49,9 @@ export const queryKeys = {
   all: ['api'] as const,
   org: {
     all: () => [...queryKeys.all, 'org'] as const,
-    units: () => [...queryKeys.org.all(), 'units'] as const,
-    unit: (id: string) => [...queryKeys.org.units(), id] as const,
+    units: (params?: any) => [...queryKeys.org.all(), 'units', params] as const,
+    unit: (id: string) => [...queryKeys.org.all(), 'units', id] as const,
+    history: (params?: any) => [...queryKeys.org.all(), 'history', params] as const,
     kpi: {
       all: () => [...queryKeys.org.all(), 'kpi'] as const,
       headcount: () => [...queryKeys.org.kpi.all(), 'headcount'] as const,

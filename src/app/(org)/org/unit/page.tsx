@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Typography,
@@ -12,7 +13,6 @@ import {
   CircularProgress,
   Alert,
   AlertTitle,
-  Paper,
   Avatar,
   IconButton,
   Dialog,
@@ -37,28 +37,22 @@ import {
   ListItemText,
 } from '@mui/material';
 import { 
-  useOrgUnits, 
-  useCreateOrgUnit, 
-  useUpdateOrgUnit, 
-  useDeleteOrgUnit,
+  orgApi,
   type OrgUnit,
-  type CreateUnitData 
-} from '@/features/org/api/use-org-units';
+  type PaginationParams
+} from '@/features/org/api/api';
 import {
   getStatusColor,
   getTypeColor,
   getTypeIcon,
-  filterOrgUnits,
-  paginateItems,
   canDeleteOrgUnit,
   getDeleteErrorMessage,
   getInitialFormData,
   mapUnitToFormData,
   getOrgUnitTypes,
   getOrgUnitStatuses,
-  OrgUnitType,
-  OrgUnitStatus,
 } from '@/utils/org-unit-utils';
+import { ORG_UNIT_ALERTS } from '@/utils/alert-utils';
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -67,27 +61,121 @@ import {
   Business as BusinessIcon,
   Refresh as RefreshIcon,
   Search as SearchIcon,
-  FilterList as FilterListIcon,
-  Apartment as ApartmentIcon,
-  Group as GroupIcon,
-  LocationOn as LocationOnIcon,
-  CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
 } from '@mui/icons-material';
+import { useOrgUnitsPagination } from '@/hooks/use-org-units-pagination';
 
 export default function OrgUnitManagementPage() {
-  // Custom hooks for API operations
-  const { data: orgUnits = [], isLoading, error: queryError } = useOrgUnits();
-  const createMutation = useCreateOrgUnit();
-  const updateMutation = useUpdateOrgUnit();
-  const deleteMutation = useDeleteOrgUnit();
+  const router = useRouter();
+
+  // Simple state management
+  const [orgUnits, setOrgUnits] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [totalCount, setTotalCount] = React.useState(0);
+  const [paginationState, setPaginationState] = React.useState({
+    page: 1,
+    size: 10,
+    sort: 'name',
+    order: 'asc' as 'asc' | 'desc',
+    search: '',
+    type: 'all',
+    status: 'all',
+  });
+
+  // Fetch data function
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const params: PaginationParams = {
+        page: paginationState.page,
+        size: paginationState.size,
+        sort: paginationState.sort,
+        order: paginationState.order,
+        search: paginationState.search,
+        type: paginationState.type !== 'all' ? paginationState.type : undefined,
+        status: paginationState.status !== 'all' ? paginationState.status : undefined,
+      };
+
+      console.log('Fetching with params:', params);
+
+      const response = await orgApi.units.getAll(params);
+
+      console.log('API Response:', response);
+
+      
+      if (response.success) {
+        setOrgUnits(response.data || []);
+        setTotalCount(response.pagination?.total || 0);
+        console.log('orgUnits state updated, totalCount:', response.pagination?.total);
+      } else {
+        setError('Failed to fetch data');
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch data on mount and when pagination changes
+  React.useEffect(() => {
+    console.log('useEffect triggered, fetching data...');
+    fetchData();
+  }, [paginationState.page, paginationState.size, paginationState.sort, paginationState.order, paginationState.search, paginationState.type, paginationState.status]);
+
+  // Debug log for orgUnits state changes
+  React.useEffect(() => {
+    console.log('orgUnits state changed:', orgUnits);
+  }, [orgUnits]);
+
+  // Debug log for totalCount state changes
+  React.useEffect(() => {
+    console.log('totalCount state changed:', totalCount);
+  }, [totalCount]);
+
+  // Pagination handlers
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPaginationState(prev => ({ ...prev, page: newPage + 1 }));
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setPaginationState(prev => ({ ...prev, size: parseInt(event.target.value, 10), page: 1 }));
+  };
+
+  const handleSearchChange = (value: string) => {
+    setPaginationState(prev => ({ ...prev, search: value, page: 1 }));
+  };
+
+  const handleSortChange = (field: string) => {
+    setPaginationState(prev => ({
+      ...prev,
+      sort: field,
+      order: prev.sort === field && prev.order === 'asc' ? 'desc' : 'asc',
+      page: 1
+    }));
+  };
+
+  const handleFilterChange = (filters: { type?: string; status?: string }) => {
+    setPaginationState(prev => ({ ...prev, ...filters, page: 1 }));
+  };
+
+  const getFilterValue = (key: 'type' | 'status') => {
+    return paginationState[key];
+  };
+
+  const updateFilter = (key: 'type' | 'status', value: string) => {
+    setPaginationState(prev => ({ ...prev, [key]: value, page: 1 }));
+  };
+
+  // Custom hooks for API operations (simplified - no mutations for now)
+  // const createMutation = useCreateOrgUnit();
+  // const updateMutation = useUpdateOrgUnit();
+  // const deleteMutation = useDeleteOrgUnit();
   
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
   // Dialog states
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
@@ -99,13 +187,32 @@ export default function OrgUnitManagementPage() {
   // Form data
   const [formData, setFormData] = useState<CreateUnitData>(getInitialFormData());
 
+  // Auto-dismiss success message after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
   const handleCreateUnit = async () => {
     try {
-      await createMutation.mutateAsync(formData);
-      setOpenCreateDialog(false);
-      setFormData(getInitialFormData());
+      const result = await orgApi.units.create(formData);
+      
+      if (result.success) {
+        setOpenCreateDialog(false);
+        setFormData(getInitialFormData());
+        fetchData(); // Refresh data
+        setSuccessMessage('Tạo đơn vị thành công!');
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to create unit');
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create unit');
+      setError('Failed to create unit');
     }
   };
 
@@ -113,23 +220,43 @@ export default function OrgUnitManagementPage() {
     if (!selectedUnit) return;
     
     try {
-      await updateMutation.mutateAsync({ id: selectedUnit.id, data: formData });
-      setOpenEditDialog(false);
-      setSelectedUnit(null);
+      const result = await orgApi.units.update(selectedUnit.id, formData);
+      
+      if (result.success) {
+        setOpenEditDialog(false);
+        setSelectedUnit(null);
+        fetchData(); // Refresh data
+        setSuccessMessage('Cập nhật đơn vị thành công!');
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to update unit');
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update unit');
+      setError('Failed to update unit');
     }
   };
 
   const handleDeleteUnit = async () => {
-    if (!selectedUnit) return;
+    console.log("handleDeleteUnit called - selectedUnit:", selectedUnit);
+    if (!selectedUnit) {
+      console.log("selectedUnit is null/undefined, returning");
+      return;
+    }
     
     try {
-      await deleteMutation.mutateAsync(selectedUnit.id);
-      setOpenDeleteDialog(false);
-      setSelectedUnit(null);
+      const result = await orgApi.units.delete(selectedUnit.id);
+      
+      if (result.success) {
+        setOpenDeleteDialog(false);
+        setSelectedUnit(null);
+        fetchData(); // Refresh data
+        setSuccessMessage('Xóa đơn vị thành công!');
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to delete unit');
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete unit');
+      setError('Failed to delete unit');
     }
   };
 
@@ -147,41 +274,30 @@ export default function OrgUnitManagementPage() {
     if (selectedUnit) {
       setFormData(mapUnitToFormData(selectedUnit));
       setOpenEditDialog(true);
+      setAnchorEl(null); // Only close menu, keep selectedUnit
     }
-    handleMenuClose();
   };
 
   const handleDeleteClick = () => {
-    if (!canDeleteOrgUnit(selectedUnit?.status ?? null)) {
-      setError(getDeleteErrorMessage());
-      handleMenuClose();
-      return;
-    }
+    console.log('handleDeleteClick - selectedUnit:', selectedUnit);
     setOpenDeleteDialog(true);
-    handleMenuClose();
+    setAnchorEl(null); // Only close menu, keep selectedUnit
+  };
+
+  const handleRowClick = (unit: OrgUnit) => {
+    router.push(`/org/unit/${unit.id}`);
   };
 
 
-  // Filter and search
-  const filteredUnits = filterOrgUnits(orgUnits, searchTerm, filterType, filterStatus);
-  const paginatedUnits = paginateItems(filteredUnits, page, rowsPerPage);
+  // Handlers are now provided by the pagination hook
 
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  if (isLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <CircularProgress size={60} />
-      </Box>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+  //       <CircularProgress size={60} />
+  //     </Box>
+  //   );
+  // }
 
   return (
     <Box>
@@ -210,10 +326,21 @@ export default function OrgUnitManagementPage() {
         </Box>
       </Stack>
 
-      {(error || queryError) && (
+      {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           <AlertTitle>Lỗi</AlertTitle>
-          {error || (queryError instanceof Error ? queryError.message : 'Unknown error')}
+          {error}
+        </Alert>
+      )}
+
+      {successMessage && (
+        <Alert 
+          severity="success" 
+          sx={{ mb: 3 }}
+          onClose={() => setSuccessMessage(null)}
+        >
+          <AlertTitle>Thành công</AlertTitle>
+          {successMessage}
         </Alert>
       )}
 
@@ -221,49 +348,55 @@ export default function OrgUnitManagementPage() {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+            {/* Loading indicator */}
+            {isLoading && (
+              <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
+                <CircularProgress size={20} />
+              </Box>
+            )}
             <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
-              <TextField
-                placeholder="Tìm kiếm đơn vị..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                size="small"
-                sx={{ minWidth: 250 }}
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                }}
-              />
-              
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <InputLabel>Loại</InputLabel>
-                <Select
-                  value={filterType}
-                  label="Loại"
-                  onChange={(e) => setFilterType(e.target.value)}
-                >
-                  <MenuItem value="all">Tất cả</MenuItem>
-                  {getOrgUnitTypes().map((type) => (
-                    <MenuItem key={type.value} value={type.value}>
-                      {type.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+               <TextField
+                 placeholder="Tìm kiếm đơn vị..."
+                 value={paginationState.search}
+                 onChange={(e) => handleSearchChange(e.target.value)}
+                 size="small"
+                 sx={{ minWidth: 250 }}
+                 InputProps={{
+                   startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                 }}
+               />
+               
+               <FormControl size="small" sx={{ minWidth: 120 }}>
+                 <InputLabel>Loại</InputLabel>
+                 <Select
+                   value={getFilterValue('type')}
+                   label="Loại"
+                   onChange={(e) => updateFilter('type', e.target.value)}
+                 >
+                   <MenuItem value="all">Tất cả</MenuItem>
+                   {getOrgUnitTypes().map((type) => (
+                     <MenuItem key={type.value} value={type.value}>
+                       {type.label}
+                     </MenuItem>
+                   ))}
+                 </Select>
+               </FormControl>
 
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <InputLabel>Trạng thái</InputLabel>
-                <Select
-                  value={filterStatus}
-                  label="Trạng thái"
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                >
-                  <MenuItem value="all">Tất cả</MenuItem>
-                  {getOrgUnitStatuses().map((status) => (
-                    <MenuItem key={status.value} value={status.value}>
-                      {status.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+               <FormControl size="small" sx={{ minWidth: 120 }}>
+                 <InputLabel>Trạng thái</InputLabel>
+                 <Select
+                   value={getFilterValue('status')}
+                   label="Trạng thái"
+                   onChange={(e) => updateFilter('status', e.target.value)}
+                 >
+                   <MenuItem value="all">Tất cả</MenuItem>
+                   {getOrgUnitStatuses().map((status) => (
+                     <MenuItem key={status.value} value={status.value}>
+                       {status.label}
+                     </MenuItem>
+                   ))}
+                 </Select>
+               </FormControl>
             </Stack>
 
             <Stack direction="row" spacing={1}>
@@ -288,25 +421,76 @@ export default function OrgUnitManagementPage() {
         </CardContent>
       </Card>
 
+      {/* Pagination Info */}
+      <Card sx={{ mb: 2 }}>
+        <CardContent>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Typography variant="body2" color="text.secondary">
+                Hiển thị {((paginationState.page - 1) * paginationState.size) + 1}-{Math.min(paginationState.page * paginationState.size, totalCount)} của {totalCount} đơn vị
+              </Typography>
+            </Stack>
+        </CardContent>
+      </Card>
+
       {/* Units Table */}
       <Card>
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Đơn vị</TableCell>
-                <TableCell>Mã</TableCell>
+                <TableCell 
+                  sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
+                  onClick={() => handleSortChange('name')}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <span>Đơn vị</span>
+                    {paginationState.sort === 'name' && (
+                      <span>{paginationState.order === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </Stack>
+                </TableCell>
+                <TableCell 
+                  sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
+                  onClick={() => handleSortChange('code')}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <span>Mã</span>
+                    {paginationState.sort === 'code' && (
+                      <span>{paginationState.order === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </Stack>
+                </TableCell>
                 <TableCell>Loại</TableCell>
                 <TableCell>Trạng thái</TableCell>
                 <TableCell>Đơn vị cha</TableCell>
                 <TableCell>Nhân viên</TableCell>
-                <TableCell>Ngày tạo</TableCell>
+                <TableCell 
+                  sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
+                  onClick={() => handleSortChange('created_at')}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <span>Ngày tạo</span>
+                    {paginationState.sort === 'created_at' && (
+                      <span>{paginationState.order === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </Stack>
+                </TableCell>
                 <TableCell align="right">Thao tác</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {paginatedUnits.map((unit) => (
-                <TableRow key={unit.id} hover>
+              {orgUnits.map((unit) => (
+                <TableRow 
+                  key={unit.id} 
+                  hover 
+                  onClick={() => handleRowClick(unit)}
+                  sx={{ 
+                    cursor: 'pointer',
+                    '&:hover': {
+                      backgroundColor: 'rgba(46, 76, 146, 0.04)',
+                    }
+                  }}
+                >
                   <TableCell>
                     <Stack direction="row" alignItems="center" spacing={2}>
                       <Avatar sx={{ backgroundColor: getTypeColor(unit.type) }}>
@@ -377,7 +561,10 @@ export default function OrgUnitManagementPage() {
                   </TableCell>
                   <TableCell align="right">
                     <IconButton
-                      onClick={(e) => handleMenuClick(e, unit)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMenuClick(e, unit);
+                      }}
                       size="small"
                     >
                       <MoreVertIcon />
@@ -389,19 +576,19 @@ export default function OrgUnitManagementPage() {
           </Table>
         </TableContainer>
         
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={filteredUnits.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="Số dòng mỗi trang:"
-          labelDisplayedRows={({ from, to, count }) => 
-            `${from}-${to} của ${count !== -1 ? count : `nhiều hơn ${to}`}`
-          }
-        />
+         <TablePagination
+           rowsPerPageOptions={[5, 10, 25]}
+           component="div"
+           count={totalCount}
+           rowsPerPage={paginationState.size}
+           page={paginationState.page - 1} // Convert to 0-based
+           onPageChange={handleChangePage}
+           onRowsPerPageChange={handleChangeRowsPerPage}
+           labelRowsPerPage="Số dòng mỗi trang:"
+           labelDisplayedRows={({ from, to, count }) => 
+             `${from}-${to} của ${count !== -1 ? count : `nhiều hơn ${to}`}`
+           }
+         />
       </Card>
 
       {/* Action Menu */}
@@ -429,28 +616,17 @@ export default function OrgUnitManagementPage() {
           </ListItemIcon>
           <ListItemText primary="Chỉnh sửa" />
         </MenuItem>
-        <Tooltip 
-          title={selectedUnit?.status === 'active' ? 'Không thể xóa đơn vị đang hoạt động' : ''}
-          placement="left"
+        <MenuItem 
+          onClick={handleDeleteClick}
+          sx={{
+            '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' },
+          }}
         >
-          <span>
-            <MenuItem 
-              onClick={handleDeleteClick}
-              disabled={selectedUnit?.status === 'active'}
-              sx={{
-                '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' },
-                '&.Mui-disabled': {
-                  opacity: 0.5,
-                },
-              }}
-            >
-              <ListItemIcon>
-                <DeleteIcon fontSize="small" sx={{ color: selectedUnit?.status === 'active' ? '#ccc' : '#f44336' }} />
-              </ListItemIcon>
-              <ListItemText primary="Xóa" />
-            </MenuItem>
-          </span>
-        </Tooltip>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" sx={{ color: '#f44336' }} />
+          </ListItemIcon>
+          <ListItemText primary="Vô hiệu hóa" />
+        </MenuItem>
       </Menu>
 
       {/* Create Dialog */}
@@ -550,7 +726,10 @@ export default function OrgUnitManagementPage() {
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} maxWidth="md" fullWidth>
+      <Dialog open={openEditDialog} onClose={() => {
+        setOpenEditDialog(false);
+        setSelectedUnit(null);
+      }} maxWidth="md" fullWidth>
         <DialogTitle>Chỉnh sửa đơn vị</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
@@ -638,7 +817,10 @@ export default function OrgUnitManagementPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenEditDialog(false)}>Hủy</Button>
+          <Button onClick={() => {
+            setOpenEditDialog(false);
+            setSelectedUnit(null);
+          }}>Hủy</Button>
           <Button onClick={handleEditUnit} variant="contained" sx={{ backgroundColor: '#2e4c92' }}>
             Cập nhật
           </Button>
@@ -646,18 +828,30 @@ export default function OrgUnitManagementPage() {
       </Dialog>
 
       {/* Delete Dialog */}
-      <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)}>
-        <DialogTitle>Xác nhận xóa</DialogTitle>
+      <Dialog open={openDeleteDialog} onClose={() => {
+        setOpenDeleteDialog(false);
+        setSelectedUnit(null);
+      }}>
+        <DialogTitle>Xác nhận vô hiệu hóa</DialogTitle>
         <DialogContent>
           <Typography>
-            Bạn có chắc chắn muốn xóa đơn vị "{selectedUnit?.name}"? 
-            Hành động này không thể hoàn tác.
+            Bạn có chắc chắn muốn vô hiệu hóa đơn vị &quot;{selectedUnit?.name}&quot;? 
+            Đơn vị sẽ bị xóa khỏi hệ thống và không thể khôi phục.
           </Typography>
+          {selectedUnit?.status === 'active' && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              <AlertTitle>Cảnh báo</AlertTitle>
+              Đây là đơn vị đang hoạt động. Việc vô hiệu hóa có thể ảnh hưởng đến các chức năng liên quan.
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)}>Hủy</Button>
+          <Button onClick={() => {
+            setOpenDeleteDialog(false);
+            setSelectedUnit(null);
+          }}>Hủy</Button>
           <Button onClick={handleDeleteUnit} variant="contained" color="error">
-            Xóa
+            Vô hiệu hóa
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
 import {
   Box,
   Drawer,
@@ -18,25 +17,29 @@ import {
   ListItemText,
   useTheme,
   useMediaQuery,
-  Avatar,
-  Menu,
-  MenuItem,
-  Chip,
-  Popover,
-  Paper,
+  Collapse,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
   Apartment as ApartmentIcon,
   Group as GroupIcon,
   Dashboard as DashboardIcon,
-  AccountCircle,
-  Edit,
-  Logout,
+  Assignment as AssignmentIcon,
+  History as HistoryIcon,
+  Assessment as AssessmentIcon,
+  Settings as SettingsIcon,
+  ListAlt as ListAltIcon,
+  Visibility as VisibilityIcon,
+  Add as AddIcon,
+  Approval as ApprovalIcon,
+  Publish as PublishIcon,
+  Storage as StorageIcon,
+  AccountTree as AccountTreeIcon,
+  Timeline as TimelineIcon,
 } from '@mui/icons-material';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { ORG_ROUTES, HR_ROUTES } from '@/constants/routes';
 
 const drawerWidth = 240;
 
@@ -49,10 +52,11 @@ export default function OrgLayout({
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [unitManagementOpen, setUnitManagementOpen] = useState(false);
+  const [treeManagementOpen, setTreeManagementOpen] = useState(false);
+  const [createUnitOpen, setCreateUnitOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const { data: session, status } = useSession();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -62,21 +66,102 @@ export default function OrgLayout({
     setCollapsed(!collapsed);
   };
 
+  const handleUnitManagementToggle = () => {
+    setUnitManagementOpen(!unitManagementOpen);
+  };
+
+  const handleTreeManagementToggle = () => {
+    setTreeManagementOpen(!treeManagementOpen);
+  };
+
+  const handleCreateUnitToggle = () => {
+    setCreateUnitOpen(!createUnitOpen);
+  };
+
   const menuItems = [
     {
-      key: ORG_ROUTES.DASHBOARD,
+      key: '/org/dashboard',
       icon: <DashboardIcon />,
       label: 'Dashboard',
     },
     {
-      key: ORG_ROUTES.TREE,
+      key: 'tree-management',
       icon: <ApartmentIcon />,
       label: 'Cây tổ chức',
+      hasSubmenu: true,
+      submenu: [
+        {
+          key: '/org/tree',
+          icon: <AccountTreeIcon />,
+          label: 'Cây tổ chức',
+        },
+        {
+          key: '/org/diagram',
+          icon: <TimelineIcon />,
+          label: 'Sơ đồ',
+        },
+      ],
     },
     {
-      key: ORG_ROUTES.UNITS,
+      key: 'unit-management',
       icon: <GroupIcon />,
       label: 'Quản lý đơn vị',
+      hasSubmenu: true,
+      submenu: [
+        {
+          key: '/org/unit',
+          icon: <ListAltIcon />,
+          label: 'Danh sách đơn vị',
+        },
+        {
+          key: 'create-unit',
+          icon: <AddIcon />,
+          label: 'Tạo đơn vị mới',
+          hasSubmenu: true,
+          submenu: [
+            {
+              key: '/org/unit/create/draft',
+              icon: <AddIcon />,
+              label: '① Khởi tạo (Draft)',
+            },
+            {
+              key: '/org/unit/create/review',
+              icon: <VisibilityIcon />,
+              label: '② Xem xét/Thẩm định (Review)',
+            },
+            {
+              key: '/org/unit/create/approve',
+              icon: <ApprovalIcon />,
+              label: '③ Phê duyệt (Approve)',
+            },
+            {
+              key: '/org/unit/create/activate',
+              icon: <PublishIcon />,
+              label: '④ Kích hoạt (Activate)',
+            },
+            {
+              key: '/org/unit/create/audit',
+              icon: <StorageIcon />,
+              label: '⑤ Theo dõi biến đổi (Audit/History)',
+            },
+          ],
+        },
+      ],
+    },
+    {
+      key: '/org/unit/create/audit',
+      icon: <HistoryIcon />,
+      label: 'Lịch sử thay đổi',
+    },
+    {
+      key: '/org/reports',
+      icon: <AssessmentIcon />,
+      label: 'Báo cáo tổ chức',
+    },
+    {
+      key: '/org/config',
+      icon: <SettingsIcon />,
+      label: 'Cấu hình hệ thống',
     },
   ];
 
@@ -87,22 +172,18 @@ export default function OrgLayout({
     }
   };
 
-  const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleUserMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleEditProfile = () => {
-    handleUserMenuClose();
-    router.push(HR_ROUTES.PROFILE);
-  };
-
-  const handleLogout = () => {
-    handleUserMenuClose();
-    signOut({ callbackUrl: '/' });
+  const handleMenuItemClick = (item: any) => {
+    if (item.hasSubmenu) {
+      if (item.key === 'unit-management') {
+        handleUnitManagementToggle();
+      } else if (item.key === 'tree-management') {
+        handleTreeManagementToggle();
+      } else if (item.key === 'create-unit') {
+        handleCreateUnitToggle();
+      }
+    } else {
+      handleMenuClick(item.key);
+    }
   };
 
   const drawer = (
@@ -113,40 +194,156 @@ export default function OrgLayout({
           variant="h6"
           noWrap
           component="div"
-          sx={{
+          sx={{ 
             color: 'white',
             fontWeight: 'bold',
             flexGrow: 1,
             textAlign: 'center'
           }}
         >
-          {collapsed ? 'T' : 'Trasy'}
+          {collapsed ? 'T' : 'Quản lí cơ cấu tổ chức'}
         </Typography>
       </Toolbar>
-
+      
       <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.12)' }} />
-
+      
       {/* Menu Items */}
       <List sx={{ flexGrow: 1, pt: 1 }}>
         {menuItems.map((item) => (
-          <ListItem key={item.key} disablePadding>
-            <ListItemButton
-              selected={pathname === item.key}
-              onClick={() => handleMenuClick(item.key)}
-              sx={{
-                mx: 1,
-                borderRadius: 1,
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                },
-              }}
-            >
-              <ListItemIcon>
-                {item.icon}
-              </ListItemIcon>
-              {!collapsed && <ListItemText primary={item.label} />}
-            </ListItemButton>
-          </ListItem>
+          <React.Fragment key={item.key}>
+            <ListItem disablePadding>
+              <ListItemButton
+                selected={pathname === item.key}
+                onClick={() => handleMenuItemClick(item)}
+                sx={{
+                  mx: 1,
+                  borderRadius: 1,
+                  '&.Mui-selected': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  },
+                }}
+              >
+                <ListItemIcon>
+                  {item.icon}
+                </ListItemIcon>
+                {!collapsed && (
+                  <>
+                    <ListItemText primary={item.label} />
+                    {item.hasSubmenu && (
+                      item.key === 'tree-management' ? (
+                        treeManagementOpen ? (
+                          <ChevronRightIcon sx={{ 
+                            transform: 'rotate(90deg)',
+                            transition: 'transform 0.2s ease-in-out'
+                          }} />
+                        ) : (
+                          <ChevronRightIcon sx={{ 
+                            transition: 'transform 0.2s ease-in-out'
+                          }} />
+                        )
+                      ) : (
+                        item.key === 'unit-management' ? (
+                          unitManagementOpen ? (
+                            <ChevronRightIcon sx={{ 
+                              transform: 'rotate(90deg)',
+                              transition: 'transform 0.2s ease-in-out'
+                            }} />
+                          ) : (
+                            <ChevronRightIcon sx={{ 
+                              transition: 'transform 0.2s ease-in-out'
+                            }} />
+                          )
+                        ) : (
+                          <ChevronRightIcon />
+                        )
+                      )
+                    )}
+                  </>
+                )}
+              </ListItemButton>
+            </ListItem>
+            
+            {/* Submenu */}
+            {item.hasSubmenu && item.submenu && !collapsed && (
+              <Collapse in={
+                (item.key === 'unit-management' && unitManagementOpen) || 
+                (item.key === 'tree-management' && treeManagementOpen)
+              } timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  {item.submenu.map((subItem) => (
+                    <React.Fragment key={subItem.key}>
+                      <ListItem disablePadding>
+                        <ListItemButton
+                          selected={pathname === subItem.key}
+                          onClick={() => subItem.hasSubmenu ? handleMenuItemClick(subItem) : handleMenuClick(subItem.key)}
+                          sx={{
+                            mx: 1,
+                            ml: 3,
+                            borderRadius: 1,
+                            '&.Mui-selected': {
+                              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            },
+                          }}
+                        >
+                          <ListItemIcon>
+                            {subItem.icon}
+                          </ListItemIcon>
+                          <ListItemText primary={subItem.label} />
+                          {subItem.hasSubmenu && (
+                            subItem.key === 'create-unit' ? (
+                              createUnitOpen ? (
+                                <ChevronRightIcon sx={{ 
+                                  transform: 'rotate(90deg)',
+                                  transition: 'transform 0.2s ease-in-out'
+                                }} />
+                              ) : (
+                                <ChevronRightIcon sx={{ 
+                                  transition: 'transform 0.2s ease-in-out'
+                                }} />
+                              )
+                            ) : (
+                              <ChevronRightIcon />
+                            )
+                          )}
+                        </ListItemButton>
+                      </ListItem>
+                      
+                      {/* Sub-submenu */}
+                      {subItem.hasSubmenu && subItem.submenu && (
+                        <Collapse in={
+                          (subItem.key === 'create-unit' && createUnitOpen)
+                        } timeout="auto" unmountOnExit>
+                          <List component="div" disablePadding>
+                            {subItem.submenu.map((subSubItem) => (
+                              <ListItem key={subSubItem.key} disablePadding>
+                                <ListItemButton
+                                  selected={pathname === subSubItem.key}
+                                  onClick={() => handleMenuClick(subSubItem.key)}
+                                  sx={{
+                                    mx: 1,
+                                    ml: 5,
+                                    borderRadius: 1,
+                                    '&.Mui-selected': {
+                                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    },
+                                  }}
+                                >
+                                  <ListItemIcon>
+                                    {subSubItem.icon}
+                                  </ListItemIcon>
+                                  <ListItemText primary={subSubItem.label} />
+                                </ListItemButton>
+                              </ListItem>
+                            ))}
+                          </List>
+                        </Collapse>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </List>
+              </Collapse>
+            )}
+          </React.Fragment>
         ))}
       </List>
     </Box>
@@ -172,36 +369,11 @@ export default function OrgLayout({
           >
             {isMobile ? <MenuIcon /> : (collapsed ? <ChevronLeftIcon sx={{ transform: 'rotate(180deg)' }} /> : <ChevronLeftIcon />)}
           </IconButton>
-
+          
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Trasy App
           </Typography>
-
-          {/* User Info and Actions */}
-          {session && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
-              <Chip
-                label={`Xin chào, ${(session.user as any)?.username || 'User'}`}
-                color="secondary"
-                size="small"
-                sx={{ color: 'white' }}
-              />
-              <IconButton
-                size="large"
-                edge="end"
-                aria-label="account of current user"
-                aria-controls="user-menu"
-                aria-haspopup="true"
-                onClick={handleUserMenuOpen}
-                color="inherit"
-              >
-                <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-                  <AccountCircle />
-                </Avatar>
-              </IconButton>
-            </Box>
-          )}
-
+          
           <ThemeToggle />
         </Toolbar>
       </AppBar>
@@ -229,7 +401,7 @@ export default function OrgLayout({
         >
           {drawer}
         </Drawer>
-
+        
         {/* Desktop drawer */}
         <Drawer
           variant="permanent"
@@ -261,106 +433,7 @@ export default function OrgLayout({
           {children}
         </Box>
       </Box>
-
-      {/* User Menu */}
-      <Popover
-        id="user-menu"
-        open={Boolean(anchorEl)}
-        anchorEl={anchorEl}
-        onClose={handleUserMenuClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-        sx={{
-          '& .MuiPaper-root': {
-            mt: 1,
-            minWidth: 200,
-            zIndex: 9999,
-            backgroundColor: 'background.paper',
-            color: 'text.primary',
-          }
-        }}
-      >
-        <Paper sx={{
-          p: 1,
-          backgroundColor: 'background.paper',
-          color: '#000000',
-          '& .MuiListItemText-primary': {
-            color: '#000000 !important',
-            fontWeight: '500 !important',
-          }
-        }}>
-          <MenuItem
-            onClick={handleEditProfile}
-            sx={{
-              color: '#000000',
-              '&:hover': {
-                backgroundColor: 'action.hover',
-              }
-            }}
-          >
-            <ListItemIcon>
-              <Edit fontSize="small" sx={{ color: '#000000' }} />
-            </ListItemIcon>
-            <ListItemText
-              primary="Chỉnh sửa thông tin"
-              primaryTypographyProps={{
-                color: '#000000',
-                fontWeight: 500
-              }}
-            />
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              handleUserMenuClose();
-              router.push('/hr/change-password');
-            }}
-            sx={{
-              color: '#000000',
-              '&:hover': {
-                backgroundColor: 'action.hover',
-              }
-            }}
-          >
-            <ListItemIcon>
-              <AccountCircle fontSize="small" sx={{ color: '#000000' }} />
-            </ListItemIcon>
-            <ListItemText
-              primary="Đổi mật khẩu"
-              primaryTypographyProps={{
-                color: '#000000',
-                fontWeight: 500
-              }}
-            />
-          </MenuItem>
-          <Divider />
-          <MenuItem
-            onClick={handleLogout}
-            sx={{
-              color: '#000000',
-              '&:hover': {
-                backgroundColor: 'action.hover',
-              }
-            }}
-          >
-            <ListItemIcon>
-              <Logout fontSize="small" sx={{ color: '#000000' }} />
-            </ListItemIcon>
-            <ListItemText
-              primary="Đăng xuất"
-              primaryTypographyProps={{
-                color: '#000000',
-                fontWeight: 500
-              }}
-            />
-          </MenuItem>
-        </Paper>
-      </Popover>
     </Box>
   );
 }
+

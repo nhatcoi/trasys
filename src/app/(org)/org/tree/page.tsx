@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -17,244 +17,68 @@ import {
 import {
   Apartment as ApartmentIcon,
   Refresh as RefreshIcon,
-  ExpandMore as ExpandMoreIcon,
-  ChevronRight as ChevronRightIcon,
-  Business as BusinessIcon,
-  People as PeopleIcon,
+  AccountTree as AccountTreeIcon,
 } from '@mui/icons-material';
+import { OrgTreeNode } from '@/components/OrgTreeNode';
+import { buildTree } from '@/utils/tree-utils';
+import { orgApi, type OrgUnit } from '@/features/org/api/api';
 
-interface OrgUnit {
-  id: number;
-  parent_id: number | null;
-  type: string | null;
-  code: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-  description: string | null;
-  status: string | null;
-  effective_from: string | null;
-  effective_to: string | null;
-  children?: OrgUnit[];
-  employees?: Employee[];
-  parent?: OrgUnit;
-}
-
-interface Employee {
-  id: string;
-  user_id: string | null;
-  employee_no: string | null;
-  employment_ty: string | null;
-  status: string | null;
-  hired_at: string | null;
-  terminated_at: string | null;
-  created_at: string;
-  updated_at: string;
-  org_unit_id: number | null;
-  org_unit?: OrgUnit;
-}
-
-function OrgTreeNode({ unit, level }: { unit: OrgUnit; level: number }) {
-  const [expanded, setExpanded] = useState(false);
-  const hasChildren = unit.children && unit.children.length > 0;
-  const employeeCount = unit.employees?.length || 0;
-
-  const toggleExpanded = () => {
-    if (hasChildren) {
-      setExpanded(!expanded);
-    }
-  };
-
-  const getStatusColor = (status: string | null) => {
-    switch (status?.toLowerCase()) {
-      case 'active':
-        return '#2e4c92';
-      case 'inactive':
-        return '#ff8c00';
-      case 'pending':
-        return '#ff8c00';
-      default:
-        return '#666666';
-    }
-  };
-
-  const getTypeColor = (type: string | null) => {
-    switch (type?.toLowerCase()) {
-      case 'department':
-        return '#2e4c92';
-      case 'division':
-        return '#2e4c92';
-      case 'team':
-        return '#ff8c00';
-      case 'branch':
-        return '#ff8c00';
-      default:
-        return '#666666';
-    }
-  };
-
-  return (
-    <Paper elevation={1} sx={{ mb: 1, ml: level * 2 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          p: 2,
-          cursor: hasChildren ? 'pointer' : 'default',
-          '&:hover': hasChildren ? { backgroundColor: 'rgba(46, 76, 146, 0.04)' } : {},
-        }}
-        onClick={toggleExpanded}
-      >
-        {/* Expand/Collapse Icon */}
-        <Box sx={{ width: 24, display: 'flex', justifyContent: 'center', mr: 2 }}>
-          {hasChildren ? (
-            expanded ? <ExpandMoreIcon color="primary" /> : <ChevronRightIcon color="primary" />
-          ) : (
-            <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'grey.400' }} />
-          )}
-        </Box>
-
-        {/* Unit Icon */}
-        <Box
-          sx={{
-            width: 40,
-            height: 40,
-            borderRadius: 1,
-            backgroundColor: 'rgba(46, 76, 146, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            mr: 2,
-          }}
-        >
-          <BusinessIcon sx={{ color: '#2e4c92', fontSize: 20 }} />
-        </Box>
-
-        {/* Unit Info */}
-        <Box sx={{ flexGrow: 1 }}>
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-              {unit.name}
-            </Typography>
-            <Chip
-              label={unit.code}
-              size="small"
-              variant="outlined"
-              sx={{ fontSize: '0.75rem' }}
-            />
-          </Stack>
-          
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            {unit.type && (
-              <Chip
-                label={unit.type}
-                size="small"
-                sx={{ 
-                  backgroundColor: getTypeColor(unit.type),
-                  color: 'white',
-                  fontSize: '0.75rem'
-                }}
-              />
-            )}
-            
-            {unit.status && (
-              <Chip
-                label={unit.status}
-                size="small"
-                sx={{ 
-                  backgroundColor: getStatusColor(unit.status),
-                  color: 'white',
-                  fontSize: '0.75rem'
-                }}
-              />
-            )}
-            
-            {employeeCount > 0 && (
-              <Chip
-                icon={<PeopleIcon />}
-                label={employeeCount}
-                size="small"
-                sx={{ 
-                  backgroundColor: '#ff8c00',
-                  color: 'white',
-                  fontSize: '0.75rem'
-                }}
-              />
-            )}
-          </Stack>
-        </Box>
-      </Box>
-
-      {/* Children */}
-      {expanded && hasChildren && (
-        <Box sx={{ ml: 2 }}>
-          {unit.children!.map((child) => (
-            <OrgTreeNode key={child.id} unit={child} level={level + 1} />
-          ))}
-        </Box>
-      )}
-    </Paper>
-  );
-}
 
 export default function OrgTreePage() {
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOrgUnits = async () => {
+  // Fetch org units data
+  const fetchOrgUnitsData = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/org/units');
-      const result = await response.json();
+      const response = await orgApi.units.getForTree();
       
-      if (result.success) {
-        // Build tree structure from flat array
-        const buildOrgTree = (units: OrgUnit[]): OrgUnit[] => {
-          const unitMap = new Map<number, OrgUnit & { children: OrgUnit[] }>();
-          const roots: OrgUnit[] = [];
-
-          // First pass: create map of all units
-          units.forEach(unit => {
-            unitMap.set(unit.id, { ...unit, children: [] });
-          });
-
-          // Second pass: build tree structure
-          units.forEach(unit => {
-            const unitWithChildren = unitMap.get(unit.id)!;
-            
-            if (unit.parent_id === null) {
-              // Root level unit
-              roots.push(unitWithChildren);
-            } else {
-              // Child unit
-              const parent = unitMap.get(unit.parent_id);
-              if (parent) {
-                parent.children.push(unitWithChildren);
-              }
-            }
-          });
-
-          return roots;
-        };
-
-        const treeData = buildOrgTree(result.data);
-        setOrgUnits(treeData);
+      if (response.success) {
+        setOrgUnits(response.data || []);
       } else {
-        setError(result.error || 'Failed to fetch organization units');
+        setError('Failed to fetch org units');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error');
+      setError(err instanceof Error ? err.message : 'Failed to fetch org units');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchOrgUnits();
+  // Fetch data on mount
+  React.useEffect(() => {
+    fetchOrgUnitsData();
   }, []);
+
+  // Refresh function
+  const refetch = () => {
+    fetchOrgUnitsData();
+  };
+
+
+
+  // Build cấu trúc cây từ mảng flat
+  // Convert string IDs to numbers for buildTree function
+  const normalizedOrgUnits = orgUnits.map(unit => ({
+    ...unit,
+    id: parseInt(unit.id, 10),
+    parent_id: unit.parent_id ? parseInt(unit.parent_id, 10) : null,
+  }));
+
+  const treeData = buildTree(normalizedOrgUnits);
+
+  // Convert back to string IDs for OrgTreeNode component
+  const convertedTreeData = treeData.map(unit => ({
+    ...unit,
+    id: unit.id.toString(),
+    parent_id: unit.parent_id?.toString() || null,
+  }));
+
+  console.log("convertedTreeData", convertedTreeData);
 
   return (
     <Box>
@@ -293,15 +117,18 @@ export default function OrgTreePage() {
                 Cây tổ chức
               </Typography>
             </Stack>
-            <Button
-              variant="contained"
-              startIcon={<RefreshIcon />}
-              onClick={fetchOrgUnits}
-              disabled={loading}
-              sx={{ backgroundColor: '#2e4c92' }}
-            >
-              Làm mới
-            </Button>
+
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Button
+                variant="contained"
+                startIcon={<RefreshIcon />}
+                onClick={() => refetch()}
+                disabled={loading}
+                sx={{ backgroundColor: '#2e4c92' }}
+              >
+                Làm mới
+              </Button>
+            </Stack>
           </Stack>
 
           {loading && (
@@ -313,11 +140,11 @@ export default function OrgTreePage() {
           {error && (
             <Alert severity="error">
               <AlertTitle>Lỗi</AlertTitle>
-              {error}
+              {String(error) || 'Có lỗi xảy ra khi tải dữ liệu'}
             </Alert>
           )}
 
-          {!loading && !error && orgUnits.length === 0 && (
+          {!loading && !error && convertedTreeData.length === 0 && (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <ApartmentIcon sx={{ fontSize: 64, color: 'grey.300', mb: 2 }} />
               <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -329,9 +156,10 @@ export default function OrgTreePage() {
             </Box>
           )}
 
-          {!loading && !error && orgUnits.length > 0 && (
+          {!loading && !error && convertedTreeData.length > 0 && (
             <Box>
-              {orgUnits.map((unit) => (
+              {/* Tree View - hiển thị cây hiện tại */}
+              {convertedTreeData.map((unit) => (
                 <OrgTreeNode key={unit.id} unit={unit} level={0} />
               ))}
             </Box>

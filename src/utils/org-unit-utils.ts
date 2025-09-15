@@ -3,6 +3,10 @@ import {
   Group as GroupIcon,
   LocationOn as LocationOnIcon,
   Business as BusinessIcon,
+  AccountTree as AccountTreeIcon,
+  Support as SupportIcon,
+  Handshake as HandshakeIcon,
+  Gavel as GavelIcon,
 } from '@mui/icons-material';
 
 // Enums for organization unit types and statuses
@@ -129,9 +133,15 @@ export const filterOrgUnits = (
   filterType: string,
   filterStatus: string
 ) => {
+  // Ensure units is an array
+  if (!Array.isArray(units)) {
+    console.warn('filterOrgUnits: units is not an array', units);
+    return [];
+  }
+  
   return units.filter(unit => {
-    const matchesSearch = unit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         unit.code.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = unit.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         unit.code?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'all' || unit.type === filterType;
     const matchesStatus = filterStatus === 'all' || unit.status === filterStatus;
     
@@ -236,6 +246,137 @@ export const getOrgUnitStatuses = () => [
  */
 export const getDeletableStatuses = () => {
   return getOrgUnitStatuses().filter(status => status.deletable);
+};
+
+// Relation type utilities
+export enum OrgRelationType {
+  DIRECT = 'direct',
+  ADVISORY = 'advisory', 
+  SUPPORT = 'support',
+  COLLAB = 'collab',
+}
+
+/**
+ * Get relation type color
+ */
+export const getRelationTypeColor = (relationType: string): string => {
+  switch (relationType) {
+    case OrgRelationType.DIRECT:
+      return '#1976d2'; // Blue
+    case OrgRelationType.ADVISORY:
+      return '#ed6c02'; // Orange
+    case OrgRelationType.SUPPORT:
+      return '#2e7d32'; // Green
+    case OrgRelationType.COLLAB:
+      return '#9c27b0'; // Purple
+    default:
+      return '#757575'; // Gray
+  }
+};
+
+/**
+ * Get relation type icon
+ */
+export const getRelationTypeIcon = (relationType: string) => {
+  switch (relationType) {
+    case OrgRelationType.DIRECT:
+      return AccountTreeIcon;
+    case OrgRelationType.ADVISORY:
+      return GavelIcon;
+    case OrgRelationType.SUPPORT:
+      return SupportIcon;
+    case OrgRelationType.COLLAB:
+      return HandshakeIcon;
+    default:
+      return BusinessIcon;
+  }
+};
+
+/**
+ * Get relation type label in Vietnamese
+ */
+export const getRelationTypeLabel = (relationType: string): string => {
+  switch (relationType) {
+    case OrgRelationType.DIRECT:
+      return 'Trực tiếp';
+    case OrgRelationType.ADVISORY:
+      return 'Tư vấn';
+    case OrgRelationType.SUPPORT:
+      return 'Hỗ trợ';
+    case OrgRelationType.COLLAB:
+      return 'Hợp tác';
+    default:
+      return 'Không xác định';
+  }
+};
+
+/**
+ * Get all relation types with labels
+ */
+export const getRelationTypes = () => [
+  { value: OrgRelationType.DIRECT, label: 'Trực tiếp' },
+  { value: OrgRelationType.ADVISORY, label: 'Tư vấn' },
+  { value: OrgRelationType.SUPPORT, label: 'Hỗ trợ' },
+  { value: OrgRelationType.COLLAB, label: 'Hợp tác' },
+];
+
+// History change type utilities
+export enum ChangeType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  STATUS_CHANGE = 'status_change',
+  NAME_CHANGE = 'name_change',
+  PARENT_CHANGE = 'parent_change',
+  TYPE_CHANGE = 'type_change',
+}
+
+/**
+ * Get change type color
+ */
+export const getChangeTypeColor = (changeType: string): string => {
+  switch (changeType) {
+    case ChangeType.CREATE:
+      return '#2e7d32'; // Green
+    case ChangeType.UPDATE:
+      return '#1976d2'; // Blue
+    case ChangeType.DELETE:
+      return '#d32f2f'; // Red
+    case ChangeType.STATUS_CHANGE:
+      return '#ed6c02'; // Orange
+    case ChangeType.NAME_CHANGE:
+      return '#9c27b0'; // Purple
+    case ChangeType.PARENT_CHANGE:
+      return '#f57c00'; // Deep Orange
+    case ChangeType.TYPE_CHANGE:
+      return '#5e35b1'; // Deep Purple
+    default:
+      return '#757575'; // Gray
+  }
+};
+
+/**
+ * Get change type label in Vietnamese
+ */
+export const getChangeTypeLabel = (changeType: string): string => {
+  switch (changeType) {
+    case ChangeType.CREATE:
+      return 'Tạo mới';
+    case ChangeType.UPDATE:
+      return 'Cập nhật';
+    case ChangeType.DELETE:
+      return 'Xóa';
+    case ChangeType.STATUS_CHANGE:
+      return 'Thay đổi trạng thái';
+    case ChangeType.NAME_CHANGE:
+      return 'Thay đổi tên';
+    case ChangeType.PARENT_CHANGE:
+      return 'Thay đổi đơn vị cha';
+    case ChangeType.TYPE_CHANGE:
+      return 'Thay đổi loại';
+    default:
+      return 'Thay đổi khác';
+  }
 };
 
 /**
