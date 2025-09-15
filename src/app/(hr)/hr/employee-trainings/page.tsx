@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -94,7 +94,7 @@ const TRAINING_STATUS_COLORS = {
     failed: 'error'
 };
 
-export default function EmployeeTrainingsPage() {
+function EmployeeTrainingsPageContent() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -499,5 +499,14 @@ export default function EmployeeTrainingsPage() {
                 </form>
             </Dialog>
         </Box>
+    );
+}
+
+
+export default function EmployeeTrainingsPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <EmployeeTrainingsPageContent />
+        </Suspense>
     );
 }

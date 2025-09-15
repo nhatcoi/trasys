@@ -259,23 +259,23 @@ model Training {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model User {
-  id                                     BigInt                 @id(map: "user_pkey") @default(autoincrement())
-  username                               String                 @unique(map: "user_username_key") @db.VarChar(64)
-  email                                  String?                @unique(map: "user_email_key") @db.VarChar(255)
+  id                                     BigInt               @id(map: "user_pkey") @default(autoincrement())
+  username                               String               @unique(map: "user_username_key") @db.VarChar(64)
+  email                                  String?              @unique(map: "user_email_key") @db.VarChar(255)
   password_hash                          String
-  status                                 String?                @default("ACTIVE") @db.VarChar(16)
-  last_login_at                          DateTime?              @db.Timestamptz(6)
-  created_at                             DateTime?              @default(now()) @db.Timestamptz(6)
-  updated_at                             DateTime?              @default(now()) @db.Timestamptz(6)
-  full_name                              String                 @db.VarChar(255)
-  dob                                    DateTime?              @db.Date
-  gender                                 String?                @db.VarChar(16)
-  phone                                  String?                @db.VarChar(32)
+  status                                 String?              @default("ACTIVE") @db.VarChar(16)
+  last_login_at                          DateTime?            @db.Timestamptz(6)
+  created_at                             DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at                             DateTime?            @default(now()) @db.Timestamptz(6)
+  full_name                              String               @db.VarChar(255)
+  dob                                    DateTime?            @db.Date
+  gender                                 String?              @db.VarChar(16)
+  phone                                  String?              @db.VarChar(32)
   address                                String?
   AuditLog                               AuditLog[]
   RolePermission                         RolePermission[]
-  user_role_user_role_assigned_byTousers UserRole[]             @relation("user_role_assigned_byTousers")
-  user_role_user_role_user_idTousers     UserRole[]             @relation("user_role_user_idTousers")
+  user_role_user_role_assigned_byTousers UserRole[]           @relation("user_role_assigned_byTousers")
+  user_role_user_role_user_idTousers     UserRole[]           @relation("user_role_user_idTousers")
   EmployeeLog                            EmployeeLog[]
   Employee                               Employee[]
   org_unit_attachments                   OrgUnitAttachments[]
@@ -375,19 +375,19 @@ model OrgUnitRole {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model OrgUnit {
-  id                         BigInt                 @id(map: "org_unit_pkey") @default(autoincrement())
+  id                         BigInt                @id(map: "org_unit_pkey") @default(autoincrement())
   parent_id                  BigInt?
-  type                       String?                @db.VarChar(10)
-  code                       String                 @db.VarChar(50)
-  name                       String                 @db.VarChar(255)
-  created_at                 DateTime?              @default(now()) @db.Timestamp(6)
-  updated_at                 DateTime?              @default(now()) @db.Timestamp(6)
+  type                       String?               @db.VarChar(10)
+  code                       String                @db.VarChar(50)
+  name                       String                @db.VarChar(255)
+  created_at                 DateTime?             @default(now()) @db.Timestamp(6)
+  updated_at                 DateTime?             @default(now()) @db.Timestamp(6)
   description                String?
-  status                     String?                @default("active") @db.VarChar(20)
-  effective_from             DateTime?              @default(dbgenerated("CURRENT_DATE")) @db.Date
-  effective_to               DateTime?              @db.Date
+  status                     String?               @default("active") @db.VarChar(20)
+  effective_from             DateTime?             @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_to               DateTime?             @db.Date
   campus_id                  BigInt?
-  planned_establishment_date DateTime?              @db.Date
+  planned_establishment_date DateTime?             @db.Date
   Course                     Course[]
   MajorOwnerHistory          MajorOwnerHistory[]
   Major                      Major[]
@@ -395,7 +395,7 @@ model OrgUnit {
   OrgAssignment              OrgAssignment[]
   org_structure_request      OrgStructureRequest[]
   org_unit_attachments       OrgUnitAttachments[]
-  campus                     campus?                @relation(fields: [campus_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  campus                     campus?               @relation(fields: [campus_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   ClassSection               ClassSection[]
   Section                    Section[]
 

@@ -18,62 +18,79 @@ export const authOptions: NextAuthOptions = {
                 password: { label: 'Password', type: 'password' },
             },
             async authorize(credentials) {
-                if (!credentials?.identifier || !credentials?.password) {
-                    return null
-                }
-
-                // Tìm user bằng email hoặc username
-                const user = await db.User.findFirst({
-                    where: {
-                        OR: [
-                            { email: credentials.identifier },
-                            { username: credentials.identifier }
-                        ]
+                try {
+                    if (!credentials?.identifier || !credentials?.password) {
+                        console.log('Missing credentials');
+                        return null
                     }
-                })
 
-                if (!user) {
-                    return null
-                }
+                    console.log('Looking for user:', credentials.identifier);
 
-                // So sánh password
-                const isPasswordValid = await bcrypt.compare(
-                    credentials.password,
-                    user.password_hash
-                )
+                    // Tìm user bằng email hoặc username
+                    const user = await db.User.findFirst({
+                        where: {
+                            OR: [
+                                { email: credentials.identifier },
+                                { username: credentials.identifier }
+                            ]
+                        }
+                    })
 
-                if (!isPasswordValid) {
-                    return null
-                }
+                    if (!user) {
+                        console.log('User not found');
+                        return null
+                    }
 
-                // Lấy permissions của user thông qua roles
-                const userRoles = await db.User_role.findMany({
-                    where: { user_id: user.id },
-                    include: {
-                        roles: {
-                            include: {
-                                role_permission: {
-                                    include: {
-                                        permissions: true
+                    console.log('User found:', user.username);
+
+                    // So sánh password
+                    const isPasswordValid = await bcrypt.compare(
+                        credentials.password,
+                        user.password_hash
+                    )
+
+                    if (!isPasswordValid) {
+                        console.log('Invalid password');
+                        return null
+                    }
+
+                    console.log('Password valid, getting permissions...');
+
+                    // Lấy permissions của user thông qua roles
+                    const userRoles = await db.UserRole.findMany({
+                        where: { user_id: user.id },
+                        include: {
+                            Role: {
+                                include: {
+                                    RolePermission: {
+                                        include: {
+                                            Permission: true
+                                        }
                                     }
                                 }
                             }
                         }
+                    });
+
+                    console.log('User roles found:', userRoles.length);
+
+                    // Flatten permissions từ tất cả roles
+                    const permissions = userRoles.flatMap(ur =>
+                        ur.Role.RolePermission.map(rp => rp.Permission.name)
+                    );
+
+                    console.log('Permissions:', permissions);
+
+                    return {
+                        id: user.id.toString(),
+                        username: user.username,
+                        email: user.email,
+                        full_name: user.full_name,
+                        permissions: permissions
                     }
-                });
-
-                // Flatten permissions từ tất cả roles
-                const permissions = userRoles.flatMap(ur =>
-                    ur.roles.role_permission.map(rp => rp.permissions.name)
-                );
-
-
-                return {
-                    id: user.id.toString(),
-                    username: user.username,
-                    email: user.email,
-                    full_name: user.full_name,
-                    permissions: permissions
+                } catch (error) {
+                    console.error('Auth error:', error);
+                    return null;
                 }
             },
 
@@ -87,7 +104,7 @@ export const authOptions: NextAuthOptions = {
             if (user) {
                 token.id = user.id
                 token.username = user.username
-                token.permissions = (user as any).permissions
+                token.permissions = (user as { permissions: string[] }).permissions
             }
             return token
         },

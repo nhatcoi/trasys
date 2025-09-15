@@ -1,20 +1,24 @@
 'use client'
 
-import { useState } from 'react'
-import { signIn, getSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { signIn } from 'next-auth/react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function SignIn() {
+function SignInForm() {
     const [identifier, setIdentifier] = useState('')
     const [password, setPassword] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const callbackUrl = searchParams.get('callbackUrl') || '/hr/dashboard'
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
         setError('')
+
+        console.log('Login attempt - callbackUrl:', callbackUrl)
 
         try {
             const result = await signIn('credentials', {
@@ -23,14 +27,16 @@ export default function SignIn() {
                 redirect: false,
             })
 
+            console.log("result, result", result, result?.error)
+
             if (result?.error) {
                 setError('Email/Username hoặc password không đúng')
             } else {
-                // Đăng nhập thành công - redirect về /hr/dashboard
-                router.push('/hr/dashboard')
+                // Đăng nhập thành công - redirect về callbackUrl hoặc default
+                router.push(callbackUrl)
                 router.refresh()
             }
-        } catch (error) {
+        } catch {
             setError('Có lỗi xảy ra, vui lòng thử lại')
         } finally {
             setIsLoading(false)
@@ -95,5 +101,13 @@ export default function SignIn() {
                 </form>
             </div>
         </div>
+    )
+}
+
+export default function SignIn() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <SignInForm />
+        </Suspense>
     )
 }

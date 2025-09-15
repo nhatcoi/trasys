@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -63,7 +63,7 @@ interface EmployeeAcademicTitle {
     academic_titles?: AcademicTitle;
 }
 
-export default function EmployeeAcademicTitlesPage() {
+function EmployeeAcademicTitlesPageContent() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -411,5 +411,13 @@ export default function EmployeeAcademicTitlesPage() {
                 </form>
             </Dialog>
         </Box>
+    );
+}
+
+export default function EmployeeAcademicTitlesPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <EmployeeAcademicTitlesPageContent />
+        </Suspense>
     );
 }
