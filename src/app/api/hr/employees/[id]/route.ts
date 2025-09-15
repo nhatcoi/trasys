@@ -1,40 +1,91 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { logEmployeeActivity, getActorInfo } from '@/lib/audit-logger';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { getToken } from 'next-auth/jwt';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const employeeId = BigInt(params.id);
-    
-    const employee = await db.employee.findUnique({
-      where: { id: employeeId },
+    const { id } = await params;
+    const employeeId = BigInt(id);
+
+    const employee = await db.Employee.findUnique({
+      where: { id: employeeId as any },
       include: {
-        org_unit: true,
+        user: true,
+        assignments: {
+          include: {
+            org_unit: true,
+            job_positions: true
+          }
+        },
+        employments: {
+          orderBy: {
+            start_date: 'desc'
+          }
+        }
       },
     });
-    
+
     if (!employee) {
       return NextResponse.json(
-        { success: false, error: 'Employee not found' },
+        {
+          success: false,
+          error: 'Employee not found'
+        },
         { status: 404 }
       );
     }
-    
+
     // Convert BigInt to string for JSON serialization
     const serializedEmployee = {
       ...employee,
       id: employee.id.toString(),
       user_id: employee.user_id?.toString() || null,
+      user: employee.user ? {
+        ...employee.user,
+        id: employee.user.id.toString()
+      } : null,
+      assignments: employee.assignments?.map((assignment: any) => ({
+        ...assignment,
+        id: assignment.id.toString(),
+        employee_id: assignment.employee_id.toString(),
+        org_unit_id: assignment.org_unit_id.toString(),
+        position_id: assignment.position_id?.toString() || null,
+        allocation: assignment.allocation?.toString() || null,
+        org_unit: assignment.org_unit ? {
+          ...assignment.org_unit,
+          id: assignment.org_unit.id.toString()
+        } : null,
+        job_positions: assignment.job_positions ? {
+          ...assignment.job_positions,
+          id: assignment.job_positions.id.toString()
+        } : null
+      })) || [],
+      employments: employee.employments?.map((employment: any) => ({
+        ...employment,
+        id: employment.id.toString(),
+        employee_id: employment.employee_id.toString()
+      })) || []
     };
-    
-    return NextResponse.json({ success: true, data: serializedEmployee });
+
+    // Use JSON.stringify with replacer to handle BigInt
+    const jsonString = JSON.stringify({ success: true, data: serializedEmployee }, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    );
+
+    return new Response(jsonString, {
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
     console.error('Database error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: error instanceof Error ? error.message : 'Database connection failed'
       },
       { status: 500 }
@@ -44,48 +95,85 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const employeeId = BigInt(params.id);
+    const { id } = await params;
+    const employeeId = BigInt(id);
     const body = await request.json();
-    const { 
-      user_id, 
-      employee_no, 
-      employment_ty, 
-      status, 
-      hired_at, 
+    const {
+      user_id,
+      employee_no,
+      employment_type,
+      status,
+      hired_at,
       terminated_at,
-      org_unit_id 
     } = body;
-    
-    const employee = await db.employee.update({
-      where: { id: employeeId },
-      data: {
-        user_id: user_id ? BigInt(user_id) : null,
-        employee_no,
-        employment_ty,
-        status,
-        hired_at: hired_at ? new Date(hired_at) : null,
-        terminated_at: terminated_at ? new Date(terminated_at) : null,
-        org_unit_id,
-      },
+
+    // Get current user from token
+    const token = await getToken({ req: request });
+    const currentUserId = token?.sub ? BigInt(token.sub) : undefined;
+
+    console.log('Token:', token);
+    console.log('Current User ID:', currentUserId);
+
+    // Get old data for logging
+    const oldEmployee = await db.Employee.findUnique({
+      where: { id: employeeId as any },
     });
-    
+
+    const updateData: any = {
+      employee_no,
+      employment_type,
+      status,
+      hired_at: hired_at ? new Date(hired_at) : null,
+      terminated_at: terminated_at ? new Date(terminated_at) : null,
+    };
+
+    // Only update user relation if user_id is provided
+    if (user_id) {
+      updateData.user = { connect: { id: BigInt(user_id) } };
+    }
+
+    const employee = await db.Employee.update({
+      where: { id: employeeId as any },
+      data: updateData,
+    });
+
     // Convert BigInt to string for JSON serialization
     const serializedEmployee = {
       ...employee,
       id: employee.id.toString(),
       user_id: employee.user_id?.toString() || null,
     };
-    
-    return NextResponse.json({ success: true, data: serializedEmployee });
+
+    // Log the update activity
+    const actorInfo = getActorInfo(request);
+    await logEmployeeActivity({
+      employee_id: employee.id,
+      action: 'UPDATE',
+      entity_type: 'employees',
+      entity_id: employee.id,
+      old_value: oldEmployee ? JSON.stringify({
+        ...oldEmployee,
+        id: oldEmployee.id.toString(),
+        user_id: oldEmployee.user_id?.toString() || null,
+      }) : undefined,
+      new_value: JSON.stringify(serializedEmployee),
+      actor_id: currentUserId,
+      ...actorInfo,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: serializedEmployee
+    });
   } catch (error) {
     console.error('Database error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to update employee' 
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update employee'
       },
       { status: 500 }
     );
@@ -94,22 +182,51 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const employeeId = BigInt(params.id);
-    
-    await db.employee.delete({
-      where: { id: employeeId },
+    const { id } = await params;
+    const employeeId = BigInt(id);
+
+    // Get current user from token
+    const token = await getToken({ req: request });
+    const currentUserId = token?.sub ? BigInt(token.sub) : undefined;
+
+    // Get old data for logging
+    const oldEmployee = await db.Employee.findUnique({
+      where: { id: employeeId as any },
     });
-    
-    return NextResponse.json({ success: true, message: 'Employee deleted successfully' });
+
+    await db.Employee.delete({
+      where: { id: employeeId as any },
+    });
+
+    // Log the deletion activity
+    const actorInfo = getActorInfo(request);
+    await logEmployeeActivity({
+      employee_id: employeeId,
+      action: 'DELETE',
+      entity_type: 'employees',
+      entity_id: employeeId,
+      old_value: oldEmployee ? JSON.stringify({
+        ...oldEmployee,
+        id: oldEmployee.id.toString(),
+        user_id: oldEmployee.user_id?.toString() || null,
+      }) : undefined,
+      actor_id: currentUserId,
+      ...actorInfo,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Employee deleted successfully'
+    });
   } catch (error) {
     console.error('Database error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to delete employee' 
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to delete employee'
       },
       { status: 500 }
     );

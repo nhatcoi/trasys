@@ -1,0 +1,127 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+
+// GET - Lấy thông tin bằng cấp theo ID
+export async function GET(
+    request: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const qualification = await db.qualifications.findUnique({
+            where: {
+                id: BigInt(params.id)
+            }
+        });
+
+        if (!qualification) {
+            return NextResponse.json(
+                { success: false, error: 'Không tìm thấy bằng cấp' },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            data: {
+                ...qualification,
+                id: qualification.id.toString()
+            }
+        });
+    } catch (error) {
+        console.error('Database error:', error);
+        return NextResponse.json(
+            {
+                success: false,
+                error: error instanceof Error ? error.message : 'Database connection failed'
+            },
+            { status: 500 }
+        );
+    }
+}
+
+// PUT - Cập nhật bằng cấp
+export async function PUT(
+    request: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const body = await request.json();
+        const { code, title } = body;
+
+        if (!code || !title) {
+            return NextResponse.json(
+                { success: false, error: 'Code và title là bắt buộc' },
+                { status: 400 }
+            );
+        }
+
+        const qualification = await db.qualifications.update({
+            where: {
+                id: BigInt(params.id)
+            },
+            data: {
+                code,
+                title
+            }
+        });
+
+        return NextResponse.json({
+            success: true,
+            data: {
+                ...qualification,
+                id: qualification.id.toString()
+            }
+        });
+    } catch (error) {
+        console.error('Database error:', error);
+        return NextResponse.json(
+            {
+                success: false,
+                error: error instanceof Error ? error.message : 'Database connection failed'
+            },
+            { status: 500 }
+        );
+    }
+}
+
+// DELETE - Xóa bằng cấp
+export async function DELETE(
+    request: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        // Kiểm tra xem có nhân viên nào đang sử dụng bằng cấp này không
+        const employeeQualifications = await db.employee_qualification.findMany({
+            where: {
+                qualification_id: BigInt(params.id)
+            }
+        });
+
+        if (employeeQualifications.length > 0) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: `Không thể xóa bằng cấp này vì có ${employeeQualifications.length} nhân viên đang sử dụng`
+                },
+                { status: 400 }
+            );
+        }
+
+        await db.qualifications.delete({
+            where: {
+                id: BigInt(params.id)
+            }
+        });
+
+        return NextResponse.json({ success: true, message: 'Xóa bằng cấp thành công' });
+    } catch (error) {
+        console.error('Database error:', error);
+        return NextResponse.json(
+            {
+                success: false,
+                error: error instanceof Error ? error.message : 'Database connection failed'
+            },
+            { status: 500 }
+        );
+    }
+}
