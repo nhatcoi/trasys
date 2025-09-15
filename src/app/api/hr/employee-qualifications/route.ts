@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
             };
         }
 
-        const employeeQualifications = await db.employee_qualification.findMany({
+        const employeeQualifications = await db.employeeQualification.findMany({
             where: whereClause,
             include: {
                 employees: {
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const employeeQualification = await db.employee_qualification.create({
+        const employeeQualification = await db.employeeQualification.create({
             data: {
                 employee_id: BigInt(employee_id),
                 qualification_id: BigInt(qualification_id),

@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
         }
 
         const [logs, totalCount] = await Promise.all([
-            db.employee_log.findMany({
+            db.employeeLog.findMany({
                 where,
                 include: {
                     employees: {
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
                 skip: offset,
                 take: limit,
             }),
-            db.employee_log.count({ where }),
+            db.employeeLog.count({ where }),
         ]);
 
         const serializedLogs = logs.map(log => ({

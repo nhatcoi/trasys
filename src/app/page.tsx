@@ -22,7 +22,6 @@ import {
   People as PeopleIcon,
 } from '@mui/icons-material';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { DbTest } from '@/components/db-test';
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -105,7 +104,26 @@ export default function Home() {
           </Grid>
 
           <Grid item xs={12} sm={10} md={8} lg={6}>
-            <DbTest />
+            <Card sx={{ textAlign: 'center', p: 3 }}>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Typography variant="h5" gutterBottom>
+                    Hệ thống HR & Quản lý
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    Quản lý nhân viên, đơn xin nghỉ, đánh giá hiệu suất và cấu trúc tổ chức
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={() => window.location.href = '/auth/signin'}
+                    sx={{ backgroundColor: '#2e4c92' }}
+                  >
+                    Đăng nhập để bắt đầu
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
           </Grid>
         </Grid>
       </Container>

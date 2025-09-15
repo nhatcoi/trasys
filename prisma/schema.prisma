@@ -19,15 +19,15 @@ model Employee {
   terminated_at           DateTime?                 @map("terminated_at") @db.Date
   created_at              DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
   updated_at              DateTime                  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  employee_academic_title employee_academic_title[]
-  employee_log            employee_log[]
-  employee_qualification  employee_qualification[]
-  employee_training       employee_training[]
+  employee_academic_title EmployeeAcademicTitle[]
+  employee_log            EmployeeLog[]
+  employee_qualification  EmployeeQualification[]
+  employee_training       EmployeeTraining[]
   user                    users                     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "employee_user_id_fkey")
-  employments             employments[]
-  leave_requests          leave_requests[]
+  employments             Employment[]
+  leave_requests          LeaveRequest[]
   assignments             OrgAssignment[]
-  performance_reviews     performance_reviews[]
+  performance_reviews     PerformanceReview[]
   instructor_assignment   instructor_assignment[]
 
   @@index([status], map: "idx_hr_employee_status")
@@ -51,7 +51,7 @@ model OrgAssignment {
   updated_at      DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   employee        Employee       @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   org_unit        org_units      @relation(fields: [org_unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  job_positions   job_positions? @relation(fields: [position_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  job_positions   JobPosition? @relation(fields: [position_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([employee_id], map: "idx_hr_assign_emp")
   @@index([start_date, end_date], map: "idx_hr_assign_period")
@@ -61,31 +61,33 @@ model OrgAssignment {
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model academic_titles {
+model AcademicTitle {
   id                      BigInt                    @id(map: "academic_title_pkey") @default(autoincrement())
   code                    String?                   @unique(map: "academic_title_code_key") @db.VarChar(32)
   title                   String                    @db.VarChar(128)
-  employee_academic_title employee_academic_title[]
+  employee_academic_title EmployeeAcademicTitle[]
 
   @@schema("hr")
+  @@map("academic_titles")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model employee_academic_title {
+model EmployeeAcademicTitle {
   id                BigInt          @id @default(autoincrement())
   employee_id       BigInt
   academic_title_id BigInt
   awarded_date      DateTime?       @db.Date
-  academic_titles   academic_titles @relation(fields: [academic_title_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  academic_titles   AcademicTitle   @relation(fields: [academic_title_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   employees         Employee        @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([employee_id], map: "idx_hr_emp_academic_title")
   @@schema("hr")
+  @@map("employee_academic_title")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model employee_log {
+model EmployeeLog {
   id          BigInt   @id @default(autoincrement())
   employee_id BigInt
   action      String   @db.VarChar(32)
@@ -110,10 +112,11 @@ model employee_log {
   @@index([entity_id], map: "idx_hr_employee_log_entity_id")
   @@index([entity_type], map: "idx_hr_employee_log_entity_type")
   @@schema("hr")
+  @@map("employee_log")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model employee_qualification {
+model EmployeeQualification {
   id               BigInt         @id @default(autoincrement())
   employee_id      BigInt
   qualification_id BigInt
@@ -121,15 +124,16 @@ model employee_qualification {
   institution      String?        @db.VarChar(255)
   awarded_date     DateTime?      @db.Date
   employees        Employee       @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  qualifications   qualifications @relation(fields: [qualification_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  qualifications   Qualification  @relation(fields: [qualification_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([employee_id], map: "idx_hr_emp_qualification")
   @@schema("hr")
+  @@map("employee_qualification")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model employee_training {
+model EmployeeTraining {
   id              BigInt    @id @default(autoincrement())
   employee_id     BigInt
   training_id     BigInt
@@ -139,15 +143,16 @@ model employee_training {
   created_at      DateTime  @default(now()) @db.Timestamptz(6)
   updated_at      DateTime  @default(now()) @db.Timestamptz(6)
   employees       Employee  @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  trainings       trainings @relation(fields: [training_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  trainings       Training  @relation(fields: [training_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([employee_id], map: "idx_hr_emp_training_employee")
   @@index([status], map: "idx_hr_emp_training_status")
   @@schema("hr")
+  @@map("employee_training")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model employments {
+model Employment {
   id            BigInt    @id(map: "employment_pkey") @default(autoincrement())
   employee_id   BigInt
   contract_no   String?   @db.VarChar(64)
@@ -163,10 +168,11 @@ model employments {
   @@index([employee_id], map: "idx_hr_employment_emp")
   @@index([start_date, end_date], map: "idx_hr_employment_time")
   @@schema("hr")
+  @@map("employments")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model job_positions {
+model JobPosition {
   id             BigInt          @id(map: "job_position_pkey") @default(autoincrement())
   code           String          @unique(map: "job_position_code_key") @db.VarChar(64)
   title          String          @db.VarChar(255)
@@ -177,11 +183,12 @@ model job_positions {
   @@index([job_family], map: "idx_hr_job_position_family")
   @@index([title], map: "idx_hr_job_position_title")
   @@schema("hr")
+  @@map("job_positions")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model leave_requests {
+model LeaveRequest {
   id          BigInt   @id(map: "leave_request_pkey") @default(autoincrement())
   employee_id BigInt
   leave_type  String   @db.VarChar(32)
@@ -197,10 +204,11 @@ model leave_requests {
   @@index([employee_id], map: "idx_hr_leave_employee")
   @@index([status], map: "idx_hr_leave_status")
   @@schema("hr")
+  @@map("leave_requests")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model performance_reviews {
+model PerformanceReview {
   id            BigInt   @id(map: "performance_review_pkey") @default(autoincrement())
   employee_id   BigInt
   review_period String?  @db.VarChar(16)
@@ -213,20 +221,22 @@ model performance_reviews {
   @@index([employee_id], map: "idx_hr_performance_employee")
   @@index([review_period], map: "idx_hr_performance_period")
   @@schema("hr")
+  @@map("performance_reviews")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model qualifications {
+model Qualification {
   id                     BigInt                   @id(map: "qualification_pkey") @default(autoincrement())
   code                   String?                  @unique(map: "qualification_code_key") @db.VarChar(32)
   title                  String                   @db.VarChar(128)
-  employee_qualification employee_qualification[]
+  employee_qualification EmployeeQualification[]
 
   @@schema("hr")
+  @@map("qualifications")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model trainings {
+model Training {
   id                BigInt              @id(map: "training_pkey") @default(autoincrement())
   title             String              @db.VarChar(255)
   provider          String?             @db.VarChar(255)
@@ -236,11 +246,12 @@ model trainings {
   description       String?
   created_at        DateTime            @default(now()) @db.Timestamptz(6)
   updated_at        DateTime            @default(now()) @db.Timestamptz(6)
-  employee_training employee_training[]
+  employee_training EmployeeTraining[]
 
   @@index([start_date, end_date], map: "idx_hr_training_dates")
   @@index([provider], map: "idx_hr_training_provider")
   @@schema("hr")
+  @@map("trainings")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -264,7 +275,7 @@ model users {
   role_permission                        role_permission[]
   user_role_user_role_assigned_byTousers user_role[]       @relation("user_role_assigned_byTousers")
   user_role_user_role_user_idTousers     user_role[]       @relation("user_role_user_idTousers")
-  employee_log                           employee_log[]
+  employee_log                           EmployeeLog[]
   employees                              Employee[]
 
   @@index([full_name], map: "idx_user_full_name")

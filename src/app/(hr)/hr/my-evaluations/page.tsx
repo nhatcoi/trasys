@@ -63,7 +63,7 @@ export default function MyEvaluationsPage() {
             }
 
             const employeeData = await employeeResponse.json();
-            const employeeId = employeeData.data?.id;
+            const employeeId = employeeData.data?.employees?.[0]?.id;
 
             if (!employeeId) {
                 throw new Error('Không tìm thấy thông tin nhân viên');
@@ -108,6 +108,13 @@ export default function MyEvaluationsPage() {
         if (score >= 4) return 'success';
         if (score >= 3) return 'warning';
         return 'error';
+    };
+
+    // Ép kiểu an toàn cho điểm số (trường hợp API trả về string)
+    const parseScore = (score: any): number | null => {
+        if (score === null || score === undefined) return null;
+        const n = Number(score);
+        return Number.isFinite(n) ? n : null;
     };
 
     if (loading) {
@@ -161,17 +168,17 @@ export default function MyEvaluationsPage() {
                                         </Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                        {evaluation.score ? (
+                                        {parseScore(evaluation.score) !== null ? (
                                             <>
                                                 <Rating
-                                                    value={evaluation.score}
+                                                    value={parseScore(evaluation.score) ?? 0}
                                                     readOnly
                                                     precision={0.1}
                                                     size="small"
                                                 />
                                                 <Chip
-                                                    label={getScoreLabel(evaluation.score)}
-                                                    color={getScoreColor(evaluation.score) as any}
+                                                    label={getScoreLabel(parseScore(evaluation.score))}
+                                                    color={getScoreColor(parseScore(evaluation.score)) as any}
                                                     size="small"
                                                 />
                                             </>
@@ -191,13 +198,13 @@ export default function MyEvaluationsPage() {
                                         <Typography variant="subtitle1" gutterBottom>
                                             Điểm đánh giá
                                         </Typography>
-                                        {evaluation.score ? (
+                                        {parseScore(evaluation.score) !== null ? (
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                                 <Typography variant="h4" color="primary">
-                                                    {evaluation.score.toFixed(1)}
+                                                    {parseScore(evaluation.score)?.toFixed(1)}
                                                 </Typography>
                                                 <Rating
-                                                    value={evaluation.score}
+                                                    value={parseScore(evaluation.score) ?? 0}
                                                     readOnly
                                                     precision={0.1}
                                                     size="large"
