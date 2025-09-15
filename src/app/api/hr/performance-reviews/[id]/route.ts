@@ -4,10 +4,11 @@ import { logEmployeeActivity, getActorInfo } from '@/lib/audit-logger';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string  }> }
 ) {
     try {
-        const reviewId = params.id;
+        const resolvedParams = await params;
+        const reviewId = resolvedParams.id;
 
         const performanceReview = await db.PerformanceReview.findUnique({
             where: { id: reviewId as any },
@@ -56,10 +57,11 @@ export async function GET(
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string  }> }
 ) {
     try {
-        const reviewId = params.id;
+        const resolvedParams = await params;
+        const reviewId = resolvedParams.id;
         const body = await request.json();
         const {
             review_period,
@@ -137,10 +139,11 @@ export async function PUT(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string  }> }
 ) {
     try {
-        const reviewId = params.id;
+        const resolvedParams = await params;
+        const reviewId = resolvedParams.id;
 
         // Get old data for logging
         const oldReview = await db.PerformanceReview.findUnique({

@@ -6,15 +6,16 @@ import { db } from '@/lib/db';
 // GET /api/hr/leave-requests/[id] - Lấy chi tiết đơn xin nghỉ
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string  }> }
 ) {
     try {
+        const resolvedParams = await params;
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const leaveRequestId = BigInt(params.id);
+        const leaveRequestId = BigInt(resolvedParams.id);
 
         const leaveRequest = await db.LeaveRequest.findUnique({
             where: { id: leaveRequestId },
@@ -107,15 +108,16 @@ export async function GET(
 // PUT /api/hr/leave-requests/[id] - Cập nhật đơn xin nghỉ
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string  }> }
 ) {
     try {
+        const resolvedParams = await params;
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const leaveRequestId = BigInt(params.id);
+        const leaveRequestId = BigInt(resolvedParams.id);
         const body = await request.json();
         const { leave_type, start_date, end_date, reason } = body;
 
@@ -231,15 +233,16 @@ export async function PUT(
 // DELETE /api/hr/leave-requests/[id] - Xóa đơn xin nghỉ
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string  }> }
 ) {
     try {
+        const resolvedParams = await params;
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const leaveRequestId = BigInt(params.id);
+        const leaveRequestId = BigInt(resolvedParams.id);
 
         // Lấy đơn xin nghỉ hiện tại
         const currentRequest = await db.LeaveRequest.findUnique({

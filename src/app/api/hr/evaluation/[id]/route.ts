@@ -6,15 +6,16 @@ import { serializeBigInt } from '@/utils/serialize';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string  }> }
 ) {
     try {
+        const resolvedParams = await params;
         const session = await getServerSession(authOptions);
         if (!session?.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const evaluationId = params.id;
+        const evaluationId = resolvedParams.id;
         const { searchParams } = new URL(request.url);
         const token = searchParams.get('token');
 
@@ -64,15 +65,16 @@ export async function GET(
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string  }> }
 ) {
     try {
+        const resolvedParams = await params;
         const session = await getServerSession(authOptions);
         if (!session?.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const evaluationId = params.id;
+        const evaluationId = resolvedParams.id;
         const body = await request.json();
         const { score, comments, evaluatorName, evaluatorEmail } = body;
 

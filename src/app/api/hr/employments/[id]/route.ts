@@ -4,12 +4,13 @@ import { db } from '@/lib/db';
 // GET - Lấy thông tin hợp đồng lao động theo ID
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string  }> }
 ) {
     try {
+        const resolvedParams = await params;
         const employment = await db.Employment.findUnique({
             where: {
-                id: BigInt(params.id)
+                id: BigInt(resolvedParams.id)
             },
             include: {
                 Employee: {
@@ -59,9 +60,10 @@ export async function GET(
 // PUT - Cập nhật hợp đồng lao động
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string  }> }
 ) {
     try {
+        const resolvedParams = await params;
         const body = await request.json();
         const { contract_no, contract_type, start_date, end_date, fte, salary_band } = body;
 
@@ -74,7 +76,7 @@ export async function PUT(
 
         const employment = await db.Employment.update({
             where: {
-                id: BigInt(params.id)
+                id: BigInt(resolvedParams.id)
             },
             data: {
                 contract_no,
@@ -125,12 +127,14 @@ export async function PUT(
 // DELETE - Xóa hợp đồng lao động
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string  }> }
 ) {
     try {
+        const resolvedParams = await params;
+    DELETE
         await db.Employment.delete({
             where: {
-                id: BigInt(params.id)
+                id: BigInt(resolvedParams.id)
             }
         });
 

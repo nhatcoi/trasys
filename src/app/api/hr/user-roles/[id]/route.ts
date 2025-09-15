@@ -8,6 +8,7 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const resolvedParams = await params;
         const { id } = await params;
         const userRoleId = BigInt(id);
 

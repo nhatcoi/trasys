@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string  }> }
+) {
     try {
-        const titleId = params.id;
+        const resolvedParams = await params;
+        const titleId = resolvedParams.id;
 
         const employeeAcademicTitle = await db.Employee_academic_title.findUnique({
             where: { id: BigInt(titleId) },
@@ -55,9 +59,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string  }> }
+) {
     try {
-        const titleId = params.id;
+        const resolvedParams = await params;
+        const titleId = resolvedParams.id;
         const body = await request.json();
         const { employee_id, academic_title_id, awarded_date } = body;
 
@@ -91,9 +99,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string  }> }
+) {
     try {
-        const titleId = params.id;
+        const resolvedParams = await params;
+        const titleId = resolvedParams.id;
 
         await db.Employee_academic_title.delete({
             where: { id: BigInt(titleId) },

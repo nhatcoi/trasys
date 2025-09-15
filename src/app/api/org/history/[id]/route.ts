@@ -5,11 +5,12 @@ const historyRepo = new HistoryRepository();
 
 // GET /api/org/history/[id]
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string  }> }
 ) {
   try {
-    const id = parseInt(params.id, 10);
+        const resolvedParams = await params;
+        const id = parseInt(resolvedParams.id, 10);
     
     if (isNaN(id)) {
       return NextResponse.json(
