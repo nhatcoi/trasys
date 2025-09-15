@@ -311,13 +311,13 @@ export default function PerformanceReviewsPage() {
                         })()}
                     </Box>
                 </Box>
-                <Button
+                {/* <Button
                     variant="contained"
                     startIcon={<AddIcon />}
                     onClick={() => setOpenDialog(true)}
                 >
                     Thêm đánh giá
-                </Button>
+                </Button> */}
             </Box>
 
             <TableContainer component={Paper}>
@@ -329,7 +329,7 @@ export default function PerformanceReviewsPage() {
                             <TableCell>Điểm số</TableCell>
                             <TableCell>Nhận xét</TableCell>
                             <TableCell>Ngày tạo</TableCell>
-                            <TableCell>Thao tác</TableCell>
+                            {/* <TableCell>Thao tác</TableCell> */}
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -388,7 +388,7 @@ export default function PerformanceReviewsPage() {
                                 <TableCell>
                                     {new Date(review.created_at).toLocaleDateString('vi-VN')}
                                 </TableCell>
-                                <TableCell>
+                                {/* <TableCell>
                                     <IconButton
                                         size="small"
                                         color="primary"
@@ -415,7 +415,7 @@ export default function PerformanceReviewsPage() {
                                             <DeleteIcon />
                                         )}
                                     </IconButton>
-                                </TableCell>
+                                </TableCell> */}
                             </TableRow>
                         ))}
                     </TableBody>
@@ -431,13 +431,13 @@ export default function PerformanceReviewsPage() {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         Hãy thêm đánh giá đầu tiên cho nhân viên
                     </Typography>
-                    <Button
+                    {/* <Button
                         variant="contained"
                         startIcon={<AddIcon />}
                         onClick={() => setOpenDialog(true)}
                     >
                         Thêm đánh giá
-                    </Button>
+                    </Button> */}
                 </Box>
             )}
 

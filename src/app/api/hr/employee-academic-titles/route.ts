@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const employeeId = searchParams.get('employee_id');
 
-        const employeeAcademicTitles = await db.employee_academic_title.findMany({
+        const employeeAcademicTitles = await db.employeeAcademicTitle.findMany({
             where: employeeId ? { employee_id: BigInt(employeeId) } : {},
             include: {
                 employees: {
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
         }
 
-        const newEmployeeAcademicTitle = await db.employee_academic_title.create({
+        const newEmployeeAcademicTitle = await db.employeeAcademicTitle.create({
             data: {
                 employee_id: BigInt(employee_id),
                 academic_title_id: BigInt(academic_title_id),

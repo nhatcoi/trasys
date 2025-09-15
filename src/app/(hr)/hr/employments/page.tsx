@@ -365,7 +365,7 @@ export default function EmploymentsPage() {
                                 <TableCell><strong>Ngày kết thúc</strong></TableCell>
                                 <TableCell><strong>FTE</strong></TableCell>
                                 <TableCell><strong>Bậc lương</strong></TableCell>
-                                <TableCell><strong>Hành động</strong></TableCell>
+                                {/* <TableCell><strong>Hành động</strong></TableCell> */}
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -417,7 +417,7 @@ export default function EmploymentsPage() {
                                             variant="outlined"
                                         />
                                     </TableCell>
-                                    <TableCell>
+                                    {/* <TableCell>
                                         <Box sx={{ display: 'flex', gap: 1 }}>
                                             <IconButton
                                                 size="small"
@@ -444,7 +444,7 @@ export default function EmploymentsPage() {
                                                 <DeleteIcon />
                                             </IconButton>
                                         </Box>
-                                    </TableCell>
+                                    </TableCell> */}
                                 </TableRow>
                             ))}
                         </TableBody>

@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
             whereClause = { employee_id: BigInt(employeeId) };
         }
 
-        const performanceReviews = await db.performance_reviews.findMany({
+        const performanceReviews = await db.performanceReview.findMany({
             where: whereClause,
             include: {
                 employees: {
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Employee ID is required' }, { status: 400 });
         }
 
-        const performanceReview = await db.performance_reviews.create({
+        const performanceReview = await db.performanceReview.create({
             data: {
                 employee_id: BigInt(employee_id),
                 review_period,

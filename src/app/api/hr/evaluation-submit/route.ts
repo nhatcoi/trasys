@@ -3,19 +3,19 @@ import { db } from '@/lib/db';
 import { serializeBigInt } from '@/utils/serialize';
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { evaluationId, score, comments } = body;
+    try {
+        const body = await request.json();
+        const { evaluationId, score, comments } = body;
 
-    if (!evaluationId || !score) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
+        if (!evaluationId || !score) {
+            return NextResponse.json(
+                { error: 'Missing required fields' },
+                { status: 400 }
+            );
+        }
 
-        // Get evaluation record
-        const evaluation = await db.performance_reviews.findUnique({
+        // Get evaluation seed record to derive employee and period
+        const evaluation = await db.performanceReview.findUnique({
             where: {
                 id: BigInt(evaluationId)
             },
@@ -35,12 +35,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Update evaluation with submitted data
-        const updatedEvaluation = await db.performance_reviews.update({
-            where: {
-                id: BigInt(evaluationId)
-            },
+        // Create a NEW anonymous evaluation entry to support multiple submissions
+        const newEvaluation = await db.performanceReview.create({
             data: {
+                employee_id: evaluation.employee_id,
+                review_period: evaluation.review_period,
                 score: parseFloat(score),
                 comments: comments || null,
                 updated_at: new Date()
@@ -54,7 +53,7 @@ export async function POST(request: NextRequest) {
             }
         });
 
-        const serializedData = serializeBigInt(updatedEvaluation);
+        const serializedData = serializeBigInt(newEvaluation);
 
         return NextResponse.json({
             message: 'Evaluation submitted successfully',

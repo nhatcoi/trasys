@@ -7,7 +7,7 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const employment = await db.employments.findUnique({
+        const employment = await db.employment.findUnique({
             where: {
                 id: BigInt(params.id)
             },
@@ -72,7 +72,7 @@ export async function PUT(
             );
         }
 
-        const employment = await db.employments.update({
+        const employment = await db.employment.update({
             where: {
                 id: BigInt(params.id)
             },
@@ -128,7 +128,7 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        await db.employments.delete({
+        await db.employment.delete({
             where: {
                 id: BigInt(params.id)
             }

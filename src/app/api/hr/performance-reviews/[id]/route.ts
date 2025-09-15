@@ -9,7 +9,7 @@ export async function GET(
     try {
         const reviewId = params.id;
 
-        const performanceReview = await db.performance_reviews.findUnique({
+        const performanceReview = await db.performanceReview.findUnique({
             where: { id: reviewId as any },
             include: {
                 employees: {
@@ -68,11 +68,11 @@ export async function PUT(
         } = body;
 
         // Get old data for logging
-        const oldReview = await db.performance_reviews.findUnique({
+        const oldReview = await db.performanceReview.findUnique({
             where: { id: reviewId as any },
         });
 
-        const performanceReview = await db.performance_reviews.update({
+        const performanceReview = await db.performanceReview.update({
             where: { id: reviewId as any },
             data: {
                 review_period,
@@ -143,11 +143,11 @@ export async function DELETE(
         const reviewId = params.id;
 
         // Get old data for logging
-        const oldReview = await db.performance_reviews.findUnique({
+        const oldReview = await db.performanceReview.findUnique({
             where: { id: reviewId as any },
         });
 
-        await db.performance_reviews.delete({
+        await db.performanceReview.delete({
             where: { id: reviewId as any }
         });
 
