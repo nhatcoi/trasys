@@ -23,15 +23,15 @@ export async function GET(request: NextRequest) {
         const offset = (page - 1) * limit;
 
         // Lấy thông tin user hiện tại
-        const currentUser = await db.users.findUnique({
+        const currentUser = await db.User.findUnique({
             where: { id: BigInt(session.user.id) },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        assignments: {
+                        OrgAssignment: {
                             include: {
-                                org_unit: true,
-                                job_positions: true
+                                OrgUnit: true,
+                                JobPosition: true
                             }
                         }
                     }
@@ -39,11 +39,11 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        if (!currentUser?.employees?.[0]) {
+        if (!currentUser?.Employee?.[0]) {
             return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
         }
 
-        const currentEmployee = currentUser.employees[0];
+        const currentEmployee = currentUser.Employee[0];
 
         // Kiểm tra quyền admin dựa trên permissions
         const isAdmin = session.user.permissions?.includes('leave_request.update') ||
@@ -55,12 +55,12 @@ export async function GET(request: NextRequest) {
         if (!isAdmin) {
             if (employeeId) {
                 // Kiểm tra quyền xem đơn của nhân viên khác
-                const targetEmployee = await db.employee.findUnique({
+                const targetEmployee = await db.Employee.findUnique({
                     where: { id: BigInt(employeeId) },
                     include: {
-                        assignments: {
+                        OrgAssignment: {
                             include: {
-                                org_unit: true
+                                OrgUnit: true
                             }
                         }
                     }
@@ -106,29 +106,36 @@ export async function GET(request: NextRequest) {
             };
         }
 
-        const leaveRequests = await db.leaveRequest.findMany({
-            where: whereClause,
-            include: {
-                employees: {
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                full_name: true,
-                                email: true
+        const [leaveRequests, total] = await Promise.all([
+            db.LeaveRequest.findMany({
+                where: whereClause,
+                include: {
+                    Employee: {
+                        include: {
+                            User: {
+                                select: {
+                                    id: true,
+                                    full_name: true,
+                                    email: true
+                                }
+                            },
+                            OrgAssignment: {
+                                include: {
+                                    OrgUnit: true,
+                                    JobPosition: true
+                                }
                             }
                         }
-                    }
+                    },
                 },
-            },
-            orderBy: {
-                created_at: 'desc'
-            },
-            skip: offset,
-            take: limit
-        });
-
-        const total = await db.leaveRequest.count({ where: whereClause });
+                orderBy: {
+                    created_at: 'desc'
+                },
+                skip: offset,
+                take: limit
+            }),
+            db.LeaveRequest.count({ where: whereClause })
+        ]);
 
         // Serialize BigInt fields
         const serializedLeaveRequests = serializeBigIntArray(leaveRequests);
@@ -173,7 +180,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Lấy thông tin employee
-        const employee = await db.employee.findFirst({
+        const employee = await db.Employee.findFirst({
             where: { user_id: BigInt(session.user.id) }
         });
 
@@ -182,7 +189,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Tạo đơn xin nghỉ
-        const leaveRequest = await db.leaveRequest.create({
+        const leaveRequest = await db.LeaveRequest.create({
             data: {
                 employee_id: employee.id,
                 leave_type,
@@ -192,9 +199,9 @@ export async function POST(request: NextRequest) {
                 status: 'PENDING'
             },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: {
+                        User: {
                             select: {
                                 id: true,
                                 full_name: true,
@@ -207,7 +214,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Tạo lịch sử trong employee_log
-        await db.employeeLog.create({
+        await db.EmployeeLog.create({
             data: {
                 employee_id: employee.id,
                 action: 'CREATE',
@@ -224,13 +231,13 @@ export async function POST(request: NextRequest) {
             ...leaveRequest,
             id: leaveRequest.id.toString(),
             employee_id: leaveRequest.employee_id.toString(),
-            employees: {
-                ...leaveRequest.employees,
-                id: leaveRequest.employees.id.toString(),
-                user_id: leaveRequest.employees.user_id.toString(),
-                user: {
-                    ...leaveRequest.employees.user,
-                    id: leaveRequest.employees.user.id.toString()
+            Employee: {
+                ...leaveRequest.Employee,
+                id: leaveRequest.Employee.id.toString(),
+                user_id: leaveRequest.Employee.user_id.toString(),
+                User: {
+                    ...leaveRequest.Employee.User,
+                    id: leaveRequest.Employee.User.id.toString()
                 }
             }
         };
@@ -244,7 +251,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function để kiểm tra quyền cấp trên
-async function checkSupervisorPermission(supervisor: any, employee: any): Promise<boolean> {
+async function checkSupervisorPermission(supervisor: any, Employee: any): Promise<boolean> {
     // Logic kiểm tra quyền cấp trên
     // Có thể dựa vào org_unit hierarchy hoặc role-based permission
 

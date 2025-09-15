@@ -5,7 +5,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     try {
         const titleId = params.id;
 
-        const employeeAcademicTitle = await db.employeeAcademicTitle.findUnique({
+        const employeeAcademicTitle = await db.Employee_academic_title.findUnique({
             where: { id: BigInt(titleId) },
             include: {
                 employees: {
@@ -61,7 +61,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         const body = await request.json();
         const { employee_id, academic_title_id, awarded_date } = body;
 
-        const updatedTitle = await db.employeeAcademicTitle.update({
+        const updatedTitle = await db.Employee_academic_title.update({
             where: { id: BigInt(titleId) },
             data: {
                 employee_id: employee_id ? BigInt(employee_id) : undefined,
@@ -95,7 +95,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     try {
         const titleId = params.id;
 
-        await db.employeeAcademicTitle.delete({
+        await db.Employee_academic_title.delete({
             where: { id: BigInt(titleId) },
         });
 

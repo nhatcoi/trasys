@@ -67,7 +67,7 @@ export default function ProfilePage() {
             const result = await response.json();
 
             if (result.success && result.data) {
-                const user = result.data.user;
+                const user = result.data.User;
                 setProfile(user);
                 setFormData({
                     full_name: user.full_name || '',

@@ -7,7 +7,7 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const qualification = await db.qualification.findUnique({
+        const qualification = await db.Qualification.findUnique({
             where: {
                 id: BigInt(params.id)
             }
@@ -55,7 +55,7 @@ export async function PUT(
             );
         }
 
-        const qualification = await db.qualification.update({
+        const qualification = await db.Qualification.update({
             where: {
                 id: BigInt(params.id)
             },
@@ -91,7 +91,7 @@ export async function DELETE(
 ) {
     try {
         // Kiểm tra xem có nhân viên nào đang sử dụng bằng cấp này không
-        const employeeQualifications = await db.employeeQualification.findMany({
+        const employeeQualifications = await db.Employee_qualification.findMany({
             where: {
                 qualification_id: BigInt(params.id)
             }
@@ -107,7 +107,7 @@ export async function DELETE(
             );
         }
 
-        await db.qualification.delete({
+        await db.Qualification.delete({
             where: {
                 id: BigInt(params.id)
             }

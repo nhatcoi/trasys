@@ -28,20 +28,20 @@ export async function GET(request: NextRequest) {
         }
 
         // Get evaluation records for the period
-        const evaluations = await db.performanceReview.findMany({
+        const evaluations = await db.PerformanceReview.findMany({
             where: {
                 review_period: period
             },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: true
+                        User: true
                     }
                 }
             },
             orderBy: {
-                employees: {
-                    user: {
+                Employee: {
+                    User: {
                         full_name: 'asc'
                     }
                 }
@@ -108,14 +108,14 @@ export async function POST(request: NextRequest) {
         }
 
         // Get evaluation records for the period
-        const evaluations = await db.performanceReview.findMany({
+        const evaluations = await db.PerformanceReview.findMany({
             where: {
                 review_period: period
             },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: true
+                        User: true
                     }
                 }
             }

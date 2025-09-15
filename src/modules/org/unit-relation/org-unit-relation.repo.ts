@@ -53,13 +53,13 @@ export class OrgUnitRelationRepository {
 
     // Execute query
     const [items, total] = await Promise.all([
-      db.orgUnitRelation.findMany({
+      db.OrgUnitRelation.findMany({
         where,
         skip,
         take: size,
         orderBy: sort ? { [sort]: order } : { created_at: 'desc' },
       }),
-      db.orgUnitRelation.count({ where }),
+      db.OrgUnitRelation.count({ where }),
     ]);
 
     // Serialize all IDs for consistency
@@ -103,7 +103,7 @@ export class OrgUnitRelationRepository {
     relation_type: string;
     effective_from: string;
   }) {
-    const relation = await db.orgUnitRelation.findUnique({
+    const relation = await db.OrgUnitRelation.findUnique({
       where: {
         parent_id_child_id_relation_type_effective_from: {
           parent_id: BigInt(params.parent_id),
@@ -143,7 +143,7 @@ export class OrgUnitRelationRepository {
 
   // Create new org unit relation
   async create(data: CreateOrgUnitRelationInput) {
-    const created = await db.orgUnitRelation.create({
+    const created = await db.OrgUnitRelation.create({
       data: {
         parent_id: BigInt(data.parent_id),
         child_id: BigInt(data.child_id),
@@ -186,7 +186,7 @@ export class OrgUnitRelationRepository {
     relation_type: string;
     effective_from: string;
   }, data: UpdateOrgUnitRelationInput) {
-    const updated = await db.orgUnitRelation.update({
+    const updated = await db.OrgUnitRelation.update({
       where: {
         parent_id_child_id_relation_type_effective_from: {
           parent_id: BigInt(params.parent_id),
@@ -235,7 +235,7 @@ export class OrgUnitRelationRepository {
     relation_type: string;
     effective_from: string;
   }) {
-    await db.orgUnitRelation.delete({
+    await db.OrgUnitRelation.delete({
       where: {
         parent_id_child_id_relation_type_effective_from: {
           parent_id: BigInt(params.parent_id),

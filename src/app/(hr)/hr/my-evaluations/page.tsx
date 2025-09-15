@@ -9,7 +9,6 @@ import {
     CardContent,
     CircularProgress,
     Alert,
-    Grid,
     Chip,
     Rating,
     Accordion,
@@ -30,9 +29,9 @@ interface EvaluationData {
     comments: string | null;
     created_at: string;
     updated_at: string;
-    employees: {
+    Employee: {
         id: string;
-        user: {
+        User: {
             id: string;
             full_name: string;
             email: string;
@@ -49,6 +48,10 @@ export default function MyEvaluationsPage() {
     useEffect(() => {
         if (session?.user) {
             fetchMyEvaluations();
+        } else if (session === null) {
+            // Session is loaded but user is not authenticated
+            setError('Vui lòng đăng nhập để xem đánh giá của bạn');
+            setLoading(false);
         }
     }, [session]);
 
@@ -63,7 +66,7 @@ export default function MyEvaluationsPage() {
             }
 
             const employeeData = await employeeResponse.json();
-            const employeeId = employeeData.data?.employees?.[0]?.id;
+            const employeeId = employeeData.data?.Employee?.[0]?.id;
 
             if (!employeeId) {
                 throw new Error('Không tìm thấy thông tin nhân viên');
@@ -110,13 +113,6 @@ export default function MyEvaluationsPage() {
         return 'error';
     };
 
-    // Ép kiểu an toàn cho điểm số (trường hợp API trả về string)
-    const parseScore = (score: any): number | null => {
-        if (score === null || score === undefined) return null;
-        const n = Number(score);
-        return Number.isFinite(n) ? n : null;
-    };
-
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -128,7 +124,14 @@ export default function MyEvaluationsPage() {
     if (error) {
         return (
             <Box sx={{ p: 3 }}>
-                <Alert severity="error">{error}</Alert>
+                <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+                {error.includes('đăng nhập') && (
+                    <Alert severity="info">
+                        <Typography variant="body2">
+                            Để xem đánh giá hiệu suất của bạn, vui lòng đăng nhập vào hệ thống.
+                        </Typography>
+                    </Alert>
+                )}
             </Box>
         );
     }
@@ -168,17 +171,17 @@ export default function MyEvaluationsPage() {
                                         </Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                        {parseScore(evaluation.score) !== null ? (
+                                        {evaluation.score ? (
                                             <>
                                                 <Rating
-                                                    value={parseScore(evaluation.score) ?? 0}
+                                                    value={evaluation.score}
                                                     readOnly
                                                     precision={0.1}
                                                     size="small"
                                                 />
                                                 <Chip
-                                                    label={getScoreLabel(parseScore(evaluation.score))}
-                                                    color={getScoreColor(parseScore(evaluation.score)) as any}
+                                                    label={getScoreLabel(evaluation.score)}
+                                                    color={getScoreColor(evaluation.score) as any}
                                                     size="small"
                                                 />
                                             </>
@@ -193,18 +196,18 @@ export default function MyEvaluationsPage() {
                                 </Box>
                             </AccordionSummary>
                             <AccordionDetails>
-                                <Grid container spacing={3}>
-                                    <Grid item xs={12} md={6}>
+                                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+                                    <Box>
                                         <Typography variant="subtitle1" gutterBottom>
                                             Điểm đánh giá
                                         </Typography>
-                                        {parseScore(evaluation.score) !== null ? (
+                                        {evaluation.score && typeof evaluation.score === 'number' ? (
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                                 <Typography variant="h4" color="primary">
-                                                    {parseScore(evaluation.score)?.toFixed(1)}
+                                                    {evaluation.score.toFixed(1)}
                                                 </Typography>
                                                 <Rating
-                                                    value={parseScore(evaluation.score) ?? 0}
+                                                    value={evaluation.score}
                                                     readOnly
                                                     precision={0.1}
                                                     size="large"
@@ -215,9 +218,9 @@ export default function MyEvaluationsPage() {
                                                 Chưa có điểm đánh giá
                                             </Typography>
                                         )}
-                                    </Grid>
+                                    </Box>
 
-                                    <Grid item xs={12} md={6}>
+                                    <Box>
                                         <Typography variant="subtitle1" gutterBottom>
                                             Thông tin kỳ đánh giá
                                         </Typography>
@@ -232,14 +235,14 @@ export default function MyEvaluationsPage() {
                                                 <strong>Cập nhật:</strong> {formatDate(evaluation.updated_at)}
                                             </Typography>
                                         </Box>
-                                    </Grid>
+                                    </Box>
 
                                     {evaluation.comments && (
                                         <>
-                                            <Grid item xs={12}>
+                                            <Box sx={{ gridColumn: '1 / -1' }}>
                                                 <Divider />
-                                            </Grid>
-                                            <Grid item xs={12}>
+                                            </Box>
+                                            <Box sx={{ gridColumn: '1 / -1' }}>
                                                 <Typography variant="subtitle1" gutterBottom>
                                                     Nhận xét
                                                 </Typography>
@@ -250,10 +253,10 @@ export default function MyEvaluationsPage() {
                                                         </Typography>
                                                     </CardContent>
                                                 </Card>
-                                            </Grid>
+                                            </Box>
                                         </>
                                     )}
-                                </Grid>
+                                </Box>
                             </AccordionDetails>
                         </Accordion>
                     ))}

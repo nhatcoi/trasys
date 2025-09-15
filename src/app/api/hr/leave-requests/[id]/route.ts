@@ -16,22 +16,22 @@ export async function GET(
 
         const leaveRequestId = BigInt(params.id);
 
-        const leaveRequest = await db.leaveRequest.findUnique({
+        const leaveRequest = await db.LeaveRequest.findUnique({
             where: { id: leaveRequestId },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: {
+                        User: {
                             select: {
                                 id: true,
                                 full_name: true,
                                 email: true
                             }
                         },
-                        assignments: {
+                        OrgAssignment: {
                             include: {
-                                org_unit: true,
-                                job_positions: true
+                                OrgUnit: true,
+                                JobPosition: true
                             }
                         }
                     }
@@ -44,10 +44,10 @@ export async function GET(
         }
 
         // Kiểm tra quyền xem
-        const currentUser = await db.users.findUnique({
+        const currentUser = await db.User.findUnique({
             where: { id: BigInt(session.user.id) },
             include: {
-                employees: true,
+                Employee: true,
             }
         });
 
@@ -70,25 +70,25 @@ export async function GET(
             ...leaveRequest,
             id: leaveRequest.id.toString(),
             employee_id: leaveRequest.employee_id.toString(),
-            employees: {
+            Employee: {
                 ...leaveRequest.employees,
                 id: leaveRequest.employees.id.toString(),
                 user_id: leaveRequest.employees.user_id.toString(),
-                user: {
+                User: {
                     ...leaveRequest.employees.user,
                     id: leaveRequest.employees.user.id.toString()
                 },
-                assignments: leaveRequest.employees.assignments.map(assignment => ({
+                OrgAssignment: leaveRequest.employees.assignments.map(assignment => ({
                     ...assignment,
                     id: assignment.id.toString(),
-                    employee_id: assignment.employee_id.toString(),
-                    org_unit_id: assignment.org_unit_id.toString(),
+                    employee_id: assignment.Employee_id.toString(),
+                    org_unit_id: assignment.OrgUnit_id.toString(),
                     position_id: assignment.position_id.toString(),
-                    org_unit: {
-                        ...assignment.org_unit,
-                        id: assignment.org_unit.id.toString()
+                    OrgUnit: {
+                        ...assignment.OrgUnits,
+                        id: assignment.OrgUnits.id.toString()
                     },
-                    job_positions: {
+                    JobPosition: {
                         ...assignment.job_positions,
                         id: assignment.job_positions.id.toString()
                     }
@@ -120,10 +120,10 @@ export async function PUT(
         const { leave_type, start_date, end_date, reason } = body;
 
         // Lấy đơn xin nghỉ hiện tại
-        const currentRequest = await db.leaveRequest.findUnique({
+        const currentRequest = await db.LeaveRequest.findUnique({
             where: { id: leaveRequestId },
             include: {
-                employees: true
+                Employee: true
             }
         });
 
@@ -132,10 +132,10 @@ export async function PUT(
         }
 
         // Kiểm tra quyền sửa
-        const currentUser = await db.users.findUnique({
+        const currentUser = await db.User.findUnique({
             where: { id: BigInt(session.user.id) },
             include: {
-                employees: true,
+                Employee: true,
             }
         });
 
@@ -167,7 +167,7 @@ export async function PUT(
         }
 
         // Cập nhật đơn xin nghỉ
-        const updatedRequest = await db.leaveRequest.update({
+        const updatedRequest = await db.LeaveRequest.update({
             where: { id: leaveRequestId },
             data: {
                 ...(leave_type && { leave_type }),
@@ -177,9 +177,9 @@ export async function PUT(
                 updated_at: new Date()
             },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: {
+                        User: {
                             select: {
                                 id: true,
                                 full_name: true,
@@ -192,7 +192,7 @@ export async function PUT(
         });
 
         // Tạo lịch sử trong employee_log
-        await db.employeeLog.create({
+        await db.EmployeeLog.create({
             data: {
                 employee_id: currentRequest.employee_id,
                 action: 'UPDATE',
@@ -209,11 +209,11 @@ export async function PUT(
             ...updatedRequest,
             id: updatedRequest.id.toString(),
             employee_id: updatedRequest.employee_id.toString(),
-            employees: {
+            Employee: {
                 ...updatedRequest.employees,
                 id: updatedRequest.employees.id.toString(),
                 user_id: updatedRequest.employees.user_id.toString(),
-                user: {
+                User: {
                     ...updatedRequest.employees.user,
                     id: updatedRequest.employees.user.id.toString()
                 }
@@ -242,10 +242,10 @@ export async function DELETE(
         const leaveRequestId = BigInt(params.id);
 
         // Lấy đơn xin nghỉ hiện tại
-        const currentRequest = await db.leaveRequest.findUnique({
+        const currentRequest = await db.LeaveRequest.findUnique({
             where: { id: leaveRequestId },
             include: {
-                employees: true
+                Employee: true
             }
         });
 
@@ -254,10 +254,10 @@ export async function DELETE(
         }
 
         // Kiểm tra quyền xóa
-        const currentUser = await db.users.findUnique({
+        const currentUser = await db.User.findUnique({
             where: { id: BigInt(session.user.id) },
             include: {
-                employees: true,
+                Employee: true,
             }
         });
 
@@ -279,7 +279,7 @@ export async function DELETE(
         }
 
         // Xóa đơn xin nghỉ (cascade sẽ xóa history)
-        await db.leaveRequest.delete({
+        await db.LeaveRequest.delete({
             where: { id: leaveRequestId }
         });
 

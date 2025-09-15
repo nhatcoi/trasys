@@ -5,7 +5,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     try {
         const trainingId = params.id;
 
-        const training = await db.training.findUnique({
+        const training = await db.Training.findUnique({
             where: { id: BigInt(trainingId) },
         });
 
@@ -22,7 +22,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             updated_at: training.updated_at.toISOString(),
         };
 
-        return NextResponse.json({ success: true, data: serializedTraining });
+        // Use JSON.stringify with replacer to handle BigInt
+        const jsonString = JSON.stringify({ success: true, data: serializedTraining }, (key, value) =>
+            typeof value === 'bigint' ? value.toString() : value
+        );
+        return NextResponse.json(JSON.parse(jsonString));
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json(
@@ -41,7 +45,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         const body = await request.json();
         const { title, provider, start_date, end_date, training_type, description } = body;
 
-        const updatedTraining = await db.training.update({
+        const updatedTraining = await db.Training.update({
             where: { id: BigInt(trainingId) },
             data: {
                 title,
@@ -62,7 +66,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             updated_at: updatedTraining.updated_at.toISOString(),
         };
 
-        return NextResponse.json({ success: true, data: serializedTraining });
+        // Use JSON.stringify with replacer to handle BigInt
+        const jsonString = JSON.stringify({ success: true, data: serializedTraining }, (key, value) =>
+            typeof value === 'bigint' ? value.toString() : value
+        );
+        return NextResponse.json(JSON.parse(jsonString));
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json(
@@ -79,7 +87,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     try {
         const trainingId = params.id;
 
-        await db.training.delete({
+        await db.Training.delete({
             where: { id: BigInt(trainingId) },
         });
 

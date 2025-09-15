@@ -3,11 +3,11 @@ import { db } from '@/lib/db';
 
 export async function GET() {
     try {
-        const rolePermissions = await db.role_permission.findMany({
+        const rolePermissions = await db.RolePermission.findMany({
             include: {
-                roles: true,
-                permissions: true,
-                users: true
+                Role: true,
+                Permission: true,
+                User: true
             },
             orderBy: {
                 granted_at: 'desc'
@@ -21,17 +21,17 @@ export async function GET() {
             role_id: rolePermission.role_id.toString(),
             permission_id: rolePermission.permission_id.toString(),
             granted_by: rolePermission.granted_by?.toString() || null,
-            roles: rolePermission.roles ? {
-                ...rolePermission.roles,
-                id: rolePermission.roles.id.toString()
+            Role: rolePermission.Role ? {
+                ...rolePermission.Role,
+                id: rolePermission.Role.id.toString()
             } : null,
-            permissions: rolePermission.permissions ? {
-                ...rolePermission.permissions,
-                id: rolePermission.permissions.id.toString()
+            Permission: rolePermission.Permission ? {
+                ...rolePermission.Permission,
+                id: rolePermission.Permission.id.toString()
             } : null,
-            users: rolePermission.users ? {
-                ...rolePermission.users,
-                id: rolePermission.users.id.toString()
+            User: rolePermission.User ? {
+                ...rolePermission.User,
+                id: rolePermission.User.id.toString()
             } : null
         }));
 
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const rolePermission = await db.role_permission.create({
+        const rolePermission = await db.RolePermission.create({
             data: {
                 role_id: BigInt(role_id),
                 permission_id: BigInt(permission_id),

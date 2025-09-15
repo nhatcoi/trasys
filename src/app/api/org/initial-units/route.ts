@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     /*
     if (body.attachments && Array.isArray(body.attachments)) {
       for (const attachment of body.attachments) {
-        const orgAttachment = await db.orgUnitAttachments.create({
+        const orgAttachment = await db.OrgUnitAttachments.create({
           data: {
             org_unit_id: BigInt(result.orgUnit.id),
             attachment_type: 'document', // Default type
@@ -183,7 +183,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'draft';
     
     // Get initial units with related data
-    const units = await db.orgUnit.findMany({
+    const units = await db.OrgUnit.findMany({
       where: { status },
       include: {
         org_structure_request: true,

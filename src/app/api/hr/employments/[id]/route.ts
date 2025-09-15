@@ -7,14 +7,14 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const employment = await db.employment.findUnique({
+        const employment = await db.Employment.findUnique({
             where: {
                 id: BigInt(params.id)
             },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: true
+                        User: true
                     }
                 }
             }
@@ -33,11 +33,11 @@ export async function GET(
                 ...employment,
                 id: employment.id.toString(),
                 employee_id: employment.employee_id.toString(),
-                employees: employment.employees ? {
+                Employee: employment.employees ? {
                     ...employment.employees,
                     id: employment.employees.id.toString(),
                     user_id: employment.employees.user_id?.toString() || null,
-                    user: employment.employees.user ? {
+                    User: employment.employees.user ? {
                         ...employment.employees.user,
                         id: employment.employees.user.id.toString()
                     } : null
@@ -72,7 +72,7 @@ export async function PUT(
             );
         }
 
-        const employment = await db.employment.update({
+        const employment = await db.Employment.update({
             where: {
                 id: BigInt(params.id)
             },
@@ -85,9 +85,9 @@ export async function PUT(
                 salary_band
             },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: true
+                        User: true
                     }
                 }
             }
@@ -99,11 +99,11 @@ export async function PUT(
                 ...employment,
                 id: employment.id.toString(),
                 employee_id: employment.employee_id.toString(),
-                employees: employment.employees ? {
+                Employee: employment.employees ? {
                     ...employment.employees,
                     id: employment.employees.id.toString(),
                     user_id: employment.employees.user_id?.toString() || null,
-                    user: employment.employees.user ? {
+                    User: employment.employees.user ? {
                         ...employment.employees.user,
                         id: employment.employees.user.id.toString()
                     } : null
@@ -128,7 +128,7 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        await db.employment.delete({
+        await db.Employment.delete({
             where: {
                 id: BigInt(params.id)
             }

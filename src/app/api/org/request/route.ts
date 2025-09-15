@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch requests with related data
-    const requests = await db.orgStructureRequest.findMany({
+    const requests = await db.OrgStructureRequest.findMany({
       where: whereClause,
       include: {
         org_units: {
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Get total count for pagination
-    const totalCount = await db.orgStructureRequest.count({
+    const totalCount = await db.OrgStructureRequest.count({
       where: whereClause,
     });
 

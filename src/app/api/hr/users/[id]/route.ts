@@ -11,7 +11,7 @@ export async function PUT(
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session?.user?.id) {
+        if (!session?.User?.id) {
             return NextResponse.json(
                 { success: false, error: 'Unauthorized' },
                 { status: 401 }
@@ -22,7 +22,7 @@ export async function PUT(
         const { full_name, email, phone, address, dob, gender, new_password } = body;
 
         // Check if user exists
-        const existingUser = await db.users.findUnique({
+        const existingUser = await db.User.findUnique({
             where: { id: BigInt(params.id) }
         });
 
@@ -49,7 +49,7 @@ export async function PUT(
         }
 
         // Update user
-        const updatedUser = await db.users.update({
+        const updatedUser = await db.User.update({
             where: { id: BigInt(params.id) },
             data: updateData,
             select: {
@@ -73,7 +73,7 @@ export async function PUT(
         });
 
     } catch (error) {
-        console.error('Error updating user:', error);
+        console.error('Error updating User:', error);
         return NextResponse.json(
             { success: false, error: 'Internal server error' },
             { status: 500 }

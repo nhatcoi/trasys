@@ -330,7 +330,7 @@ export default function EmploymentsPage() {
                                 const employee = employees.find(emp => emp.id === employeeId);
                                 return (
                                     <Typography variant="subtitle1" color="text.secondary">
-                                        Lịch sử hợp đồng của: {employee?.user?.full_name || 'Nhân viên'}
+                                        Lịch sử hợp đồng của: {employee?.User?.full_name || 'Nhân viên'}
                                     </Typography>
                                 );
                             }
@@ -374,10 +374,10 @@ export default function EmploymentsPage() {
                                     <TableCell>
                                         <Box>
                                             <Typography variant="body2" fontWeight="medium">
-                                                {employment.employees?.user?.full_name || 'N/A'}
+                                                {employment.Employee?.User?.full_name || 'N/A'}
                                             </Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                {employment.employees?.employee_no || 'N/A'}
+                                                {employment.Employee?.employee_no || 'N/A'}
                                             </Typography>
                                         </Box>
                                     </TableCell>
@@ -469,7 +469,7 @@ export default function EmploymentsPage() {
                                 >
                                     {employees.map((employee) => (
                                         <MenuItem key={employee.id} value={employee.id}>
-                                            {employee.user?.full_name} ({employee.employee_no})
+                                            {employee.User?.full_name} ({employee.employee_no})
                                         </MenuItem>
                                     ))}
                                 </Select>
@@ -575,10 +575,10 @@ export default function EmploymentsPage() {
                                     Nhân viên
                                 </Typography>
                                 <Typography variant="body1" fontWeight="medium">
-                                    {viewingEmployment.employees?.user?.full_name || 'N/A'}
+                                    {viewingEmployment.Employee?.User?.full_name || 'N/A'}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                    {viewingEmployment.employees?.employee_no || 'N/A'}
+                                    {viewingEmployment.Employee?.employee_no || 'N/A'}
                                 </Typography>
                             </Grid>
 

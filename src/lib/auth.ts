@@ -23,7 +23,7 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 // Tìm user bằng email hoặc username
-                const user = await db.users.findFirst({
+                const user = await db.User.findFirst({
                     where: {
                         OR: [
                             { email: credentials.identifier },
@@ -47,7 +47,7 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 // Lấy permissions của user thông qua roles
-                const userRoles = await db.user_role.findMany({
+                const userRoles = await db.User_role.findMany({
                     where: { user_id: user.id },
                     include: {
                         roles: {

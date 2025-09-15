@@ -5,34 +5,34 @@ import { db } from '@/lib/db';
 export async function GET(request: NextRequest) {
   try {
     // Get total units count
-    const totalUnits = await db.orgUnit.count();
+    const totalUnits = await db.OrgUnit.count();
 
     // Get active/inactive units count
-    const activeUnits = await db.orgUnit.count({
+    const activeUnits = await db.OrgUnit.count({
       where: { status: 'active' }
     });
     
-    const inactiveUnits = await db.orgUnit.count({
+    const inactiveUnits = await db.OrgUnit.count({
       where: { status: 'inactive' }
     });
 
     // Get units by type
     const [departments, divisions, teams, branches] = await Promise.all([
-      db.orgUnit.count({ where: { type: 'department' } }),
-      db.orgUnit.count({ where: { type: 'division' } }),
-      db.orgUnit.count({ where: { type: 'team' } }),
-      db.orgUnit.count({ where: { type: 'branch' } })
+      db.OrgUnit.count({ where: { type: 'department' } }),
+      db.OrgUnit.count({ where: { type: 'division' } }),
+      db.OrgUnit.count({ where: { type: 'team' } }),
+      db.OrgUnit.count({ where: { type: 'branch' } })
     ]);
 
     // Get total employees count from org_assignment
-    const totalEmployees = await db.orgAssignment.count({
+    const totalEmployees = await db.OrgAssignment.count({
       where: {
         end_date: null // Only active assignments
       }
     });
 
     // Get top 5 units by employee count
-    const topUnits = await db.orgUnit.findMany({
+    const topUnits = await db.OrgUnit.findMany({
       select: {
         id: true,
         name: true,

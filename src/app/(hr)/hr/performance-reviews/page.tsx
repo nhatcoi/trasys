@@ -303,7 +303,7 @@ export default function PerformanceReviewsPage() {
                                 const employee = employees.find(emp => emp.id === employeeId);
                                 return (
                                     <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-                                        Lịch sử đánh giá của: <strong>{employee?.user?.full_name || 'N/A'}</strong>
+                                        Lịch sử đánh giá của: <strong>{employee?.User?.full_name || 'N/A'}</strong>
                                     </Typography>
                                 );
                             }
@@ -338,14 +338,14 @@ export default function PerformanceReviewsPage() {
                                 <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                         <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-                                            {review.employees?.user?.full_name?.charAt(0) || 'N/A'}
+                                            {review.Employee?.User?.full_name?.charAt(0) || 'N/A'}
                                         </Avatar>
                                         <Box>
                                             <Typography variant="body2" fontWeight="medium">
-                                                {review.employees?.user?.full_name || 'N/A'}
+                                                {review.Employee?.User?.full_name || 'N/A'}
                                             </Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                {review.employees?.employee_no || 'N/A'}
+                                                {review.Employee?.employee_no || 'N/A'}
                                             </Typography>
                                         </Box>
                                     </Box>
@@ -405,7 +405,7 @@ export default function PerformanceReviewsPage() {
                                     <IconButton
                                         size="small"
                                         color="error"
-                                        onClick={() => handleDelete(review.id, review.employees?.user?.full_name || 'N/A')}
+                                        onClick={() => handleDelete(review.id, review.Employee?.User?.full_name || 'N/A')}
                                         disabled={actionLoading === `delete-${review.id}`}
                                         title="Xóa đánh giá"
                                     >
@@ -458,7 +458,7 @@ export default function PerformanceReviewsPage() {
                                 >
                                     {employees.map((employee) => (
                                         <MenuItem key={employee.id} value={employee.id}>
-                                            {employee.user?.full_name} ({employee.employee_no})
+                                            {employee.User?.full_name} ({employee.employee_no})
                                         </MenuItem>
                                     ))}
                                 </Select>

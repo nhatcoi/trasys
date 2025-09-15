@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get campuses from database
-    const campuses = await db.campus.findMany({
+    const campuses = await db.Campus.findMany({
       where,
       select: {
         id: true,
