@@ -18,7 +18,7 @@ export async function DELETE(
 
         // Get old data for logging
         const oldRolePermission = await db.Role_permission.findUnique({
-            where: { id: rolePermissionId as any },
+            where: { id: BigInt(rolePermissionId) },
             include: {
                 roles: true,
                 permissions: true
@@ -26,7 +26,7 @@ export async function DELETE(
         });
 
         await db.Role_permission.delete({
-            where: { id: rolePermissionId as any },
+            where: { id: BigInt(rolePermissionId) },
         });
 
         // Log the deletion activity

@@ -11,7 +11,7 @@ export async function GET(
         const reviewId = resolvedParams.id;
 
         const performanceReview = await db.PerformanceReview.findUnique({
-            where: { id: reviewId as any },
+            where: { id: BigInt(reviewId) },
             include: {
                 Employee: {
                     include: {
@@ -71,11 +71,11 @@ export async function PUT(
 
         // Get old data for logging
         const oldReview = await db.PerformanceReview.findUnique({
-            where: { id: reviewId as any },
+            where: { id: BigInt(reviewId) },
         });
 
         const performanceReview = await db.PerformanceReview.update({
-            where: { id: reviewId as any },
+            where: { id: BigInt(reviewId) },
             data: {
                 review_period,
                 score: score ? parseFloat(score) : null,
@@ -147,11 +147,11 @@ export async function DELETE(
 
         // Get old data for logging
         const oldReview = await db.PerformanceReview.findUnique({
-            where: { id: reviewId as any },
+            where: { id: BigInt(reviewId) },
         });
 
         await db.PerformanceReview.delete({
-            where: { id: reviewId as any }
+            where: { id: BigInt(reviewId) }
         });
 
         // Log the deletion activity

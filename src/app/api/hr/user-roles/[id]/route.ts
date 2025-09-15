@@ -18,7 +18,7 @@ export async function DELETE(
 
         // Get old data for logging
         const oldUserRole = await db.User_role.findUnique({
-            where: { id: userRoleId as any },
+            where: { id: BigInt(userRoleId) },
             include: {
                 users: true,
                 roles: true
@@ -26,7 +26,7 @@ export async function DELETE(
         });
 
         await db.User_role.delete({
-            where: { id: userRoleId as any },
+            where: { id: BigInt(userRoleId) },
         });
 
         // Log the deletion activity

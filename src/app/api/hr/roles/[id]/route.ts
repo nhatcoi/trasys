@@ -13,7 +13,7 @@ export async function GET(
         const roleId = BigInt(id);
 
         const role = await db.Role.findUnique({
-            where: { id: roleId as any },
+            where: { id: BigInt(roleId) },
             include: {
                 role_permission: {
                     include: {
@@ -94,11 +94,11 @@ export async function PUT(
 
         // Get old data for logging
         const oldRole = await db.Role.findUnique({
-            where: { id: roleId as any },
+            where: { id: BigInt(roleId) },
         });
 
         const role = await db.Role.update({
-            where: { id: roleId as any },
+            where: { id: BigInt(roleId) },
             data: {
                 code,
                 name
@@ -158,11 +158,11 @@ export async function DELETE(
 
         // Get old data for logging
         const oldRole = await db.Role.findUnique({
-            where: { id: roleId as any },
+            where: { id: BigInt(roleId) },
         });
 
         await db.Role.delete({
-            where: { id: roleId as any },
+            where: { id: BigInt(roleId) },
         });
 
         // Log the deletion activity

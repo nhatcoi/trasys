@@ -185,7 +185,7 @@ export function usePaginationWithFilters<T extends Record<string, string>>(
   
   // Initialize filters with default 'all' values
   const initialFilters = filterKeys.reduce((acc, key) => {
-    acc[key as string] = (initialFilterValues as any)[key] || 'all';
+    acc[key as string] = (initialFilterValues as { [key: string]: unknown })[key] || 'all';
     return acc;
   }, {} as Record<string, string>);
 

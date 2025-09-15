@@ -107,7 +107,7 @@ export default function ProfilePage() {
                 return;
             }
 
-            const response = await fetch(`/api/hr/users/${(session.user as any).id}`, {
+            const response = await fetch(`/api/hr/users/${(session.user as { id?: string }).id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

@@ -196,8 +196,8 @@ export function PaginationTable<T = unknown>({
                         width={column.width}
                       >
                         {column.render 
-                          ? column.render((row as any)[column.key], row, index)
-                          : (row as any)[column.key]
+                          ? column.render((row as { [key: string]: unknown })[column.key], row, index)
+                          : (row as { [key: string]: unknown })[column.key]
                         }
                       </TableCell>
                     ))}
