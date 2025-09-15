@@ -17,14 +17,14 @@ interface CreateHistoryInput {
   old_name?: string;
   new_name?: string;
   change_type: string;
-  details?: any;
+  details?: { [key: string]: unknown };
 }
 
 export class HistoryRepository {
   // Get history records with filtering and pagination
   async findAll(options: HistoryQuery) {
     // Build where clause
-    const where: any = {};
+    const where: { [key: string]: unknown } = {};
     
     if (options.org_unit_id) {
       where.org_unit_id = parseInt(options.org_unit_id, 10);
@@ -45,14 +45,14 @@ export class HistoryRepository {
     }
 
     // Build orderBy clause
-    const orderBy: any = {};
+    const orderBy: { [key: string]: unknown } = {};
     orderBy[options.sort] = options.order;
 
     // Calculate pagination
     const skip = (options.page - 1) * options.size;
 
     // Build query options
-    const queryOptions: any = {
+    const queryOptions: { [key: string]: unknown } = {
       where,
       orderBy,
       skip,
@@ -82,7 +82,7 @@ export class HistoryRepository {
 
   // Count total records for pagination
   async count(options: HistoryQuery) {
-    const where: any = {};
+    const where: { [key: string]: unknown } = {};
     
     if (options.org_unit_id) {
       where.org_unit_id = parseInt(options.org_unit_id, 10);

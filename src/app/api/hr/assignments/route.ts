@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
 // Helper function to serialize BigInt to string
-const serializeAssignment = (assignment: any) => {
+const serializeAssignment = (assignment: { id: bigint; [key: string]: unknown }) => {
     if (!assignment) return null;
     return {
         ...assignment,
@@ -28,7 +28,7 @@ export async function GET() {
         });
 
         // Convert BigInt to string for JSON serialization
-        const serializedAssignments = assignments.map((assignment: any) => ({
+        const serializedAssignments = assignments.map((assignment: { id: bigint; [key: string]: unknown }) => ({
             ...serializeAssignment(assignment),
             Employee: assignment.Employee ? {
                 ...assignment.Employee,

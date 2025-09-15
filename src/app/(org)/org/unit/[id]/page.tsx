@@ -119,7 +119,7 @@ export default function UnitDetailPage() {
   }, [unitId]);
 
   // Update unit function
-  const updateUnit = async (data: any) => {
+  const updateUnit = async (data: { name?: string; description?: string; [key: string]: unknown }) => {
     try {
       const result = await orgApi.units.update(unitId, data);
       

@@ -93,7 +93,7 @@ export default function OrgLayout({
   };
 
   // Filter menu items based on permissions
-  const filterMenuItems = (items: Array<{ permissions?: string[]; hasSubmenu?: boolean; submenu?: any[] }>): Array<{ permissions?: string[]; hasSubmenu?: boolean; submenu?: any[] }> => {
+  const filterMenuItems = (items: Array<{ permissions?: string[]; hasSubmenu?: boolean; submenu?: Array<{ permissions?: string[]; hasSubmenu?: boolean; [key: string]: unknown }> }>): Array<{ permissions?: string[]; hasSubmenu?: boolean; submenu?: Array<{ permissions?: string[]; hasSubmenu?: boolean; [key: string]: unknown }> }> => {
     return items.filter(item => {
       // If no permissions specified, show to all authenticated users
       if (!item.permissions) return true;
@@ -506,7 +506,7 @@ export default function OrgLayout({
                 color="inherit"
               >
                 <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-                  {(session.user as any).full_name?.charAt(0) || session.user.username?.charAt(0) || 'U'}
+                  {(session.user as { full_name?: string }).full_name?.charAt(0) || session.user.username?.charAt(0) || 'U'}
                 </Avatar>
               </IconButton>
               
@@ -528,7 +528,7 @@ export default function OrgLayout({
                 <MenuItem disabled>
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                      {(session.user as any).full_name || session.user.username}
+                      {(session.user as { full_name?: string }).full_name || session.user.username}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {session.user.email}

@@ -148,7 +148,7 @@ export async function POST(
 }
 
 // Helper function để kiểm tra quyền duyệt
-async function checkApprovalPermission(supervisor: any, Employee: any): Promise<boolean> {
+async function checkApprovalPermission(supervisor: { id: string; [key: string]: unknown }, Employee: { id: string; [key: string]: unknown }): Promise<boolean> {
     // Logic kiểm tra quyền duyệt
     // Có thể dựa vào:
     // 1. Org unit hierarchy (supervisor ở cấp cao hơn)

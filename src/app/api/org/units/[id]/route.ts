@@ -4,7 +4,7 @@ import { OrgUnitRepository } from '@/modules/org/org.repo';
 const orgUnitRepo = new OrgUnitRepository();
 
 // Simple validation helper
-function validateRequired(data: any, fields: string[]): string[] {
+function validateRequired(data: { [key: string]: unknown }, fields: string[]): string[] {
   const errors: string[] = [];
   for (const field of fields) {
     if (!data[field] || (typeof data[field] === 'string' && data[field].trim() === '')) {

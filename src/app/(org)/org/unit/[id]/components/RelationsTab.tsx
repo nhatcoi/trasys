@@ -94,7 +94,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
   });
 
   // State for relations data
-  const [relationsData, setRelationsData] = useState<any>(null);
+  const [relationsData, setRelationsData] = useState<{ [key: string]: unknown } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [relationsError, setRelationsError] = useState<string | null>(null);
 
@@ -125,7 +125,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
   const childRelations = relationsData?.childRelations || [];
 
   // Update relation function
-  const updateRelation = async (relationId: string, data: any) => {
+  const updateRelation = async (relationId: string, data: { name?: string; type?: string; [key: string]: unknown }) => {
     try {
       const result = await orgApi.relations.update(relationId, data);
       

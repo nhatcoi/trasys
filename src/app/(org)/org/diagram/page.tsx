@@ -68,7 +68,7 @@ export default function OrgDiagramPage() {
           ...unit,
           id: unit.id.toString(),
           parent_id: unit.parent_id?.toString() || null,
-          children: (unit as any).children || [],
+          children: (unit as { children?: unknown[] }).children || [],
         }));
         
         setTreeData(convertedTree);

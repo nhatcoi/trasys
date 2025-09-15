@@ -75,7 +75,7 @@ interface OrgUnitHistory {
   old_name: string | null;
   new_name: string | null;
   change_type: string;
-  details: any;
+  details: { [key: string]: unknown };
   changed_at: string;
   changed_by: string | null;
 }
@@ -329,7 +329,7 @@ export default function CreateAuditPage() {
     return typeOption?.label || type;
   };
 
-  const formatDetails = (details: any) => {
+  const formatDetails = (details: { [key: string]: unknown }) => {
     if (!details) return 'No details available';
     if (typeof details === 'string') return details;
     if (typeof details === 'object') {
@@ -607,7 +607,7 @@ export default function CreateAuditPage() {
                             <Chip 
                               label={status.label} 
                               size="small" 
-                              color={status.color as any}
+                              color={status.color as string}
                             />
                           </Box>
                         </MenuItem>

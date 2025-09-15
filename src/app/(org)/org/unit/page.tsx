@@ -68,7 +68,7 @@ export default function OrgUnitManagementPage() {
   const router = useRouter();
 
   // Simple state management
-  const [orgUnits, setOrgUnits] = React.useState<any[]>([]);
+  const [orgUnits, setOrgUnits] = React.useState<Array<{ id: string; name: string; [key: string]: unknown }>>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [totalCount, setTotalCount] = React.useState(0);

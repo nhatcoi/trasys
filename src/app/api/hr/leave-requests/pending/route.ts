@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
         const isAdmin = session.user.permissions?.includes('leave_request.update') ||
             session.user.permissions?.includes('employee.update');
 
-        let whereClause: any = {
+        let whereClause: { [key: string]: unknown } = {
             status: 'PENDING'
         };
 

@@ -4,7 +4,7 @@ import { OrgUnitRepository } from '@/modules/org/org.repo';
 const orgUnitRepo = new OrgUnitRepository();
 
 // Simple validation helper
-function validateRequired(obj: any, fields: string[]) {
+function validateRequired(obj: { [key: string]: unknown }, fields: string[]) {
   const missing = fields.filter(field => !obj[field]);
   if (missing.length > 0) {
     throw new Error(`Missing required fields: ${missing.join(', ')}`);

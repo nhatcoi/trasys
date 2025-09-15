@@ -37,7 +37,7 @@ export async function GET(
         const serializedPermission = {
             ...permission,
             id: permission.id.toString(),
-            role_permission: permission.role_permission?.map((rp: any) => ({
+            role_permission: permission.role_permission?.map((rp: { id: bigint; [key: string]: unknown }) => ({
                 ...rp,
                 id: rp.id.toString(),
                 role_id: rp.role_id.toString(),

@@ -57,13 +57,13 @@ interface OrgStructureRequest {
   requester_id: string | null;
   request_type: string;
   target_org_unit_id: string | null;
-  payload: any;
+  payload: { [key: string]: unknown };
   status: string;
   workflow_step: number;
   created_at: string | null;
   updated_at: string | null;
   owner_org_id?: string | null;
-  attachments?: any;
+  attachments?: Array<{ id: string; name: string; url: string; [key: string]: unknown }>;
 }
 
 interface OrgUnit {

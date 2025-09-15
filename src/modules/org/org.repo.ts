@@ -66,7 +66,7 @@ export class OrgUnitRepository {
   // Search and filter with pagination, sorting, and relations
   async findAll(options: OrgUnitQuery) {
     // Build where clause
-    const where: any = {};
+    const where: { [key: string]: unknown } = {};
     
     if (options.search) {
       where.OR = [
@@ -95,20 +95,20 @@ export class OrgUnitRepository {
     }
 
     // Build include clause
-    const include: any = {};
+    const include: { [key: string]: unknown } = {};
     if (options.include_children) include.children = true;
     if (options.include_employees) include.OrgAssignment = true;
     if (options.include_parent) include.parent = true;
 
     // Build orderBy clause
-    const orderBy: any = {};
+    const orderBy: { [key: string]: unknown } = {};
     orderBy[options.sort] = options.order;
 
     // Calculate pagination
     const skip = (options.page - 1) * options.size;
 
     // Build query options
-    const queryOptions: any = {
+    const queryOptions: { [key: string]: unknown } = {
       where,
       orderBy,
       skip,
@@ -131,7 +131,7 @@ export class OrgUnitRepository {
       parent_id: item.parent_id?.toString(),
       campus_id: item.campus_id?.toString(),
       // Serialize nested BigInt fields in OrgAssignment
-      org_assignment: item.OrgAssignment?.map((assignment: any) => ({
+      org_assignment: item.OrgAssignment?.map((assignment: { id: bigint; [key: string]: unknown }) => ({
         ...assignment,
         id: assignment.id?.toString(),
         employee_id: assignment.employee_id?.toString(),
@@ -151,7 +151,7 @@ export class OrgUnitRepository {
 
   // Count total records for pagination
   async count(options: OrgUnitQuery) {
-    const where: any = {};
+    const where: { [key: string]: unknown } = {};
     
     if (options.search) {
       where.OR = [
@@ -226,7 +226,7 @@ export class OrgUnitRepository {
   }
 
   // Update organization unit
-  async update(id: number, data: any) {
+  async update(id: number, data: { [key: string]: unknown }) {
     const result = await db.OrgUnit.update({
       where: { id },
       data: {

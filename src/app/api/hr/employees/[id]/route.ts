@@ -51,7 +51,7 @@ export async function GET(
         ...employee.User,
         id: employee.User.id.toString()
       } : null,
-      OrgAssignment: employee.OrgAssignment?.map((assignment: any) => ({
+      OrgAssignment: employee.OrgAssignment?.map((assignment: { id: bigint; [key: string]: unknown }) => ({
         ...assignment,
         id: assignment.id.toString(),
         employee_id: assignment.Employee_id.toString(),
@@ -67,7 +67,7 @@ export async function GET(
           id: assignment.job_positions.id.toString()
         } : null
       })) || [],
-      employments: employee.employments?.map((employment: any) => ({
+      employments: employee.employments?.map((employment: { id: bigint; [key: string]: unknown }) => ({
         ...employment,
         id: employment.id.toString(),
         employee_id: employment.employee_id.toString()
@@ -124,7 +124,7 @@ export async function PUT(
       where: { id: employeeId as any },
     });
 
-    const updateData: any = {
+    const updateData: { [key: string]: unknown } = {
       employee_no,
       employment_type,
       status,

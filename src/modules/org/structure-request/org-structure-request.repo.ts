@@ -18,8 +18,8 @@ interface CreateOrgStructureRequestInput {
   requester_id?: string;
   target_org_unit_id?: string;
   owner_org_id?: string;
-  attachments?: any;
-  payload: any;
+  attachments?: Array<{ id: string; name: string; url: string; [key: string]: unknown }>;
+  payload: { [key: string]: unknown };
   status?: string;
   workflow_step?: number;
 }
@@ -29,8 +29,8 @@ interface UpdateOrgStructureRequestInput {
   requester_id?: string;
   target_org_unit_id?: string;
   owner_org_id?: string;
-  attachments?: any;
-  payload?: any;
+  attachments?: Array<{ id: string; name: string; url: string; [key: string]: unknown }>;
+  payload?: { [key: string]: unknown };
   status?: string;
   workflow_step?: number;
 }
@@ -41,8 +41,8 @@ interface OrgStructureRequest {
   request_type: string;
   target_org_unit_id: string | null;
   owner_org_id: string | null;
-  attachments: any;
-  payload: any;
+  attachments: Array<{ id: string; name: string; url: string; [key: string]: unknown }>;
+  payload: { [key: string]: unknown };
   status: string;
   workflow_step: number;
   created_at: string | null;
@@ -56,7 +56,7 @@ export class OrgStructureRequestRepository {
     const skip = (page - 1) * size;
 
     // Build where clause
-    const where: any = {};
+    const where: { [key: string]: unknown } = {};
     
     if (search) {
       where.OR = [
