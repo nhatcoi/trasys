@@ -210,18 +210,18 @@ export default function EmployeesPage() {
                         </TableHead>
                         <TableBody>
                             {employees.map((employee) => {
-                                const primaryAssignment = employee.assignments?.find(a => a.is_primary);
+                                const primaryAssignment = employee.OrgAssignment?.find(a => a.is_primary);
                                 return (
                                     <TableRow key={employee.id} hover>
                                         <TableCell>{employee.employee_no || 'N/A'}</TableCell>
                                         <TableCell>
                                             <Typography variant="body2" fontWeight="medium">
-                                                {employee.user?.full_name || 'N/A'}
+                                                {employee.User?.full_name || 'N/A'}
                                             </Typography>
                                         </TableCell>
-                                        <TableCell>{employee.user?.username || 'N/A'}</TableCell>
-                                        <TableCell>{employee.user?.email || 'N/A'}</TableCell>
-                                        <TableCell>{employee.user?.phone || 'N/A'}</TableCell>
+                                        <TableCell>{employee.User?.username || 'N/A'}</TableCell>
+                                        <TableCell>{employee.User?.email || 'N/A'}</TableCell>
+                                        <TableCell>{employee.User?.phone || 'N/A'}</TableCell>
                                         <TableCell>
                                             <Chip
                                                 label={employee.employment_type || 'N/A'}
@@ -232,22 +232,22 @@ export default function EmployeesPage() {
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="body2" color="text.secondary">
-                                                {primaryAssignment?.org_unit?.name || 'N/A'}
+                                                {primaryAssignment?.OrgUnit?.name || 'N/A'}
                                             </Typography>
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="body2" color="text.secondary">
-                                                {primaryAssignment?.job_positions?.title || 'N/A'}
+                                                {primaryAssignment?.JobPosition?.title || 'N/A'}
                                             </Typography>
                                         </TableCell>
                                         <TableCell>
-                                            {employee.employments && employee.employments.length > 0 ? (
+                                            {employee.employments && employee.Employment.length > 0 ? (
                                                 <Box>
                                                     <Typography variant="body2" fontWeight="medium">
-                                                        {employee.employments[0].contract_no}
+                                                        {employee.Employment[0].contract_no}
                                                     </Typography>
                                                     <Typography variant="caption" color="text.secondary">
-                                                        {employee.employments[0].contract_type} - {employee.employments[0].salary_band}
+                                                        {employee.Employment[0].contract_type} - {employee.Employment[0].salary_band}
                                                     </Typography>
                                                 </Box>
                                             ) : (

@@ -19,14 +19,14 @@ export async function GET(
         const token = searchParams.get('token');
 
         // Get evaluation record
-        const evaluation = await db.performanceReview.findUnique({
+        const evaluation = await db.PerformanceReview.findUnique({
             where: {
                 id: BigInt(evaluationId)
             },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: true
+                        User: true
                     }
                 }
             }
@@ -77,14 +77,14 @@ export async function PUT(
         const { score, comments, evaluatorName, evaluatorEmail } = body;
 
         // Get evaluation record
-        const evaluation = await db.performanceReview.findUnique({
+        const evaluation = await db.PerformanceReview.findUnique({
             where: {
                 id: BigInt(evaluationId)
             },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: true
+                        User: true
                     }
                 }
             }
@@ -105,7 +105,7 @@ export async function PUT(
         }
 
         // Update evaluation
-        const updatedEvaluation = await db.performanceReview.update({
+        const updatedEvaluation = await db.PerformanceReview.update({
             where: {
                 id: BigInt(evaluationId)
             },
@@ -115,9 +115,9 @@ export async function PUT(
                 updated_at: new Date()
             },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: true
+                        User: true
                     }
                 }
             }

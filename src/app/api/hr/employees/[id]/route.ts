@@ -16,11 +16,11 @@ export async function GET(
     const employee = await db.employee.findUnique({
       where: { id: employeeId as any },
       include: {
-        user: true,
-        assignments: {
+        User: true,
+        OrgAssignment: {
           include: {
-            org_unit: true,
-            job_positions: true
+            OrgUnit: true,
+            JobPosition: true
           }
         },
         employments: {
@@ -45,23 +45,23 @@ export async function GET(
     const serializedEmployee = {
       ...employee,
       id: employee.id.toString(),
-      user_id: employee.user_id?.toString() || null,
-      user: employee.user ? {
-        ...employee.user,
-        id: employee.user.id.toString()
+      user_id: employee.User_id?.toString() || null,
+      User: employee.User ? {
+        ...employee.User,
+        id: employee.User.id.toString()
       } : null,
-      assignments: employee.assignments?.map((assignment: any) => ({
+      OrgAssignment: employee.OrgAssignment?.map((assignment: any) => ({
         ...assignment,
         id: assignment.id.toString(),
-        employee_id: assignment.employee_id.toString(),
-        org_unit_id: assignment.org_unit_id.toString(),
+        employee_id: assignment.Employee_id.toString(),
+        org_unit_id: assignment.OrgUnit_id.toString(),
         position_id: assignment.position_id?.toString() || null,
         allocation: assignment.allocation?.toString() || null,
-        org_unit: assignment.org_unit ? {
-          ...assignment.org_unit,
-          id: assignment.org_unit.id.toString()
+        OrgUnit: assignment.OrgUnit ? {
+          ...assignment.OrgUnit,
+          id: assignment.OrgUnit.id.toString()
         } : null,
-        job_positions: assignment.job_positions ? {
+        JobPosition: assignment.job_positions ? {
           ...assignment.job_positions,
           id: assignment.job_positions.id.toString()
         } : null
@@ -132,7 +132,7 @@ export async function PUT(
 
     // Only update user relation if user_id is provided
     if (user_id) {
-      updateData.user = { connect: { id: BigInt(user_id) } };
+      updateData.User = { connect: { id: BigInt(user_id) } };
     }
 
     const employee = await db.employee.update({
@@ -144,7 +144,7 @@ export async function PUT(
     const serializedEmployee = {
       ...employee,
       id: employee.id.toString(),
-      user_id: employee.user_id?.toString() || null,
+      user_id: employee.User_id?.toString() || null,
     };
 
     // Log the update activity

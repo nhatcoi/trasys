@@ -197,7 +197,7 @@ export default function ReportsPage() {
                 </ListItemIcon>
                 <ListItemText
                   primary={campus.campus}
-                  secondary={`${campus.units} đơn vị • ${campus.employees} nhân viên`}
+                  secondary={`${campus.units} đơn vị • ${campus.Employee} nhân viên`}
                 />
                 <Chip
                   label={`${Math.round((campus.units / reportData.overview.totalUnits) * 100)}%`}
@@ -293,7 +293,7 @@ export default function ReportsPage() {
                   secondary={`${unit.code} • ${unit.type}`}
                 />
                 <Chip
-                  label={`${unit.employees} nhân viên`}
+                  label={`${unit.Employee} nhân viên`}
                   color="error"
                   variant="outlined"
                 />

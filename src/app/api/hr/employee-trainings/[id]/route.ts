@@ -5,7 +5,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     try {
         const trainingId = params.id;
 
-        const employeeTraining = await db.employeeTraining.findUnique({
+        const employeeTraining = await db.Employee_training.findUnique({
             where: { id: BigInt(trainingId) },
             include: {
                 employees: {
@@ -67,7 +67,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         const body = await request.json();
         const { employee_id, training_id, status, completion_date, certificate_url } = body;
 
-        const updatedTraining = await db.employeeTraining.update({
+        const updatedTraining = await db.Employee_training.update({
             where: { id: BigInt(trainingId) },
             data: {
                 employee_id: employee_id ? BigInt(employee_id) : undefined,
@@ -105,7 +105,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     try {
         const trainingId = params.id;
 
-        await db.employeeTraining.delete({
+        await db.Employee_training.delete({
             where: { id: BigInt(trainingId) },
         });
 

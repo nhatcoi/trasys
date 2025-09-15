@@ -16,7 +16,7 @@ export async function DELETE(
         const currentUserId = token?.sub ? BigInt(token.sub) : undefined;
 
         // Get old data for logging
-        const oldUserRole = await db.user_role.findUnique({
+        const oldUserRole = await db.User_role.findUnique({
             where: { id: userRoleId as any },
             include: {
                 users: true,
@@ -24,7 +24,7 @@ export async function DELETE(
             }
         });
 
-        await db.user_role.delete({
+        await db.User_role.delete({
             where: { id: userRoleId as any },
         });
 

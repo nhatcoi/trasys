@@ -170,7 +170,7 @@ export default function EvaluationFormPage() {
                                     Tên giảng viên:
                                 </Typography>
                                 <Typography variant="body1" fontWeight="medium">
-                                    {evaluation.employees.user.full_name}
+                                    {evaluation.Employee.User.full_name}
                                 </Typography>
                             </Grid>
                             <Grid item xs={12} sm={6}>

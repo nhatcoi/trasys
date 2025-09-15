@@ -22,7 +22,7 @@ export async function PUT(
     const unitId = BigInt(id);
     
     // Check if unit exists
-    const existingUnit = await db.orgUnit.findUnique({
+    const existingUnit = await db.OrgUnit.findUnique({
       where: { id: unitId },
       select: { id: true, name: true, code: true }
     });
@@ -35,7 +35,7 @@ export async function PUT(
     }
     
     // Update only status field
-    const updatedUnit = await db.orgUnit.update({
+    const updatedUnit = await db.OrgUnit.update({
       where: { id: unitId },
       data: { status: body.status },
       select: {

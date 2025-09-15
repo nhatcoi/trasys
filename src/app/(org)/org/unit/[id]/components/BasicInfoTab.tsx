@@ -604,7 +604,7 @@ export default function BasicInfoTab({ unit, onUpdate }: BasicInfoTabProps) {
                   <PeopleIcon sx={{ fontSize: 24 }} />
                 </Avatar>
                 <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2e7d32', mb: 1 }}>
-                  {unit.employees?.length || 0}
+                  {unit.Employee?.length || 0}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold' }}>
                   Tổng nhân viên

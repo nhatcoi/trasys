@@ -62,13 +62,13 @@ export class OrgUnitRoleRepository {
 
     // Execute query
     const [items, total] = await Promise.all([
-      db.orgUnitRole.findMany({
+      db.OrgUnitRole.findMany({
         where,
         skip,
         take: size,
         orderBy: { [sort]: order },
       }),
-      db.orgUnitRole.count({ where }),
+      db.OrgUnitRole.count({ where }),
     ]);
 
     // Serialize all IDs for consistency
@@ -94,7 +94,7 @@ export class OrgUnitRoleRepository {
 
   // Find by ID
   async findById(id: string): Promise<OrgUnitRole | null> {
-    const item = await db.orgUnitRole.findUnique({
+    const item = await db.OrgUnitRole.findUnique({
       where: { id: BigInt(id) },
     });
 
@@ -110,7 +110,7 @@ export class OrgUnitRoleRepository {
 
   // Create new org unit role
   async create(data: CreateOrgUnitRoleInput): Promise<OrgUnitRole> {
-    const created = await db.orgUnitRole.create({
+    const created = await db.OrgUnitRole.create({
       data: {
         org_unit_id: data.org_unit_id ? BigInt(data.org_unit_id) : null,
         role_code: data.role_code,
@@ -128,7 +128,7 @@ export class OrgUnitRoleRepository {
 
   // Update org unit role
   async update(id: string, data: UpdateOrgUnitRoleInput): Promise<OrgUnitRole> {
-    const updated = await db.orgUnitRole.update({
+    const updated = await db.OrgUnitRole.update({
       where: { id: BigInt(id) },
       data: {
         org_unit_id: data.org_unit_id ? BigInt(data.org_unit_id) : undefined,
@@ -147,7 +147,7 @@ export class OrgUnitRoleRepository {
 
   // Delete org unit role
   async delete(id: string): Promise<void> {
-    await db.orgUnitRole.delete({
+    await db.OrgUnitRole.delete({
       where: { id: BigInt(id) },
     });
   }

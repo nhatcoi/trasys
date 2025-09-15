@@ -152,7 +152,7 @@ export default function AssignmentsPage() {
 
     const getEmployeeName = (employeeId: string) => {
         const employee = employees.find(emp => emp.id === employeeId);
-        return employee?.user?.full_name || `Employee ${employeeId}`;
+        return employee?.User?.full_name || `Employee ${employeeId}`;
     };
 
     const getOrgUnitName = (orgUnitId: string) => {
@@ -216,10 +216,10 @@ export default function AssignmentsPage() {
                             {assignments.map((assignment) => (
                                 <TableRow key={assignment.id}>
                                     <TableCell>
-                                        {getEmployeeName(assignment.employee_id)}
+                                        {getEmployeeName(assignment.Employee_id)}
                                     </TableCell>
                                     <TableCell>
-                                        {getOrgUnitName(assignment.org_unit_id)}
+                                        {getOrgUnitName(assignment.OrgUnit_id)}
                                     </TableCell>
                                     <TableCell>
                                         <Chip

@@ -551,7 +551,7 @@ export default function OrgUnitManagementPage() {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {unit.employees?.length || 0}
+                      {unit.Employee?.length || 0}
                     </Typography>
                   </TableCell>
                   <TableCell>

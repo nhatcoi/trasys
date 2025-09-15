@@ -3,11 +3,11 @@ import { db } from '@/lib/db';
 
 export async function GET() {
     try {
-        const permissions = await db.permissions.findMany({
+        const permissions = await db.Permission.findMany({
             include: {
-                role_permission: {
+                RolePermission: {
                     include: {
-                        roles: true
+                        Role: true
                     }
                 }
             },
@@ -20,13 +20,13 @@ export async function GET() {
         const serializedPermissions = permissions.map((permission: any) => ({
             ...permission,
             id: permission.id.toString(),
-            role_permission: permission.role_permission?.map((rp: any) => ({
+            RolePermission: permission.role_permission?.map((rp: any) => ({
                 ...rp,
                 id: rp.id.toString(),
                 role_id: rp.role_id.toString(),
                 permission_id: rp.permission_id.toString(),
                 granted_by: rp.granted_by?.toString() || null,
-                roles: rp.roles ? {
+                Role: rp.roles ? {
                     ...rp.roles,
                     id: rp.roles.id.toString()
                 } : null
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const permission = await db.permissions.create({
+        const permission = await db.Permission.create({
             data: {
                 name,
                 description,

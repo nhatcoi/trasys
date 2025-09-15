@@ -30,12 +30,12 @@ interface ReportsTabProps {
 
 export default function ReportsTab({ unit }: ReportsTabProps) {
   // Calculate statistics
-  const totalEmployees = unit.employees?.length || 0;
+  const totalEmployees = unit.Employee?.length || 0;
   const totalChildren = unit.children?.length || 0;
-  const totalSubEmployees = unit.children?.reduce((total, child) => total + (child.employees?.length || 0), 0) || 0;
+  const totalSubEmployees = unit.children?.reduce((total, child) => total + (child.Employee?.length || 0), 0) || 0;
   const grandTotalEmployees = totalEmployees + totalSubEmployees;
 
-  const managementCount = unit.employees?.filter(emp => 
+  const managementCount = unit.Employee?.filter(emp => 
     emp.position?.toLowerCase().includes('trưởng') || 
     emp.position?.toLowerCase().includes('giám đốc') ||
     emp.position?.toLowerCase().includes('phó') ||

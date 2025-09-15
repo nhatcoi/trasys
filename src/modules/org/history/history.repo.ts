@@ -60,8 +60,8 @@ export class HistoryRepository {
     };
 
     const [items, total] = await Promise.all([
-      db.orgUnitHistory.findMany(queryOptions),
-      db.orgUnitHistory.count({ where })
+      db.OrgUnitHistory.findMany(queryOptions),
+      db.OrgUnitHistory.count({ where })
     ]);
 
     // Serialize BigInt fields
@@ -102,12 +102,12 @@ export class HistoryRepository {
       }
     }
 
-    return await db.orgUnitHistory.count({ where });
+    return await db.OrgUnitHistory.count({ where });
   }
 
   // Get history by ID
   async findById(id: number) {
-    return db.orgUnitHistory.findUnique({
+    return db.OrgUnitHistory.findUnique({
         where: {id},
         include: {
             org_units: {
@@ -124,7 +124,7 @@ export class HistoryRepository {
 
   // Create new history record
   async create(data: CreateHistoryInput) {
-    return db.orgUnitHistory.create({
+    return db.OrgUnitHistory.create({
         data: {
             org_unit_id: data.org_unit_id,
             old_name: data.old_name,

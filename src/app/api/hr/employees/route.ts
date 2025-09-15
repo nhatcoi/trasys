@@ -31,9 +31,9 @@ export async function GET() {
       const currentUserEmployee = await db.employee.findFirst({
         where: { user_id: currentUserId },
         include: {
-          assignments: {
+          OrgAssignment: {
             include: {
-              org_unit: true
+              OrgUnit: true
             }
           }
         }
@@ -44,7 +44,7 @@ export async function GET() {
         const userOrgUnitIds = currentUserEmployee.assignments.map(a => a.org_unit_id);
 
         // Find all sub-units of user's org units
-        const subOrgUnits = await db.org_units.findMany({
+        const subOrgUnits = await db.OrgUnit.findMany({
           where: {
             parent_id: { in: userOrgUnitIds }
           }
@@ -57,7 +57,7 @@ export async function GET() {
 
         // Filter employees to only those in user's organizational scope
         whereClause = {
-          assignments: {
+          OrgAssignment: {
             some: {
               org_unit_id: { in: allOrgUnitIds }
             }
@@ -75,11 +75,11 @@ export async function GET() {
     const employees = await db.employee.findMany({
       where: whereClause,
       include: {
-        user: true,
-        assignments: {
+        User: true,
+        OrgAssignment: {
           include: {
-            org_unit: true,
-            job_positions: true
+            OrgUnit: true,
+            JobPosition: true
           }
         }
       },
@@ -92,26 +92,26 @@ export async function GET() {
       user_id: employee.user_id?.toString() || null,
       created_at: employee.created_at?.toString() || null,
       updated_at: employee.updated_at?.toString() || null,
-      user: employee.user ? {
-        ...employee.user,
-        id: employee.user.id.toString(),
-        created_at: employee.user.created_at?.toString() || null,
-        updated_at: employee.user.updated_at?.toString() || null
+      User: employee.User ? {
+        ...employee.User,
+        id: employee.User.id.toString(),
+        created_at: employee.User.created_at?.toString() || null,
+        updated_at: employee.User.updated_at?.toString() || null
       } : null,
-      assignments: employee.assignments?.map((assignment: any) => ({
+      OrgAssignment: employee.OrgAssignment?.map((assignment: any) => ({
         ...assignment,
         id: assignment.id.toString(),
-        employee_id: assignment.employee_id.toString(),
-        org_unit_id: assignment.org_unit_id.toString(),
+        employee_id: assignment.employee_id?.toString() || null,
+        org_unit_id: assignment.org_unit_id?.toString() || null,
         position_id: assignment.position_id?.toString() || null,
         allocation: assignment.allocation?.toString() || null,
         created_at: assignment.created_at?.toString() || null,
         updated_at: assignment.updated_at?.toString() || null,
-        org_unit: assignment.org_unit ? {
-          ...assignment.org_unit,
-          id: assignment.org_unit.id.toString()
+        OrgUnit: assignment.OrgUnit ? {
+          ...assignment.OrgUnit,
+          id: assignment.OrgUnit.id.toString()
         } : null,
-        job_positions: assignment.job_positions ? {
+        JobPosition: assignment.job_positions ? {
           ...assignment.job_positions,
           id: assignment.job_positions.id.toString()
         } : null
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
 
     const employee = await db.employee.create({
       data: {
-        user: user_id ? { connect: { id: BigInt(user_id) } } : undefined,
+        User: user_id ? { connect: { id: BigInt(user_id) } } : undefined,
         employee_no,
         employment_type,
         status,
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
     const serializedEmployee = {
       ...employee,
       id: employee.id.toString(),
-      user_id: employee.user_id?.toString() || null,
+      user_id: employee.User_id?.toString() || null,
     };
 
     // Log the creation activity

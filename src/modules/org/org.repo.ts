@@ -60,7 +60,7 @@ interface OrgUnit {
 export class OrgUnitRepository {
   // Get all organization units without relations (lazy)
   // async findAll() {
-  //   return await db.orgUnit.findMany();
+  //   return await db.OrgUnit.findMany();
   // }
 
   // Search and filter with pagination, sorting, and relations
@@ -120,8 +120,8 @@ export class OrgUnitRepository {
     }
 
     const [items, total] = await Promise.all([
-      db.orgUnit.findMany(queryOptions),
-      db.orgUnit.count({ where })
+      db.OrgUnit.findMany(queryOptions),
+      db.OrgUnit.count({ where })
     ]);
     
     // Serialize BigInt fields
@@ -179,12 +179,12 @@ export class OrgUnitRepository {
       }
     }
 
-    return await db.orgUnit.count({ where });
+    return await db.OrgUnit.count({ where });
   }
 
   // Get organization unit by ID
   async findById(id: number) {
-    const result = await db.orgUnit.findUnique({
+    const result = await db.OrgUnit.findUnique({
       where: { id },
     });
 
@@ -201,7 +201,7 @@ export class OrgUnitRepository {
 
   // Create new organization unit
   async create(data: CreateOrgUnitInput) {
-    const result = await db.orgUnit.create({
+    const result = await db.OrgUnit.create({
       data: {
         name: data.name,
         code: data.code,
@@ -227,7 +227,7 @@ export class OrgUnitRepository {
 
   // Update organization unit
   async update(id: number, data: any) {
-    const result = await db.orgUnit.update({
+    const result = await db.OrgUnit.update({
       where: { id },
       data: {
         name: data.name,
@@ -253,7 +253,7 @@ export class OrgUnitRepository {
 
   // "Delete" organization unit: update status to 'deleted'
   async delete(id: number) {
-    const result = await db.orgUnit.update({
+    const result = await db.OrgUnit.update({
       where: { id },
       data: { status: 'deleted' },
     });
@@ -269,7 +269,7 @@ export class OrgUnitRepository {
 
   // Get organization units by parent ID
   async findByParentId(parentId: number) {
-    return await db.orgUnit.findMany({
+    return await db.OrgUnit.findMany({
       where: { parent_id: parentId },
       include: {
         children: true,
@@ -280,7 +280,7 @@ export class OrgUnitRepository {
 
   // Get status counts for statistics
   async getStatusCounts() {
-    const counts = await db.orgUnit.groupBy({
+    const counts = await db.OrgUnit.groupBy({
       by: ['status'],
       _count: {
         status: true,

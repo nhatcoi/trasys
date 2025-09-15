@@ -8,7 +8,7 @@ import { serializeBigIntArray } from '@/utils/serialize';
 export async function GET(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
+        if (!session?.User?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -18,15 +18,15 @@ export async function GET(request: NextRequest) {
         const offset = (page - 1) * limit;
 
         // Lấy thông tin user hiện tại
-        const currentUser = await db.users.findUnique({
+        const currentUser = await db.User.findUnique({
             where: { id: BigInt(session.user.id) },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        assignments: {
+                        OrgAssignment: {
                             include: {
-                                org_unit: true,
-                                job_positions: true
+                                OrgUnit: true,
+                                JobPosition: true
                             }
                         }
                     }
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        if (!currentUser?.employees?.[0]) {
+        if (!currentUser?.Employee?.[0]) {
             return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
         }
 
@@ -55,22 +55,22 @@ export async function GET(request: NextRequest) {
         }
 
         const [leaveRequests, total] = await Promise.all([
-            db.leaveRequest.findMany({
+            db.LeaveRequest.findMany({
                 where: whereClause,
                 include: {
-                    employees: {
+                    Employee: {
                         include: {
-                            user: {
+                            User: {
                                 select: {
                                     id: true,
                                     full_name: true,
                                     email: true
                                 }
                             },
-                            assignments: {
+                            OrgAssignment: {
                                 include: {
-                                    org_unit: true,
-                                    job_positions: true
+                                    OrgUnit: true,
+                                    JobPosition: true
                                 }
                             }
                         }
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
                 skip: offset,
                 take: limit
             }),
-            db.leaveRequest.count({ where: whereClause })
+            db.LeaveRequest.count({ where: whereClause })
         ]);
 
         // Serialize BigInt fields

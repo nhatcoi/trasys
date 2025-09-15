@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
         const offset = (page - 1) * limit;
 
         // Get evaluation periods from performance_reviews
-        const evaluationPeriods = await db.performanceReview.findMany({
+        const evaluationPeriods = await db.PerformanceReview.findMany({
             select: {
                 review_period: true,
                 created_at: true,
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         // Get count for each period
         const periodsWithCount = await Promise.all(
             evaluationPeriods.map(async (period) => {
-                const count = await db.performanceReview.count({
+                const count = await db.PerformanceReview.count({
                     where: { review_period: period.review_period }
                 });
                 return {
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         );
 
         // Get total count
-        const total = await db.performanceReview.groupBy({
+        const total = await db.PerformanceReview.groupBy({
             by: ['review_period'],
             _count: {
                 review_period: true
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if period already exists
-        const existingPeriod = await db.performanceReview.findFirst({
+        const existingPeriod = await db.PerformanceReview.findFirst({
             where: { review_period: period }
         });
 
@@ -113,13 +113,13 @@ export async function POST(request: NextRequest) {
         }
 
         // Get all lecturers
-        const lecturers = await db.employee.findMany({
+        const lecturers = await db.Employee.findMany({
             where: {
                 employment_type: 'lecturer',
                 status: 'ACTIVE'
             },
             include: {
-                user: true
+                User: true
             }
         });
 
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
         }));
 
         // Insert evaluation records
-        await db.performanceReview.createMany({
+        await db.PerformanceReview.createMany({
             data: evaluationRecords
         });
 

@@ -35,7 +35,7 @@ interface PersonnelTabProps {
 
 export default function PersonnelTab({ unit }: PersonnelTabProps) {
   // Find unit head/manager
-  const unitHead = unit.employees?.find(emp => 
+  const unitHead = unit.Employee?.find(emp => 
     emp.position?.toLowerCase().includes('trưởng') || 
     emp.position?.toLowerCase().includes('giám đốc') ||
     emp.position?.toLowerCase().includes('head') ||
@@ -43,7 +43,7 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
   );
 
   // Group employees by position type
-  const management = unit.employees?.filter(emp => 
+  const management = unit.Employee?.filter(emp => 
     emp.position?.toLowerCase().includes('trưởng') || 
     emp.position?.toLowerCase().includes('giám đốc') ||
     emp.position?.toLowerCase().includes('phó') ||
@@ -51,7 +51,7 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
     emp.position?.toLowerCase().includes('manager')
   ) || [];
 
-  const staff = unit.employees?.filter(emp => 
+  const staff = unit.Employee?.filter(emp => 
     !emp.position?.toLowerCase().includes('trưởng') && 
     !emp.position?.toLowerCase().includes('giám đốc') &&
     !emp.position?.toLowerCase().includes('phó') &&
@@ -133,7 +133,7 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
                     <GroupIcon />
                   </Avatar>
                   <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    {unit.employees?.length || 0}
+                    {unit.Employee?.length || 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Tổng nhân viên
@@ -175,7 +175,7 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
                     <PersonIcon />
                   </Avatar>
                   <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    {unit.children?.reduce((total, child) => total + (child.employees?.length || 0), 0)}
+                    {unit.children?.reduce((total, child) => total + (child.Employee?.length || 0), 0)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Nhân viên đơn vị con
@@ -349,7 +349,7 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
         )}
 
         {/* No Employees Message */}
-        {(!unit.employees || unit.employees.length === 0) && (
+        {(!unit.Employee || unit.Employee.length === 0) && (
           <Card>
             <CardContent>
               <Box sx={{ textAlign: 'center', py: 4 }}>

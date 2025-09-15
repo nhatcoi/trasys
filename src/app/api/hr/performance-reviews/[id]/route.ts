@@ -9,12 +9,12 @@ export async function GET(
     try {
         const reviewId = params.id;
 
-        const performanceReview = await db.performanceReview.findUnique({
+        const performanceReview = await db.PerformanceReview.findUnique({
             where: { id: reviewId as any },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: true
+                        User: true
                     }
                 }
             }
@@ -30,11 +30,11 @@ export async function GET(
             id: performanceReview.id.toString(),
             employee_id: performanceReview.employee_id.toString(),
             score: performanceReview.score?.toString() || null,
-            employees: performanceReview.employees ? {
+            Employee: performanceReview.employees ? {
                 ...performanceReview.employees,
                 id: performanceReview.employees.id.toString(),
                 user_id: performanceReview.employees.user_id.toString(),
-                user: performanceReview.employees.user ? {
+                User: performanceReview.employees.user ? {
                     ...performanceReview.employees.user,
                     id: performanceReview.employees.user.id.toString()
                 } : null
@@ -68,11 +68,11 @@ export async function PUT(
         } = body;
 
         // Get old data for logging
-        const oldReview = await db.performanceReview.findUnique({
+        const oldReview = await db.PerformanceReview.findUnique({
             where: { id: reviewId as any },
         });
 
-        const performanceReview = await db.performanceReview.update({
+        const performanceReview = await db.PerformanceReview.update({
             where: { id: reviewId as any },
             data: {
                 review_period,
@@ -80,9 +80,9 @@ export async function PUT(
                 comments,
             },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: true
+                        User: true
                     }
                 }
             }
@@ -94,11 +94,11 @@ export async function PUT(
             id: performanceReview.id.toString(),
             employee_id: performanceReview.employee_id.toString(),
             score: performanceReview.score?.toString() || null,
-            employees: performanceReview.employees ? {
+            Employee: performanceReview.employees ? {
                 ...performanceReview.employees,
                 id: performanceReview.employees.id.toString(),
                 user_id: performanceReview.employees.user_id.toString(),
-                user: performanceReview.employees.user ? {
+                User: performanceReview.employees.user ? {
                     ...performanceReview.employees.user,
                     id: performanceReview.employees.user.id.toString()
                 } : null
@@ -143,11 +143,11 @@ export async function DELETE(
         const reviewId = params.id;
 
         // Get old data for logging
-        const oldReview = await db.performanceReview.findUnique({
+        const oldReview = await db.PerformanceReview.findUnique({
             where: { id: reviewId as any },
         });
 
-        await db.performanceReview.delete({
+        await db.PerformanceReview.delete({
             where: { id: reviewId as any }
         });
 

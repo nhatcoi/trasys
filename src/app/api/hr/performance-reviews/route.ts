@@ -12,12 +12,12 @@ export async function GET(request: NextRequest) {
             whereClause = { employee_id: BigInt(employeeId) };
         }
 
-        const performanceReviews = await db.performanceReview.findMany({
+        const performanceReviews = await db.PerformanceReview.findMany({
             where: whereClause,
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: true
+                        User: true
                     }
                 }
             },
@@ -32,11 +32,11 @@ export async function GET(request: NextRequest) {
             id: review.id.toString(),
             employee_id: review.employee_id.toString(),
             score: review.score?.toString() || null,
-            employees: review.employees ? {
+            Employee: review.employees ? {
                 ...review.employees,
                 id: review.employees.id.toString(),
                 user_id: review.employees.user_id.toString(),
-                user: review.employees.user ? {
+                User: review.employees.user ? {
                     ...review.employees.user,
                     id: review.employees.user.id.toString()
                 } : null
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Employee ID is required' }, { status: 400 });
         }
 
-        const performanceReview = await db.performanceReview.create({
+        const performanceReview = await db.PerformanceReview.create({
             data: {
                 employee_id: BigInt(employee_id),
                 review_period,
@@ -78,9 +78,9 @@ export async function POST(request: NextRequest) {
                 comments,
             },
             include: {
-                employees: {
+                Employee: {
                     include: {
-                        user: true
+                        User: true
                     }
                 }
             }
@@ -92,11 +92,11 @@ export async function POST(request: NextRequest) {
             id: performanceReview.id.toString(),
             employee_id: performanceReview.employee_id.toString(),
             score: performanceReview.score?.toString() || null,
-            employees: performanceReview.employees ? {
+            Employee: performanceReview.employees ? {
                 ...performanceReview.employees,
                 id: performanceReview.employees.id.toString(),
                 user_id: performanceReview.employees.user_id.toString(),
-                user: performanceReview.employees.user ? {
+                User: performanceReview.employees.user ? {
                     ...performanceReview.employees.user,
                     id: performanceReview.employees.user.id.toString()
                 } : null
