@@ -35,10 +35,10 @@ export async function PUT(
       );
     }
     
-    // Update only status field
+    // Update only status field (auto uppercase)
     const updatedUnit = await db.OrgUnit.update({
       where: { id: unitId },
-      data: { status: body.status },
+      data: { status: body.status?.toUpperCase() }, // Auto uppercase status
       select: {
         id: true,
         name: true,

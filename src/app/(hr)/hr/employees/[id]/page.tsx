@@ -413,24 +413,24 @@ export default function EmployeeDetailPage() {
                                     Xem lịch sử hợp đồng
                                 </Button>
                             </Box>
-                            {employee.employments && employee.Employment.length > 0 ? (
+                            {employee.employments && employee.employments.length > 0 ? (
                                 <Box>
                                     <Typography variant="body2" color="text.secondary" gutterBottom>
                                         Hợp đồng hiện tại
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                                         <Chip
-                                            label={`${employee.Employment[0].contract_no} - ${employee.Employment[0].contract_type}`}
+                                            label={`${employee.employments[0].contract_no} - ${employee.employments[0].contract_type}`}
                                             color="primary"
                                             variant="outlined"
                                         />
                                         <Chip
-                                            label={`FTE: ${employee.Employment[0].fte}`}
+                                            label={`FTE: ${employee.employments[0].fte}`}
                                             color="secondary"
                                             variant="outlined"
                                         />
                                         <Chip
-                                            label={`Bậc lương: ${employee.Employment[0].salary_band}`}
+                                            label={`Bậc lương: ${employee.employments[0].salary_band}`}
                                             color="info"
                                             variant="outlined"
                                         />

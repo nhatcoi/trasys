@@ -350,6 +350,10 @@ model OrgUnitRelation {
   created_at     DateTime        @default(now()) @db.Timestamptz(6)
   updated_at     DateTime        @default(now()) @db.Timestamptz(6)
 
+  // Relations
+  parent         OrgUnit         @relation("OrgUnitParent", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  child          OrgUnit         @relation("OrgUnitChild", fields: [child_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   @@id([parent_id, child_id, relation_type, effective_from])
   @@index([child_id], map: "idx_org_unit_relation_child")
   @@index([effective_from, effective_to], map: "idx_org_unit_relation_effective")
@@ -398,6 +402,10 @@ model OrgUnit {
   campus                     campus?               @relation(fields: [campus_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   ClassSection               ClassSection[]
   Section                    Section[]
+  
+  // Relations for OrgUnitRelation
+  parentRelations            OrgUnitRelation[]     @relation("OrgUnitParent")
+  childRelations             OrgUnitRelation[]     @relation("OrgUnitChild")
 
   @@index([effective_from, effective_to], map: "idx_org_unit_effective_dates")
   @@index([parent_id], map: "idx_org_unit_parent_id")
@@ -1178,4 +1186,35 @@ enum OrgRelationType {
 
   @@map("org_relation_type")
   @@schema("public")
+}
+
+// Simple models for organization unit types and statuses
+model OrgUnitType {
+  id          BigInt    @id @default(autoincrement())
+  code        String    @unique @db.VarChar(20)
+  name        String    @db.VarChar(100)
+  description String?
+  color       String    @default("#1976d2") @db.VarChar(7)
+  is_active   Boolean   @default(true)
+  sort_order  Int       @default(0)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("org_unit_types")
+  @@schema("org")
+}
+
+model OrgUnitStatus {
+  id            BigInt    @id @default(autoincrement())
+  code          String    @unique @db.VarChar(20)
+  name          String    @db.VarChar(100)
+  description   String?
+  color         String    @default("#757575") @db.VarChar(7)
+  is_active     Boolean   @default(true)
+  workflow_step Int       @default(0)
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("org_unit_statuses")
+  @@schema("org")
 }

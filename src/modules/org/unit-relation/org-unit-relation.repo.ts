@@ -14,13 +14,17 @@ interface OrgUnitRelationQuery {
 interface CreateOrgUnitRelationInput {
   parent_id: string;
   child_id: string;
-  relation_type?: string;
-  is_active?: boolean;
+  relation_type: string;
+  effective_from?: string;
+  effective_to?: string;
+  note?: string;
 }
 
 interface UpdateOrgUnitRelationInput {
   relation_type?: string;
-  is_active?: boolean;
+  effective_from?: string;
+  effective_to?: string;
+  note?: string;
 }
 
 export class OrgUnitRelationRepository {

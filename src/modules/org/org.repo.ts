@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { normalizeOrgUnitData } from '@/utils/org-unit-normalizer';
 
 // Types
 interface OrgUnitQuery {
@@ -77,11 +78,11 @@ export class OrgUnitRepository {
     }
     
     if (options.status) {
-      where.status = options.status;
+      where.status = options.status.toUpperCase(); // Normalize status query
     }
     
     if (options.type) {
-      where.type = options.type;
+      where.type = options.type.toUpperCase(); // Normalize type query
     }
     
     if (options.fromDate || options.toDate) {
@@ -190,11 +191,11 @@ export class OrgUnitRepository {
     }
     
     if (options.status) {
-      where.status = options.status;
+      where.status = options.status.toUpperCase(); // Normalize status query
     }
     
     if (options.type) {
-      where.type = options.type;
+      where.type = options.type.toUpperCase(); // Normalize type query
     }
     
     if (options.fromDate || options.toDate) {
@@ -230,18 +231,21 @@ export class OrgUnitRepository {
 
   // Create new organization unit
   async create(data: CreateOrgUnitInput) {
+    // Normalize data to ensure consistent case formatting
+    const normalizedData = normalizeOrgUnitData(data);
+    
     const result = await db.orgUnit.create({
       data: {
-        name: data.name,
-        code: data.code,
-        parent_id: data.parent_id ? BigInt(data.parent_id) : null,
-        type: data.type,
-        description: data.description,
-        status: data.status,
-        effective_from: data.effective_from ? new Date(data.effective_from) : null,
-        effective_to: data.effective_to ? new Date(data.effective_to) : null,
-        campus_id: data.campus_id ? BigInt(data.campus_id) : null,
-        planned_establishment_date: data.planned_establishment_date ? new Date(data.planned_establishment_date) : null,
+        name: normalizedData.name,
+        code: normalizedData.code,
+        parent_id: normalizedData.parent_id ? BigInt(normalizedData.parent_id) : null,
+        type: normalizedData.type,
+        description: normalizedData.description,
+        status: normalizedData.status,
+        effective_from: normalizedData.effective_from ? new Date(normalizedData.effective_from) : null,
+        effective_to: normalizedData.effective_to ? new Date(normalizedData.effective_to) : null,
+        campus_id: normalizedData.campus_id ? BigInt(normalizedData.campus_id) : null,
+        planned_establishment_date: normalizedData.planned_establishment_date ? new Date(normalizedData.planned_establishment_date) : null,
       },
     });
 
@@ -256,13 +260,16 @@ export class OrgUnitRepository {
 
   // Update organization unit
   async update(id: number, data: UpdateOrgUnitInput) {
+    // Normalize data to ensure consistent case formatting
+    const normalizedData = normalizeOrgUnitData(data);
+    
     const updateData: any = {};
     
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.code !== undefined) updateData.code = data.code;
-    if (data.type !== undefined) updateData.type = data.type;
-    if (data.description !== undefined) updateData.description = data.description;
-    if (data.status !== undefined) updateData.status = data.status;
+    if (normalizedData.name !== undefined) updateData.name = normalizedData.name;
+    if (normalizedData.code !== undefined) updateData.code = normalizedData.code;
+    if (normalizedData.type !== undefined) updateData.type = normalizedData.type;
+    if (normalizedData.description !== undefined) updateData.description = normalizedData.description;
+    if (normalizedData.status !== undefined) updateData.status = normalizedData.status;
     
     if (data.parent_id !== undefined) {
       updateData.parent_id = data.parent_id ? BigInt(data.parent_id) : null;
@@ -291,11 +298,11 @@ export class OrgUnitRepository {
     };
   }
 
-  // "Delete" organization unit: update status to 'deleted'
+  // "Delete" organization unit: update status to 'ARCHIVED'
   async delete(id: number) {
     const result = await db.orgUnit.update({
       where: { id },
-      data: { status: 'deleted' },
+      data: { status: 'ARCHIVED' }, // Use uppercase status
     });
 
     // Serialize BigInt fields

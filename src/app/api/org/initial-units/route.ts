@@ -23,11 +23,11 @@ export async function POST(request: NextRequest) {
         data: {
           code: body.code,
           name: body.name,
-          type: body.type && body.type !== '' ? body.type : null,
+          type: body.type && body.type !== '' ? body.type.toUpperCase() : null,
           campus_id: BigInt(body.campus_id),
           parent_id: body.parent_id ? BigInt(body.parent_id) : null,
           description: body.description || null,
-          status: 'draft',
+          status: 'DRAFT',
           planned_establishment_date: body.planned_establishment_date ? new Date(body.planned_establishment_date) : null,
           effective_from: body.planned_establishment_date ? new Date(body.planned_establishment_date) : new Date(),
           effective_to: null,

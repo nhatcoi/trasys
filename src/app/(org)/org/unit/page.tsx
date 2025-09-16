@@ -52,7 +52,17 @@ import {
   getOrgUnitTypes,
   getOrgUnitStatuses,
 } from '@/utils/org-unit-utils';
-import { ORG_UNIT_ALERTS } from '@/utils/alert-utils';
+import { useOrgTypesStatuses } from '@/hooks/use-org-types-statuses';
+import {
+  convertTypesToOptions,
+  convertStatusesToOptions,
+  getTypeColorFromApi,
+  getStatusColorFromApi,
+  getTypeNameFromApi,
+  getStatusNameFromApi,
+  isStatusDeletableFromApi,
+} from '@/utils/org-data-converters';
+// import { ORG_UNIT_ALERTS } from '@/utils/alert-utils';
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -64,11 +74,32 @@ import {
 } from '@mui/icons-material';
 import { useOrgUnitsPagination } from '@/hooks/use-org-units-pagination';
 
+interface CreateUnitData {
+  name: string;
+  code: string;
+  type: string;
+  description: string;
+  parent_id: number | null;
+  status: string;
+  effective_from: string;
+  effective_to: string;
+}
+
 export default function OrgUnitManagementPage() {
   const router = useRouter();
 
+  // Fetch real types and statuses from API
+  const {
+    types: apiTypes,
+    statuses: apiStatuses,
+    typesLoading,
+    statusesLoading,
+    error: apiError,
+    refreshAll: refreshTypesStatuses,
+  } = useOrgTypesStatuses();
+
   // Simple state management
-  const [orgUnits, setOrgUnits] = React.useState<Array<{ id: string; name: string; [key: string]: unknown }>>([]);
+  const [orgUnits, setOrgUnits] = React.useState<OrgUnit[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [totalCount, setTotalCount] = React.useState(0);
@@ -326,10 +357,18 @@ export default function OrgUnitManagementPage() {
         </Box>
       </Stack>
 
-      {error && (
+      {(error || apiError) && (
         <Alert severity="error" sx={{ mb: 3 }}>
           <AlertTitle>Lỗi</AlertTitle>
-          {error}
+          {error || apiError}
+        </Alert>
+      )}
+
+      {/* Loading indicator for types/statuses */}
+      {(typesLoading || statusesLoading) && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <AlertTitle>Đang tải dữ liệu</AlertTitle>
+          Đang tải danh sách loại đơn vị và trạng thái...
         </Alert>
       )}
 
@@ -372,9 +411,10 @@ export default function OrgUnitManagementPage() {
                    value={getFilterValue('type')}
                    label="Loại"
                    onChange={(e) => updateFilter('type', e.target.value)}
+                   disabled={typesLoading}
                  >
                    <MenuItem value="all">Tất cả</MenuItem>
-                   {getOrgUnitTypes().map((type) => (
+                   {convertTypesToOptions(apiTypes).map((type) => (
                      <MenuItem key={type.value} value={type.value}>
                        {type.label}
                      </MenuItem>
@@ -388,9 +428,10 @@ export default function OrgUnitManagementPage() {
                    value={getFilterValue('status')}
                    label="Trạng thái"
                    onChange={(e) => updateFilter('status', e.target.value)}
+                   disabled={statusesLoading}
                  >
                    <MenuItem value="all">Tất cả</MenuItem>
-                   {getOrgUnitStatuses().map((status) => (
+                   {convertStatusesToOptions(apiStatuses).map((status) => (
                      <MenuItem key={status.value} value={status.value}>
                        {status.label}
                      </MenuItem>
@@ -403,8 +444,11 @@ export default function OrgUnitManagementPage() {
               <Button
                 variant="outlined"
                 startIcon={<RefreshIcon />}
-                onClick={() => window.location.reload()}
-                disabled={isLoading}
+                onClick={() => {
+                  fetchData();
+                  refreshTypesStatuses();
+                }}
+                disabled={isLoading || typesLoading || statusesLoading}
               >
                 Làm mới
               </Button>
@@ -493,7 +537,7 @@ export default function OrgUnitManagementPage() {
                 >
                   <TableCell>
                     <Stack direction="row" alignItems="center" spacing={2}>
-                      <Avatar sx={{ backgroundColor: getTypeColor(unit.type) }}>
+                      <Avatar sx={{ backgroundColor: getTypeColorFromApi(unit.type, apiTypes) }}>
                         {React.createElement(getTypeIcon(unit.type))}
                       </Avatar>
                       <Box>
@@ -502,7 +546,7 @@ export default function OrgUnitManagementPage() {
                         </Typography>
                         {unit.description && (
                           <Typography variant="caption" color="text.secondary">
-                            {unit.description}
+                            {String(unit.description)}
                           </Typography>
                         )}
                       </Box>
@@ -518,10 +562,10 @@ export default function OrgUnitManagementPage() {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={unit.type || 'N/A'}
+                      label={String(unit.type || 'N/A')}
                       size="small"
                       sx={{
-                        backgroundColor: getTypeColor(unit.type),
+                        backgroundColor: getTypeColorFromApi(String(unit.type), apiTypes),
                         color: 'white',
                         fontSize: '0.75rem',
                       }}
@@ -529,10 +573,10 @@ export default function OrgUnitManagementPage() {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={unit.status || 'N/A'}
+                      label={String(unit.status || 'N/A')}
                       size="small"
                       sx={{
-                        backgroundColor: getStatusColor(unit.status),
+                        backgroundColor: getStatusColorFromApi(String(unit.status), apiStatuses),
                         color: 'white',
                         fontSize: '0.75rem',
                       }}
@@ -541,7 +585,7 @@ export default function OrgUnitManagementPage() {
                   <TableCell>
                     {unit.parent ? (
                       <Typography variant="body2">
-                        {unit.parent.name}
+                        {String(unit.parent.name)}
                       </Typography>
                     ) : (
                       <Typography variant="body2" color="text.secondary">
@@ -551,12 +595,12 @@ export default function OrgUnitManagementPage() {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {unit.Employee?.length || 0}
+                      {String(unit.Employee?.length || 0)}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {new Date(unit.created_at).toLocaleDateString('vi-VN')}
+                      {new Date(String(unit.created_at)).toLocaleDateString('vi-VN')}
                     </Typography>
                   </TableCell>
                   <TableCell align="right">
@@ -654,8 +698,9 @@ export default function OrgUnitManagementPage() {
                 value={formData.type}
                 label="Loại đơn vị"
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                disabled={typesLoading}
               >
-                {getOrgUnitTypes().map((type) => (
+                {convertTypesToOptions(apiTypes).map((type) => (
                   <MenuItem key={type.value} value={type.value}>
                     {type.label}
                   </MenuItem>
@@ -691,8 +736,9 @@ export default function OrgUnitManagementPage() {
                 value={formData.status}
                 label="Trạng thái"
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                disabled={statusesLoading}
               >
-                {getOrgUnitStatuses().map((status) => (
+                {convertStatusesToOptions(apiStatuses).map((status) => (
                   <MenuItem key={status.value} value={status.value}>
                     {status.label}
                   </MenuItem>
@@ -753,8 +799,9 @@ export default function OrgUnitManagementPage() {
                 value={formData.type}
                 label="Loại đơn vị"
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                disabled={typesLoading}
               >
-                {getOrgUnitTypes().map((type) => (
+                {convertTypesToOptions(apiTypes).map((type) => (
                   <MenuItem key={type.value} value={type.value}>
                     {type.label}
                   </MenuItem>
@@ -790,8 +837,9 @@ export default function OrgUnitManagementPage() {
                 value={formData.status}
                 label="Trạng thái"
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                disabled={statusesLoading}
               >
-                {getOrgUnitStatuses().map((status) => (
+                {convertStatusesToOptions(apiStatuses).map((status) => (
                   <MenuItem key={status.value} value={status.value}>
                     {status.label}
                   </MenuItem>

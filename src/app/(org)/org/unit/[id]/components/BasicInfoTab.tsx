@@ -576,7 +576,7 @@ export default function BasicInfoTab({ unit, onUpdate }: BasicInfoTabProps) {
             transform: 'translateY(-2px)',
           }
         }}>
-          <CardContent sx={{ p: 3 }}>
+          {/* <CardContent sx={{ p: 3 }}>
             <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
               <Avatar sx={{ backgroundColor: '#ff9800', width: 40, height: 40 }}>
                 <AnalyticsIcon />
@@ -635,7 +635,7 @@ export default function BasicInfoTab({ unit, onUpdate }: BasicInfoTabProps) {
                 </Typography>
               </Box>
             </Box>
-          </CardContent>
+          </CardContent> */}
         </Card>
       </Box>
     </Box>

@@ -241,13 +241,13 @@ export default function EmployeesPage() {
                                             </Typography>
                                         </TableCell>
                                         <TableCell>
-                                            {employee.employments && employee.Employment.length > 0 ? (
+                                            {employee.employments && employee.employments.length > 0 ? (
                                                 <Box>
                                                     <Typography variant="body2" fontWeight="medium">
-                                                        {employee.Employment[0].contract_no}
+                                                        {employee.employments[0].contract_no}
                                                     </Typography>
                                                     <Typography variant="caption" color="text.secondary">
-                                                        {employee.Employment[0].contract_type} - {employee.Employment[0].salary_band}
+                                                        {employee.employments[0].contract_type} - {employee.employments[0].salary_band}
                                                     </Typography>
                                                 </Box>
                                             ) : (
