@@ -24,7 +24,7 @@ export async function GET(
                         JobPosition: true
                     }
                 },
-                employments: {
+                Employment: {
                     orderBy: {
                         start_date: 'desc'
                     }
@@ -54,20 +54,20 @@ export async function GET(
             OrgAssignment: employee.OrgAssignment?.map((assignment: { id: bigint; [key: string]: unknown }) => ({
                 ...assignment,
                 id: assignment.id.toString(),
-                employee_id: assignment.Employee_id.toString(),
-                org_unit_id: assignment.OrgUnit_id.toString(),
+                employee_id: assignment.employee_id.toString(),
+                org_unit_id: assignment.org_unit_id.toString(),
                 position_id: assignment.position_id?.toString() || null,
                 allocation: assignment.allocation?.toString() || null,
                 OrgUnit: assignment.OrgUnit ? {
                     ...assignment.OrgUnit,
                     id: assignment.OrgUnit.id.toString()
                 } : null,
-                JobPosition: assignment.job_positions ? {
-                    ...assignment.job_positions,
-                    id: assignment.job_positions.id.toString()
+                JobPosition: assignment.JobPosition ? {
+                    ...assignment.JobPosition,
+                    id: assignment.JobPosition.id.toString()
                 } : null
             })) || [],
-            employments: employee.employments?.map((employment: { id: bigint; [key: string]: unknown }) => ({
+            employments: employee.Employment?.map((employment: { id: bigint; [key: string]: unknown }) => ({
                 ...employment,
                 id: employment.id.toString(),
                 employee_id: employment.employee_id.toString()

@@ -40,6 +40,8 @@ import {
   Edit as EditIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { 
   orgApi,
@@ -65,6 +67,15 @@ interface EditRelationData {
   note: string;
 }
 
+interface AddRelationData {
+  relation_type: 'direct' | 'advisory' | 'support' | 'collab';
+  relation_direction: 'parent' | 'child';
+  related_unit_id: string;
+  effective_from: string;
+  effective_to: string;
+  note: string;
+}
+
 // Extend OrgUnitRelation to include parent and child info
 interface OrgUnitWithRelation extends OrgUnitRelation {
   parent?: OrgUnit;
@@ -85,6 +96,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedRelation, setSelectedRelation] = useState<OrgUnitWithRelation | null>(null);
   const [editData, setEditData] = useState<EditRelationData>({
     relation_type: 'direct',
@@ -92,9 +104,21 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
     effective_to: '',
     note: '',
   });
+  const [addData, setAddData] = useState<AddRelationData>({
+    relation_type: 'direct',
+    relation_direction: 'parent',
+    related_unit_id: '',
+    effective_from: new Date().toISOString().split('T')[0],
+    effective_to: '',
+    note: '',
+  });
+  const [availableUnits, setAvailableUnits] = useState<OrgUnit[]>([]);
 
   // State for relations data
-  const [relationsData, setRelationsData] = useState<{ [key: string]: unknown } | null>(null);
+  const [relationsData, setRelationsData] = useState<{
+    parentRelations: OrgUnitWithRelation[];
+    childRelations: OrgUnitWithRelation[];
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [relationsError, setRelationsError] = useState<string | null>(null);
 
@@ -114,6 +138,33 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
     }
   };
 
+  // Fetch available units for adding relations
+  const fetchAvailableUnits = async () => {
+    try {
+      // Gọi API trực tiếp để lấy tất cả đơn vị
+      const response = await fetch('/api/org/units?size=1000&page=1&sort=name&order=asc');
+      const data = await response.json();
+      
+      if (data.success) {
+        // Filter out current unit and units already in relations
+        const currentRelations = [
+          ...(relationsData?.parentRelations || []),
+          ...(relationsData?.childRelations || [])
+        ];
+        const relatedUnitIds = currentRelations.map(rel => 
+          rel.parent_id === unitId ? rel.child_id : rel.parent_id
+        );
+        
+        const filteredUnits = data.data.filter((unit: OrgUnit) => 
+          unit.id !== unitId && !relatedUnitIds.includes(unit.id)
+        );
+        setAvailableUnits(filteredUnits);
+      }
+    } catch (err) {
+      console.error('Failed to fetch available units:', err);
+    }
+  };
+
   // Fetch data on mount
   React.useEffect(() => {
     if (unitId) {
@@ -125,7 +176,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
   const childRelations = relationsData?.childRelations || [];
 
   // Update relation function
-  const updateRelation = async (relationId: string, data: { name?: string; type?: string; [key: string]: unknown }) => {
+  const updateRelation = async (relationId: string, data: { relation_type?: string; effective_to?: string; note?: string }) => {
     try {
       const result = await orgApi.relations.update(relationId, data);
       
@@ -134,6 +185,45 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
         return result.data;
       } else {
         throw new Error(result.error || 'Failed to update relation');
+      }
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  // Create relation function
+  const createRelation = async (data: AddRelationData) => {
+    try {
+      const relationData = {
+        parent_id: data.relation_direction === 'parent' ? data.related_unit_id : unitId,
+        child_id: data.relation_direction === 'parent' ? unitId : data.related_unit_id,
+        relation_type: data.relation_type,
+        effective_from: data.effective_from,
+        effective_to: data.effective_to || undefined,
+        note: data.note || '',
+      };
+      
+      const result = await orgApi.relations.create(relationData);
+      if (result.success) {
+        fetchRelationsData(); // Refresh data
+        return true;
+      } else {
+        throw new Error(result.error || 'Failed to create relation');
+      }
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  // Delete relation function
+  const deleteRelation = async (relationId: string) => {
+    try {
+      const result = await orgApi.relations.delete(relationId);
+      if (result.success) {
+        fetchRelationsData(); // Refresh data
+        return true;
+      } else {
+        throw new Error(result.error || 'Failed to delete relation');
       }
     } catch (err) {
       throw err;
@@ -159,7 +249,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
   const handleEditRelation = (relation: OrgUnitWithRelation) => {
     setSelectedRelation(relation);
     setEditData({
-      relation_type: relation.relation_type,
+      relation_type: relation.relation_type as 'direct' | 'advisory' | 'support' | 'collab',
       effective_from: relation.effective_from ? new Date(relation.effective_from).toISOString().split('T')[0] : '',
       effective_to: relation.effective_to ? new Date(relation.effective_to).toISOString().split('T')[0] : '',
       note: relation.note || '',
@@ -182,7 +272,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
 
       const updateData = {
         relation_type: editData.relation_type,
-        effective_to: editData.effective_to || null,
+        effective_to: editData.effective_to || undefined,
         note: editData.note || '',
       };
 
@@ -204,6 +294,56 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
     }));
   };
 
+  const handleAddInputChange = (field: keyof AddRelationData, value: string) => {
+    setAddData(prev => ({
+      ...prev,
+      [field]: field === 'relation_type' ? value as 'direct' | 'advisory' | 'support' | 'collab' : 
+               field === 'relation_direction' ? value as 'parent' | 'child' : value,
+    }));
+  };
+
+  const handleAddRelation = () => {
+    setAddData({
+      relation_type: 'direct',
+      relation_direction: 'parent',
+      related_unit_id: '',
+      effective_from: new Date().toISOString().split('T')[0],
+      effective_to: '',
+      note: '',
+    });
+    fetchAvailableUnits();
+    setAddDialogOpen(true);
+  };
+
+  const handleSaveAddRelation = async () => {
+    if (!addData.related_unit_id) {
+      setError('Vui lòng chọn đơn vị liên quan');
+      return;
+    }
+
+    try {
+      await createRelation(addData);
+      setAddDialogOpen(false);
+      setSuccess('Thêm quan hệ thành công!');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi thêm quan hệ');
+    }
+  };
+
+  const handleDeleteRelation = async (relation: OrgUnitWithRelation) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa quan hệ này?')) return;
+    
+    try {
+      const relationKey = `${relation.parent_id}-${relation.child_id}-${relation.relation_type}-${relation.effective_from}`;
+      await deleteRelation(relationKey);
+      setSuccess('Xóa quan hệ thành công!');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi xóa quan hệ');
+    }
+  };
+
   const getRelationIcon = (relationType: string) => {
     switch (relationType) {
       case 'direct': return AccountTreeIcon;
@@ -222,17 +362,25 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
           Quan hệ tổ chức
         </Typography>
         
-        {!isEditing ? (
+        <Stack direction="row" spacing={2}>
           <Button
-            variant="outlined"
-            startIcon={<EditIcon />}
-            onClick={handleEdit}
-            sx={{ minWidth: 120 }}
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleAddRelation}
+            sx={{ backgroundColor: '#1976d2' }}
           >
-            Chỉnh sửa
+            Thêm quan hệ
           </Button>
-        ) : (
-          <Stack direction="row" spacing={1}>
+          {!isEditing ? (
+            <Button
+              variant="outlined"
+              startIcon={<EditIcon />}
+              onClick={handleEdit}
+              sx={{ minWidth: 120 }}
+            >
+              Chỉnh sửa
+            </Button>
+          ) : (
             <Button
               variant="outlined"
               startIcon={<CancelIcon />}
@@ -241,8 +389,8 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
             >
               Hủy
             </Button>
-          </Stack>
-        )}
+          )}
+        </Stack>
       </Box>
 
       {/* Alerts */}
@@ -332,17 +480,31 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
                         <TableCell align="right">
                           <Stack direction="row" spacing={1}>
                             {isEditing && (
-                              <Tooltip title="Chỉnh sửa quan hệ">
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditRelation(relation);
-                                  }}
-                                >
-                                  <EditIcon />
-                                </IconButton>
-                              </Tooltip>
+                              <Stack direction="row" spacing={1}>
+                                <Tooltip title="Chỉnh sửa quan hệ">
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditRelation(relation);
+                                    }}
+                                  >
+                                    <EditIcon />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Xóa quan hệ">
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteRelation(relation);
+                                    }}
+                                  >
+                                    <DeleteIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              </Stack>
                             )}
                           </Stack>
                         </TableCell>
@@ -421,17 +583,31 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
                         <TableCell align="right">
                           <Stack direction="row" spacing={1}>
                             {isEditing && (
-                              <Tooltip title="Chỉnh sửa quan hệ">
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditRelation(relation);
-                                  }}
-                                >
-                                  <EditIcon />
-                                </IconButton>
-                              </Tooltip>
+                              <Stack direction="row" spacing={1}>
+                                <Tooltip title="Chỉnh sửa quan hệ">
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditRelation(relation);
+                                    }}
+                                  >
+                                    <EditIcon />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Xóa quan hệ">
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteRelation(relation);
+                                    }}
+                                  >
+                                    <DeleteIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              </Stack>
                             )}
                           </Stack>
                         </TableCell>
@@ -462,6 +638,123 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
           </Card>
         )}
       </Stack>
+
+      {/* Add Relation Dialog */}
+      <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Thêm quan hệ mới
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <FormControl fullWidth>
+              <InputLabel>Hướng quan hệ</InputLabel>
+              <Select
+                value={addData.relation_direction}
+                onChange={(e) => handleAddInputChange('relation_direction', e.target.value)}
+                label="Hướng quan hệ"
+              >
+                <MenuItem value="parent">
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <BusinessIcon color="primary" />
+                    <Typography>Đơn vị cha (đơn vị này là con)</Typography>
+                  </Stack>
+                </MenuItem>
+                <MenuItem value="child">
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <AccountTreeIcon color="secondary" />
+                    <Typography>Đơn vị con (đơn vị này là cha)</Typography>
+                  </Stack>
+                </MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth>
+              <InputLabel>Đơn vị liên quan</InputLabel>
+              <Select
+                value={addData.related_unit_id}
+                onChange={(e) => handleAddInputChange('related_unit_id', e.target.value)}
+                label="Đơn vị liên quan"
+              >
+                {availableUnits.map((unit) => (
+                  <MenuItem key={unit.id} value={unit.id}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Avatar sx={{ backgroundColor: getTypeColor(unit.type || ''), width: 24, height: 24 }}>
+                        {React.createElement(getTypeIcon(unit.type || ''), { fontSize: 'small' })}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="body2" fontWeight="bold">{unit.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">{unit.code}</Typography>
+                      </Box>
+                    </Stack>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth>
+              <InputLabel>Loại quan hệ</InputLabel>
+              <Select
+                value={addData.relation_type}
+                onChange={(e) => handleAddInputChange('relation_type', e.target.value)}
+                label="Loại quan hệ"
+              >
+                {relationTypes.map((type) => (
+                  <MenuItem key={type.value} value={type.value}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Avatar sx={{ backgroundColor: type.color, width: 20, height: 20 }}>
+                        {React.createElement(getRelationIcon(type.value), { fontSize: 'small' })}
+                      </Avatar>
+                      <Typography>{type.label}</Typography>
+                    </Stack>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              fullWidth
+              type="date"
+              label="Hiệu lực từ"
+              value={addData.effective_from}
+              onChange={(e) => handleAddInputChange('effective_from', e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+
+            <TextField
+              fullWidth
+              type="date"
+              label="Hiệu lực đến"
+              value={addData.effective_to}
+              onChange={(e) => handleAddInputChange('effective_to', e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              helperText="Để trống nếu không giới hạn thời gian"
+            />
+
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="Ghi chú"
+              value={addData.note}
+              onChange={(e) => handleAddInputChange('note', e.target.value)}
+              placeholder="Nhập ghi chú về quan hệ..."
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddDialogOpen(false)}>
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={isLoading ? <CircularProgress size={16} /> : <AddIcon />}
+            onClick={handleSaveAddRelation}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Đang thêm...' : 'Thêm quan hệ'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Edit Relation Dialog */}
       <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>

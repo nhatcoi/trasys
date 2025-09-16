@@ -424,10 +424,27 @@ export default function ReportsPage() {
                   <ListItemIcon>
                     <PieChartIcon color="primary" />
                   </ListItemIcon>
-                  <ListItemText
-                    primary={type.type}
-                    secondary={`${type.count} đơn vị`}
-                  />
+                  <Box sx={{ flex: 1 }}>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        color: '#000000',
+                        fontSize: '14px',
+                        fontWeight: 'medium'
+                      }}
+                    >
+                      {type.type}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: '#666666',
+                        fontSize: '12px'
+                      }}
+                    >
+                      {type.count} đơn vị
+                    </Typography>
+                  </Box>
                   <Chip
                     label={`${type.percentage}%`}
                     color="secondary"
@@ -465,10 +482,27 @@ export default function ReportsPage() {
                   <ListItemIcon>
                     <WarningIcon color="warning" />
                   </ListItemIcon>
-                  <ListItemText
-                    primary={unit.name}
-                    secondary={`${unit.code} • ${unit.type || 'Không xác định'}`}
-                  />
+                  <Box sx={{ flex: 1 }}>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        color: '#000000',
+                        fontSize: '14px',
+                        fontWeight: 'medium'
+                      }}
+                    >
+                      {unit.name}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: '#666666',
+                        fontSize: '12px'
+                      }}
+                    >
+                      {unit.code} • {unit.type || 'Không xác định'}
+                    </Typography>
+                  </Box>
                   <Chip
                     label={`${unit.days} ngày`}
                     color="warning"
@@ -506,10 +540,27 @@ export default function ReportsPage() {
                   <ListItemIcon>
                     <GroupIcon color="error" />
                   </ListItemIcon>
-                  <ListItemText
-                    primary={unit.name}
-                    secondary={`${unit.code} • ${unit.type || 'Không xác định'}`}
-                  />
+                  <Box sx={{ flex: 1 }}>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        color: '#000000',
+                        fontSize: '14px',
+                        fontWeight: 'medium'
+                      }}
+                    >
+                      {unit.name}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: '#666666',
+                        fontSize: '12px'
+                      }}
+                    >
+                      {unit.code} • {unit.type || 'Không xác định'}
+                    </Typography>
+                  </Box>
                   <Chip
                     label={`${unit.employeeCount} nhân viên`}
                     color="error"
@@ -551,13 +602,13 @@ export default function ReportsPage() {
             width: 48,
             height: 48,
             borderRadius: 1,
-            backgroundColor: '#2e4c92',
+            backgroundColor: 'primary.main',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <AssessmentIcon sx={{ color: 'white', fontSize: 24 }} />
+          <AssessmentIcon sx={{ color: 'primary.contrastText', fontSize: 24 }} />
         </Box>
         <Box>
           <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
@@ -596,17 +647,30 @@ export default function ReportsPage() {
                         },
                       }}
                     >
-                      <ListItemIcon sx={{ color: selectedReport === report.id ? report.color : 'inherit' }}>
+                      <ListItemIcon sx={{ color: selectedReport === report.id ? report.color : 'text.secondary' }}>
                         {report.icon}
                       </ListItemIcon>
-                      <ListItemText
-                        primary={report.title}
-                        secondary={report.description}
-                        primaryTypographyProps={{
-                          fontWeight: selectedReport === report.id ? 'bold' : 'normal',
-                          color: selectedReport === report.id ? report.color : 'inherit',
-                        }}
-                      />
+                      <Box sx={{ flex: 1 }}>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            fontWeight: selectedReport === report.id ? 'bold' : 'normal',
+                            color: selectedReport === report.id ? report.color : '#000000',
+                            fontSize: '14px'
+                          }}
+                        >
+                          {report.title}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: '#666666',
+                            fontSize: '12px'
+                          }}
+                        >
+                          {report.description}
+                        </Typography>
+                      </Box>
                     </ListItem>
                     {index < reportTypes.length - 1 && <Divider />}
                   </React.Fragment>

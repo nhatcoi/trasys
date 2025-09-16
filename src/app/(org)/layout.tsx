@@ -45,6 +45,7 @@ import {
   AccountTree as AccountTreeIcon,
   Timeline as TimelineIcon,
   Person as PersonIcon,
+  AssignmentInd as AssignmentIndIcon,
   Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -250,6 +251,12 @@ export default function OrgLayout({
           ],
         },
       ],
+    },
+    {
+      key: '/org/assignments',
+      icon: <AssignmentIndIcon />,
+      label: 'Phân công nhân sự',
+      permissions: ['org_unit.read'],
     },
     {
       key: '/org/unit/create/audit',
