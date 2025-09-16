@@ -116,7 +116,7 @@ export default function HrLayout({
                 </Toolbar>
             </AppBar>
 
-            {/* New Sidebar */}
+            {/* New Sidebarw */}
             <NewSidebar />
 
             {/* Main content */}
