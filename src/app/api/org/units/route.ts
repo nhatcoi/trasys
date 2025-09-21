@@ -2,9 +2,9 @@ import { NextRequest } from 'next/server';
 import { withErrorHandling, withBody } from '@/lib/api-handler';
 import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
-import { getUserAccessibleUnits } from '@/lib/hierarchical-permissions';
+import { getUserAccessibleUnits } from '@/lib/auth/hierarchical-permissions';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/auth/auth';
 
 export const GET = withErrorHandling(
   async (request: NextRequest) => {

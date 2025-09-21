@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { withErrorHandling } from '@/lib/api-handler';
-// import { hasPermission, hasAnyPermission } from '@/lib/api-utils';
+// import { hasPermission, hasAnyPermission } from '@/lib/permission-utils';
 
 export const GET = withErrorHandling(
   async (request: NextRequest) => {

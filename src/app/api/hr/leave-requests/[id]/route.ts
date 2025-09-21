@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/auth/auth';
 import { db } from '@/lib/db';
 
 // GET /api/hr/leave-requests/[id] - Lấy chi tiết đơn xin nghỉ

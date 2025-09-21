@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server';
 import { withIdParam, withIdAndBody, serializeBigInt } from '@/lib/api-handler';
 import { db } from '@/lib/db';
-import { canAccessOrgUnit } from '@/lib/hierarchical-permissions';
+import { canAccessOrgUnit } from '@/lib/auth/hierarchical-permissions';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/auth/auth';
 
 // GET /api/org/units/[id] - Get org unit by ID
 export const GET = withIdParam(

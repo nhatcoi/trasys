@@ -2,7 +2,7 @@ import {NextRequest, NextResponse} from 'next/server';
 import {db} from '@/lib/db';
 import {logEmployeeActivity, getActorInfo} from '@/lib/audit-logger';
 import {getServerSession} from 'next-auth';
-import {authOptions} from '@/lib/auth';
+import {authOptions} from '@/lib/auth/auth';
 import {getToken} from 'next-auth/jwt';
 
 export async function GET(

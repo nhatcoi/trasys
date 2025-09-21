@@ -1,7 +1,7 @@
 // NextAuth configuration
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import { db } from './db'
+import { db } from '../db'
 import bcrypt from 'bcryptjs'
 
 export const authOptions: NextAuthOptions = {
@@ -27,7 +27,7 @@ export const authOptions: NextAuthOptions = {
                     console.log('Looking for user:', credentials.identifier);
 
                     // Tìm user bằng email hoặc username
-                    const user = await db.User.findFirst({
+                    const user = await db.user.findFirst({
                         where: {
                             OR: [
                                 { email: credentials.identifier },
@@ -57,7 +57,7 @@ export const authOptions: NextAuthOptions = {
                     console.log('Password valid, getting permissions...');
 
                     // Lấy permissions của user thông qua roles
-                    const userRoles = await db.UserRole.findMany({
+                    const userRoles = await db.userRole.findMany({
                         where: { user_id: user.id },
                         include: {
                             Role: {
