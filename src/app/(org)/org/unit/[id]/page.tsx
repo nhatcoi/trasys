@@ -34,7 +34,8 @@ import {
   Assessment as AssessmentIcon,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
-import { orgApi, type OrgUnit } from '@/features/org/api/api';
+import { type OrgUnit } from '@/features/org/api/api';
+import { API_ROUTES } from '@/constants/routes';
 import { 
   getStatusColor, 
   getTypeColor, 
@@ -97,12 +98,13 @@ export default function UnitDetailPage() {
       setIsLoading(true);
       setError(null);
       
-      const response = await orgApi.units.getById(unitId);
+      const response = await fetch(API_ROUTES.ORG.UNITS_BY_ID(unitId));
+      const data = await response.json();
       
-      if (response.success) {
-        setUnit(response.data);
+      if (data.success) {
+        setUnit(data.data);
       } else {
-        setError(response.error || 'Failed to fetch unit');
+        setError(data.error || 'Failed to fetch unit');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch unit');
@@ -121,7 +123,12 @@ export default function UnitDetailPage() {
   // Update unit function
   const updateUnit = async (data: { name?: string; description?: string; [key: string]: unknown }) => {
     try {
-      const result = await orgApi.units.update(unitId, data);
+      const response = await fetch(API_ROUTES.ORG.UNITS_BY_ID(unitId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
       
       if (result.success) {
         setUnit(result.data);

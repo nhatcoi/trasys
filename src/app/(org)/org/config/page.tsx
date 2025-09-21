@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { API_ROUTES } from '@/constants/routes';
+import { buildUrl } from '@/lib/api-handler';
 import {
   Box,
   Typography,
@@ -79,7 +81,7 @@ export default function ConfigPage() {
   // Fetch data
   const fetchTypes = async () => {
     try {
-      const response = await fetch('/api/org/types?include_inactive=true');
+      const response = await fetch(buildUrl(API_ROUTES.ORG.TYPES, { include_inactive: true }));
       const result = await response.json();
       if (result.success) {
         setTypes(result.data);
@@ -93,7 +95,7 @@ export default function ConfigPage() {
 
   const fetchStatuses = async () => {
     try {
-      const response = await fetch('/api/org/statuses?include_inactive=true');
+      const response = await fetch(buildUrl(API_ROUTES.ORG.STATUSES, { include_inactive: true }));
       const result = await response.json();
       if (result.success) {
         setStatuses(result.data);
@@ -282,12 +284,12 @@ export default function ConfigPage() {
                       }
                       secondary={
                         <Box>
-                          <Typography variant="body2" color="text.secondary">
+                          <Box component="span" sx={{ display: 'block', mb: 0.5 }}>
                             {type.description || 'Không có mô tả'}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                          </Box>
+                          <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
                             Tạo: {new Date(type.created_at).toLocaleDateString('vi-VN')}
-                          </Typography>
+                          </Box>
                         </Box>
                       }
                     />
@@ -356,12 +358,12 @@ export default function ConfigPage() {
                       }
                       secondary={
                         <Box>
-                          <Typography variant="body2" color="text.secondary">
+                          <Box component="span" sx={{ display: 'block', mb: 0.5 }}>
                             {status.description || 'Không có mô tả'}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                          </Box>
+                          <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
                             Tạo: {new Date(status.created_at).toLocaleDateString('vi-VN')}
-                          </Typography>
+                          </Box>
                         </Box>
                       }
                     />

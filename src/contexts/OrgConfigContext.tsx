@@ -1,6 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { API_ROUTES } from '@/constants/routes';
+import { buildUrl } from '@/lib/api-handler';
 
 interface OrgUnitType {
   id: string;
@@ -64,7 +66,7 @@ export const OrgConfigProvider: React.FC<OrgConfigProviderProps> = ({ children }
 
   const fetchTypes = async () => {
     try {
-      const response = await fetch('/api/org/types?include_inactive=true');
+      const response = await fetch(buildUrl(API_ROUTES.ORG.TYPES, { include_inactive: true }));
       const result = await response.json();
       if (result.success) {
         setTypes(result.data);
@@ -78,7 +80,7 @@ export const OrgConfigProvider: React.FC<OrgConfigProviderProps> = ({ children }
 
   const fetchStatuses = async () => {
     try {
-      const response = await fetch('/api/org/statuses?include_inactive=true');
+      const response = await fetch(buildUrl(API_ROUTES.ORG.STATUSES, { include_inactive: true }));
       const result = await response.json();
       if (result.success) {
         setStatuses(result.data);

@@ -137,9 +137,9 @@ export default function OrgUnitManagementPage() {
 
       
       if (response.success) {
-        setOrgUnits(response.data || []);
-        setTotalCount(response.pagination?.total || 0);
-        console.log('orgUnits state updated, totalCount:', response.pagination?.total);
+        setOrgUnits(response.data?.items || []);
+        setTotalCount(response.data?.pagination?.total || 0);
+        console.log('orgUnits state updated, totalCount:', response.data?.pagination?.total);
       } else {
         setError('Failed to fetch data');
       }

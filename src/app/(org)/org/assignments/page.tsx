@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { API_ROUTES } from '@/constants/routes';
+import { buildUrl } from '@/lib/api-handler';
 import {
   Box,
   Typography,
@@ -135,10 +137,10 @@ export default function AssignmentsPage() {
     setError(null);
     try {
       const [assignmentsRes, employeesRes, orgUnitsRes, jobPositionsRes] = await Promise.all([
-        fetch('/api/org/assignments'),
-        fetch('/api/hr/employees'),
-        fetch('/api/org/units?page=1&size=1000'),
-        fetch('/api/hr/job-positions'),
+        fetch(API_ROUTES.ORG.ASSIGNMENTS),
+        fetch(API_ROUTES.HR.EMPLOYEES),
+        fetch(buildUrl(API_ROUTES.ORG.UNITS, { page: 1, size: 1000 })),
+        fetch(API_ROUTES.HR.POSITIONS),
       ]);
 
       const [assignmentsData, employeesData, orgUnitsData, jobPositionsData] = await Promise.all([
@@ -149,16 +151,16 @@ export default function AssignmentsPage() {
       ]);
 
       if (assignmentsData.success) {
-        setAssignments(assignmentsData.data);
+        setAssignments(Array.isArray(assignmentsData.data) ? assignmentsData.data : []);
       }
       if (employeesData.success) {
-        setEmployees(employeesData.data);
+        setEmployees(Array.isArray(employeesData.data) ? employeesData.data : []);
       }
       if (orgUnitsData.success) {
-        setOrgUnits(orgUnitsData.data);
+        setOrgUnits(orgUnitsData.data.items || []);
       }
       if (jobPositionsData.success) {
-        setJobPositions(jobPositionsData.data);
+        setJobPositions(Array.isArray(jobPositionsData.data) ? jobPositionsData.data : []);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load data');
@@ -192,7 +194,7 @@ export default function AssignmentsPage() {
       end_date: assignment.end_date ? assignment.end_date.split('T')[0] : '',
       assignment_type: assignment.assignment_type,
       is_primary: assignment.is_primary,
-      allocation: assignment.allocation,
+      allocation: Number(assignment.allocation).toString(),
     });
     setOpenDialog(true);
   };
@@ -200,8 +202,8 @@ export default function AssignmentsPage() {
   const handleSaveAssignment = async () => {
     try {
       const url = editingAssignment 
-        ? `/api/org/assignments/${editingAssignment.id}`
-        : '/api/org/assignments';
+        ? API_ROUTES.ORG.ASSIGNMENTS_BY_ID(editingAssignment.id)
+        : API_ROUTES.ORG.ASSIGNMENTS;
       
       const method = editingAssignment ? 'PUT' : 'POST';
       
@@ -228,7 +230,7 @@ export default function AssignmentsPage() {
     if (!confirm('Bạn có chắc chắn muốn xóa phân công này?')) return;
     
     try {
-      const response = await fetch(`/api/org/assignments/${id}`, {
+      const response = await fetch(API_ROUTES.ORG.ASSIGNMENTS_BY_ID(id), {
         method: 'DELETE',
       });
 
@@ -244,7 +246,7 @@ export default function AssignmentsPage() {
     }
   };
 
-  const filteredAssignments = assignments.filter(assignment => {
+  const filteredAssignments = (assignments || []).filter(assignment => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -439,7 +441,7 @@ export default function AssignmentsPage() {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {assignment.is_primary ? 'Chính' : 'Phụ'} ({assignment.allocation}%)
+                        {assignment.is_primary ? 'Chính' : 'Phụ'} ({Number(assignment.allocation)}%)
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
@@ -488,9 +490,9 @@ export default function AssignmentsPage() {
           <Stack spacing={3} sx={{ mt: 1 }}>
             {/* Employee Selection */}
             <Autocomplete
-              options={employees}
+              options={employees || []}
               getOptionLabel={(option) => `${option.User.full_name} (${option.employee_no})`}
-              value={employees.find(emp => emp.id === formData.employee_id) || null}
+              value={(employees || []).find(emp => emp.id === formData.employee_id) || null}
               onChange={(event, newValue) => {
                 setFormData(prev => ({ ...prev, employee_id: newValue?.id || '' }));
               }}
@@ -518,9 +520,9 @@ export default function AssignmentsPage() {
 
             {/* Org Unit Selection */}
             <Autocomplete
-              options={orgUnits}
+              options={orgUnits || []}
               getOptionLabel={(option) => `${option.name} (${option.code})`}
-              value={orgUnits.find(unit => unit.id === formData.org_unit_id) || null}
+              value={(orgUnits || []).find(unit => unit.id === formData.org_unit_id) || null}
               onChange={(event, newValue) => {
                 setFormData(prev => ({ ...prev, org_unit_id: newValue?.id || '' }));
               }}
@@ -548,9 +550,9 @@ export default function AssignmentsPage() {
 
             {/* Job Position Selection */}
             <Autocomplete
-              options={jobPositions}
+              options={jobPositions || []}
               getOptionLabel={(option) => `${option.title} (${option.code})`}
-              value={jobPositions.find(pos => pos.id === formData.job_position_id) || null}
+              value={(jobPositions || []).find(pos => pos.id === formData.job_position_id) || null}
               onChange={(event, newValue) => {
                 setFormData(prev => ({ ...prev, job_position_id: newValue?.id || '' }));
               }}

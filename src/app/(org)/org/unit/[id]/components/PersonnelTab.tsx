@@ -111,7 +111,10 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
   const [editingAssignment, setEditingAssignment] = useState<OrgAssignment | null>(null);
   
   // Employee search hook
-  const { employees, loading: searchLoading, error: searchError, searchEmployees } = useEmployeeSearch();
+  const { employees, loading: searchLoading, error: searchError, searchEmployees, loadAllEmployees } = useEmployeeSearch();
+  
+  // Track user input to prevent search loop
+  const [isUserTyping, setIsUserTyping] = useState(false);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -173,6 +176,10 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
       is_primary: true,
       allocation: '1.00',
     });
+    // Reset typing state and load all employees when opening modal
+    setIsUserTyping(false);
+    setError(null); // Clear any previous errors
+    loadAllEmployees();
     setOpenDialog(true);
   };
 
@@ -185,8 +192,12 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
       end_date: assignment.end_date ? assignment.end_date.split('T')[0] : '',
       assignment_type: assignment.assignment_type,
       is_primary: assignment.is_primary,
-      allocation: assignment.allocation,
+      allocation: Number(assignment.allocation).toString(),
     });
+    // Reset typing state and load all employees when opening modal
+    setIsUserTyping(false);
+    setError(null); // Clear any previous errors
+    loadAllEmployees();
     setOpenDialog(true);
   };
 
@@ -213,7 +224,7 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
         setOpenDialog(false);
         loadAssignments();
       } else {
-        setError(result.error || 'Failed to save assignment');
+        setError(result.details || result.error || 'Failed to save assignment');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to save assignment');
@@ -269,7 +280,7 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
     status: 'active', // Assuming assigned employees are active
     assignment_type: assignment.assignment_type,
     is_primary: assignment.is_primary,
-    allocation: assignment.allocation,
+    allocation: Number(assignment.allocation).toString(),
     start_date: assignment.start_date,
     end_date: assignment.end_date,
   }));
@@ -544,7 +555,7 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
-                            {assignment.is_primary ? 'Chính' : 'Phụ'} ({assignment.allocation}%)
+                            {assignment.is_primary ? 'Chính' : 'Phụ'} ({Number(assignment.allocation)}%)
                           </Typography>
                         </TableCell>
                         <TableCell align="center">
@@ -774,6 +785,13 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
         </DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
+            {/* Error Display */}
+            {error && (
+              <Alert severity="error" onClose={() => setError(null)}>
+                {error}
+              </Alert>
+            )}
+            
             {/* Employee Selection */}
             <Autocomplete
               options={employees}
@@ -782,17 +800,31 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
               onChange={(event, newValue) => {
                 setFormData(prev => ({ ...prev, employee_id: newValue?.id || '' }));
               }}
-              onInputChange={(event, newInputValue) => {
-                if (newInputValue.length >= 2) {
-                  searchEmployees(newInputValue);
+              onInputChange={(event, newInputValue, reason) => {
+                // Only search when user is typing, not when selecting an option
+                if (reason === 'input') {
+                  setIsUserTyping(true);
+                  if (newInputValue.length >= 1) {
+                    searchEmployees(newInputValue);
+                  } else if (newInputValue.length === 0) {
+                    // Load all employees when input is cleared
+                    loadAllEmployees();
+                  }
+                } else if (reason === 'reset') {
+                  setIsUserTyping(false);
                 }
               }}
+              noOptionsText={searchLoading ? "Đang tải..." : "Không tìm thấy nhân viên"}
+              loading={searchLoading}
+              filterOptions={(options) => options} // Disable client-side filtering since we're doing server-side search
               renderInput={(params) => (
                 <TextField
                   {...params}
                   label="Nhân viên"
                   placeholder="Tìm kiếm nhân viên..."
                   required
+                  error={!!searchError}
+                  helperText={searchError || "Nhập tên nhân viên để tìm kiếm"}
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (
@@ -816,7 +848,6 @@ export default function PersonnelTab({ unit }: PersonnelTabProps) {
                   </Box>
                 </Box>
               )}
-              noOptionsText="Không tìm thấy nhân viên"
               clearOnEscape
               selectOnFocus
               handleHomeEndKeys

@@ -1,23 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { withIdParam, withIdAndBody, validateSchema } from '@/lib/api-handler';
+import { Schemas } from '@/lib/api-schemas';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { id } = await params;
-    const assignmentId = BigInt(id);
-
+export const GET = withIdParam(
+  async (id: string) => {
     const assignment = await db.orgAssignment.findUnique({
-      where: { id: assignmentId },
+      where: { id: BigInt(id) },
       include: {
         Employee: {
           include: {
@@ -49,168 +37,94 @@ export async function GET(
     });
 
     if (!assignment) {
-      return NextResponse.json(
-        { success: false, error: 'Assignment not found' },
-        { status: 404 }
-      );
+      throw new Error('Không tìm thấy phân công');
     }
 
-    // Serialize response
-    const serializedAssignment = {
-      id: assignment.id.toString(),
-      employee_id: assignment.employee_id.toString(),
-      org_unit_id: assignment.org_unit_id.toString(),
-      job_position_id: assignment.position_id?.toString(),
-      start_date: assignment.start_date,
-      end_date: assignment.end_date,
-      assignment_type: assignment.assignment_type,
-      is_primary: assignment.is_primary,
-      allocation: assignment.allocation.toString(),
-      created_at: assignment.created_at,
-      updated_at: assignment.updated_at,
-      Employee: {
-        id: assignment.Employee.id.toString(),
-        employee_no: assignment.Employee.employee_no,
-        User: assignment.Employee.User ? {
-          id: assignment.Employee.User.id.toString(),
-          full_name: assignment.Employee.User.full_name,
-          email: assignment.Employee.User.email,
-        } : null,
-      },
-      OrgUnit: assignment.OrgUnit ? {
-        id: assignment.OrgUnit.id.toString(),
-        name: assignment.OrgUnit.name,
-        code: assignment.OrgUnit.code,
-        type: assignment.OrgUnit.type,
-      } : null,
-      JobPosition: assignment.JobPosition ? {
-        id: assignment.JobPosition.id.toString(),
-        title: assignment.JobPosition.title,
-        code: assignment.JobPosition.code,
-      } : null,
-    };
+    return assignment;
+  },
+  'fetch assignment'
+);
 
-    return NextResponse.json({
-      success: true,
-      data: serializedAssignment,
-    });
-
-  } catch (error: any) {
-    console.error('Get assignment error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch assignment',
-        details: error.message,
-      },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+export const PUT = withIdAndBody(
+  async (id: string, body: unknown) => {
+    // Convert string allocation to number if needed
+    const data = body as Record<string, unknown>;
+    if (data.allocation && typeof data.allocation === 'string') {
+      data.allocation = parseFloat(data.allocation);
     }
+    
+    const validatedData = validateSchema(Schemas.Assignment.Update, data);
+    const { employee_id, org_unit_id, job_position_id, start_date, end_date, assignment_type, is_primary, allocation } = validatedData;
 
-    const { id } = await params;
-    const assignmentId = BigInt(id);
-    const body = await request.json();
-    const { employee_id, org_unit_id, job_position_id, start_date, end_date, assignment_type, is_primary, allocation } = body;
 
-    // Check if assignment exists
     const existingAssignment = await db.orgAssignment.findUnique({
-      where: { id: assignmentId },
+      where: { id: BigInt(id) },
     });
-
     if (!existingAssignment) {
-      return NextResponse.json(
-        { success: false, error: 'Assignment not found' },
-        { status: 404 }
-      );
+      throw new Error('Assignment not found');
     }
 
-    // Validate required fields
-    if (!employee_id || !org_unit_id || !start_date) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    // Check if employee exists
-    const employee = await db.employee.findUnique({
-      where: { id: BigInt(employee_id) },
-    });
-    if (!employee) {
-      return NextResponse.json(
-        { success: false, error: 'Employee not found' },
-        { status: 404 }
-      );
-    }
-
-    // Check if org unit exists
-    const orgUnit = await db.OrgUnit.findUnique({
-      where: { id: BigInt(org_unit_id) },
-    });
-    if (!orgUnit) {
-      return NextResponse.json(
-        { success: false, error: 'Organization unit not found' },
-        { status: 404 }
-      );
-    }
-
-    // Check if job position exists (if provided)
-    if (job_position_id) {
-      const jobPosition = await db.JobPosition.findUnique({
-        where: { id: BigInt(job_position_id) },
+    if (employee_id) {
+      const employee = await db.employee.findUnique({
+        where: { id: BigInt(employee_id) },
       });
-      if (!jobPosition) {
-        return NextResponse.json(
-          { success: false, error: 'Job position not found' },
-          { status: 404 }
-        );
+      if (!employee) {
+        throw new Error('Employee not found');
       }
     }
 
-    // Check for existing active assignment (excluding current one)
-    const conflictingAssignment = await db.orgAssignment.findFirst({
-      where: {
-        employee_id: BigInt(employee_id),
-        org_unit_id: BigInt(org_unit_id),
-        is_primary: true,
-        id: { not: assignmentId },
-        OR: [
-          { end_date: null },
-          { end_date: { gte: new Date(start_date) } },
-        ],
-      },
-    });
+    if (org_unit_id) {
+      const orgUnit = await db.orgUnit.findUnique({
+        where: { id: BigInt(org_unit_id) },
+      });
+      if (!orgUnit) {
+        throw new Error('Organization unit not found');
+      }
+    }
 
-    if (conflictingAssignment) {
-      return NextResponse.json(
-        { success: false, error: 'Employee already has an active assignment to this unit' },
-        { status: 400 }
-      );
+    if (job_position_id) {
+      const jobPosition = await db.jobPosition.findUnique({
+        where: { id: BigInt(job_position_id) },
+      });
+      if (!jobPosition) {
+        throw new Error('Job position not found');
+      }
+    }
+
+    if (employee_id || org_unit_id) {
+      const checkEmployeeId = employee_id ? BigInt(employee_id) : existingAssignment.employee_id;
+      const checkOrgUnitId = org_unit_id ? BigInt(org_unit_id) : existingAssignment.org_unit_id;
+
+      const conflictingAssignment = await db.orgAssignment.findFirst({
+        where: {
+          id: { not: BigInt(id) },
+          employee_id: checkEmployeeId,
+          org_unit_id: checkOrgUnitId,
+          is_primary: true,
+          OR: [
+            { end_date: null },
+            { end_date: { gte: new Date(start_date || existingAssignment.start_date) } },
+          ],
+        },
+      });
+
+      if (conflictingAssignment) {
+        throw new Error('Nhân viên này đã có phân công chính trong đơn vị này');
+      }
     }
 
     // Update assignment
-    const assignment = await db.orgAssignment.update({
-      where: { id: assignmentId },
+    const updatedAssignment = await db.orgAssignment.update({
+      where: { id: BigInt(id) },
       data: {
-        employee_id: BigInt(employee_id),
-        org_unit_id: BigInt(org_unit_id),
-        position_id: job_position_id ? BigInt(job_position_id) : null,
-        start_date: new Date(start_date),
-        end_date: end_date ? new Date(end_date) : null,
-        assignment_type: assignment_type || 'admin',
-        is_primary: is_primary !== undefined ? is_primary : true,
-        allocation: allocation ? parseFloat(allocation) : 1.00,
+        ...(employee_id && { employee_id: BigInt(employee_id) }),
+        ...(org_unit_id && { org_unit_id: BigInt(org_unit_id) }),
+        ...(job_position_id && { position_id: BigInt(job_position_id) }),
+        ...(start_date && { start_date: new Date(start_date) }),
+        ...(end_date && { end_date: new Date(end_date) }),
+        ...(assignment_type && { assignment_type }),
+        ...(is_primary !== undefined && { is_primary }),
+        ...(allocation && { allocation: parseFloat(allocation.toString()) }),
       },
       include: {
         Employee: {
@@ -242,104 +156,59 @@ export async function PUT(
       },
     });
 
-    // Serialize response
-    const serializedAssignment = {
-      id: assignment.id.toString(),
-      employee_id: assignment.employee_id.toString(),
-      org_unit_id: assignment.org_unit_id.toString(),
-      job_position_id: assignment.position_id?.toString(),
-      start_date: assignment.start_date,
-      end_date: assignment.end_date,
-      assignment_type: assignment.assignment_type,
-      is_primary: assignment.is_primary,
-      allocation: assignment.allocation.toString(),
-      created_at: assignment.created_at,
-      updated_at: assignment.updated_at,
-      Employee: {
-        id: assignment.Employee.id.toString(),
-        employee_no: assignment.Employee.employee_no,
-        User: assignment.Employee.User ? {
-          id: assignment.Employee.User.id.toString(),
-          full_name: assignment.Employee.User.full_name,
-          email: assignment.Employee.User.email,
-        } : null,
-      },
-      OrgUnit: assignment.OrgUnit ? {
-        id: assignment.OrgUnit.id.toString(),
-        name: assignment.OrgUnit.name,
-        code: assignment.OrgUnit.code,
-        type: assignment.OrgUnit.type,
-      } : null,
-      JobPosition: assignment.JobPosition ? {
-        id: assignment.JobPosition.id.toString(),
-        title: assignment.JobPosition.title,
-        code: assignment.JobPosition.code,
-      } : null,
-    };
+    return updatedAssignment;
+  },
+  'update assignment'
+);
 
-    return NextResponse.json({
-      success: true,
-      data: serializedAssignment,
-      message: 'Assignment updated successfully',
+export const DELETE = withIdParam(
+  async (id: string) => {
+
+    const assignment = await db.orgAssignment.findUnique({
+      where: { id: BigInt(id) },
     });
-
-  } catch (error: any) {
-    console.error('Update assignment error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to update assignment',
-        details: error.message,
-      },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    if (!assignment) {
+      throw new Error('Assignment not found');
     }
 
-    const { id } = await params;
-    const assignmentId = BigInt(id);
-
-    // Check if assignment exists
-    const existingAssignment = await db.orgAssignment.findUnique({
-      where: { id: assignmentId },
-    });
-
-    if (!existingAssignment) {
-      return NextResponse.json(
-        { success: false, error: 'Assignment not found' },
-        { status: 404 }
-      );
-    }
-
-    // Delete assignment
-    await db.orgAssignment.delete({
-      where: { id: assignmentId },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: 'Assignment deleted successfully',
-    });
-
-  } catch (error: any) {
-    console.error('Delete assignment error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to delete assignment',
-        details: error.message,
+    // soft delete
+    const deletedAssignment = await db.orgAssignment.update({
+      where: { id: BigInt(id) },
+      data: {
+        end_date: new Date(),
+        is_primary: false,
       },
-      { status: 500 }
-    );
-  }
-}
+      include: {
+        Employee: {
+          include: {
+            User: {
+              select: {
+                id: true,
+                full_name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        OrgUnit: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            type: true,
+          },
+        },
+        JobPosition: {
+          select: {
+            id: true,
+            title: true,
+            code: true,
+          },
+        },
+      },
+    });
+
+    return deletedAssignment;
+  },
+  'delete assignment'
+);

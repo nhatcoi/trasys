@@ -68,29 +68,28 @@ export const API_ROUTES = {
         USER_ROLES: '/api/hr/user-roles',
         USER_ROLES_BY_ID: (id: string) => `/api/hr/user-roles/${id}`,
         ME: '/api/hr/me',
+
+        POSITIONS: '/api/hr/positions',
     },
     ORG: {
-        // Stats and overview
         STATS: '/api/org/stats',
-        
-        // Units
         UNITS: '/api/org/units',
         UNITS_BY_ID: (id: string) => `/api/org/units/${id}`,
         UNITS_AUDIT: '/api/org/units/audit',
         UNITS_HISTORY: (id: string) => `/api/org/units/${id}/history`,
         UNITS_STATUS: (id: string) => `/api/org/units/${id}/status`,
-        
-        // Structure requests
         STRUCTURE_REQUESTS: '/api/org/structure-requests',
         STRUCTURE_REQUESTS_BY_ID: (id: string) => `/api/org/structure-requests/${id}`,
-        
-        // Initial units
         INITIAL_UNITS: '/api/org/initial-units',
-        
-        // History
         HISTORY: '/api/org/history',
-        
-        // KPI
+        HISTORY_BY_ID: (id: string) => `/api/org/history/${id}`,
+        UNIT_RELATIONS: '/api/org/unit-relations',
+        UNIT_RELATIONS_BY_ID: (id: string) => `/api/org/unit-relations/${id}`,
+        ASSIGNMENTS: '/api/org/assignments',
+        ASSIGNMENTS_BY_ID: (id: string) => `/api/org/assignments/${id}`,
+        TYPES: '/api/org/types',
+        STATUSES: '/api/org/statuses',
+        STATUSES_BY_ID: (id: string) => `/api/org/statuses/${id}`,
         KPI: {
             HEADCOUNT: '/api/org/kpi/headcount',
         },
@@ -103,6 +102,7 @@ export const ORG_ROUTES = {
     TREE: '/org/tree',
     DIAGRAM: '/org/diagram',
     REPORTS: '/org/reports',
+    CONFIG: '/org/config',
     HISTORY: '/org/unit/create/audit',
 
     

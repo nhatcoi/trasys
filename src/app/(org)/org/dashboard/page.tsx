@@ -23,10 +23,8 @@ import {
     Divider,
     Container,
     Button,
-    Grid,
     Paper,
     IconButton,
-    CardActionArea,
     CardActions,
 } from '@mui/material';
 import {
@@ -111,7 +109,9 @@ const MOCK_ACTIVITIES: RecentActivity[] = [
 ];
 
 // Utility functions
-const getActivityIcon = (type: string) => {
+const getActivityIcon = (type: string | null | undefined) => {
+    if (!type) return <InfoIcon />;
+    
     const iconMap = {
         unit_created: <BusinessIcon color="success" />,
         unit_updated: <AssessmentIcon color="info" />,
@@ -121,7 +121,9 @@ const getActivityIcon = (type: string) => {
     return iconMap[type as keyof typeof iconMap] || <InfoIcon />;
 };
 
-const getTypeColor = (type: string): string => {
+const getTypeColor = (type: string | null | undefined): string => {
+    if (!type) return COLORS.GRAY;
+    
     const colorMap = {
         department: COLORS.PRIMARY,
         division: COLORS.SECONDARY,
@@ -146,7 +148,13 @@ export default function OrgDashboardPage() {
     const [error, setError] = useState<string | null>(null);
     const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
 
-    const topUnits: TopUnit[] = stats?.topUnits || [];
+    const topUnits: TopUnit[] = stats?.topUnits?.map(unit => ({
+        id: unit.id,
+        name: unit.name,
+        code: unit.code,
+        type: unit.type,
+        employeeCount: (unit as any)._count?.OrgAssignment || 0
+    })) || [];
 
     const fetchStats = async (): Promise<void> => {
         try {
@@ -352,13 +360,13 @@ export default function OrgDashboardPage() {
         ];
 
         return (
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
                 {statsData.map((stat, index) => (
-                    <Grid item xs={12} sm={6} md={3} key={index}>
+                    <Box key={index} sx={{ flex: '1 1 300px', minWidth: '250px' }}>
                         {renderStatCard(stat.title, stat.value, stat.icon, stat.color, stat.bgColor)}
-                    </Grid>
+                    </Box>
                 ))}
-            </Grid>
+            </Box>
         );
     };
 
@@ -420,13 +428,15 @@ export default function OrgDashboardPage() {
                     Truy cập nhanh
                 </Typography>
 
-                <Grid container spacing={3}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
                     {actions.map((action, index) => (
-                        <Grid item xs={12} sm={6} md={4} key={index}>
+                        <Box key={index} sx={{ flex: '1 1 300px', minWidth: '250px' }}>
                             <Card
+                                onClick={() => router.push(action.route)}
                                 sx={{
                                     height: '100%',
                                     borderRadius: 3,
+                                    cursor: 'pointer',
                                     transition: 'all 0.3s ease',
                                     '&:hover': {
                                         transform: 'translateY(-8px)',
@@ -434,42 +444,41 @@ export default function OrgDashboardPage() {
                                     }
                                 }}
                             >
-                                <CardActionArea
-                                    onClick={() => router.push(action.route)}
-                                    sx={{ height: '100%', p: 0 }}
+                                <Box
+                                    sx={{
+                                        background: action.gradient,
+                                        p: 3,
+                                        color: 'white',
+                                        textAlign: 'center'
+                                    }}
                                 >
-                                    <Box
-                                        sx={{
-                                            background: action.gradient,
-                                            p: 3,
-                                            color: 'white',
-                                            textAlign: 'center'
+                                    <Box sx={{ mb: 2 }}>
+                                        {action.icon}
+                                    </Box>
+                                    <Typography variant="h6" component="h3" sx={{ fontWeight: 700, mb: 1 }}>
+                                        {action.title}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                                        {action.description}
+                                    </Typography>
+                                </Box>
+                                <CardActions sx={{ justifyContent: 'center', p: 2 }}>
+                                    <Button
+                                        size="small"
+                                        endIcon={<ArrowForwardIcon />}
+                                        sx={{ fontWeight: 600 }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            router.push(action.route);
                                         }}
                                     >
-                                        <Box sx={{ mb: 2 }}>
-                                            {action.icon}
-                                        </Box>
-                                        <Typography variant="h6" component="h3" sx={{ fontWeight: 700, mb: 1 }}>
-                                            {action.title}
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                                            {action.description}
-                                        </Typography>
-                                    </Box>
-                                    <CardActions sx={{ justifyContent: 'center', p: 2 }}>
-                                        <Button
-                                            size="small"
-                                            endIcon={<ArrowForwardIcon />}
-                                            sx={{ fontWeight: 600 }}
-                                        >
-                                            Truy cập
-                                        </Button>
-                                    </CardActions>
-                                </CardActionArea>
+                                        Truy cập
+                                    </Button>
+                                </CardActions>
                             </Card>
-                        </Grid>
+                        </Box>
                     ))}
-                </Grid>
+                </Box>
             </Box>
         );
     };
@@ -480,9 +489,9 @@ export default function OrgDashboardPage() {
                 Chức năng bổ sung
             </Typography>
 
-            <Grid container spacing={3}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
                 {/* Quản lý đơn vị */}
-                <Grid item xs={12} md={4}>
+                <Box sx={{ flex: '1 1 300px', minWidth: '250px' }}>
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
                         Quản lý đơn vị
                     </Typography>
@@ -548,10 +557,10 @@ export default function OrgDashboardPage() {
                             Xóa đơn vị
                         </Button>
                     </Stack>
-                </Grid>
+                </Box>
 
                 {/* Quy trình tạo đơn vị */}
-                <Grid item xs={12} md={4}>
+                <Box sx={{ flex: '1 1 300px', minWidth: '250px' }}>
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
                         Quy trình tạo đơn vị
                     </Typography>
@@ -637,10 +646,10 @@ export default function OrgDashboardPage() {
                             Phê duyệt đơn vị
                         </Button>
                     </Stack>
-                </Grid>
+                </Box>
 
                 {/* Quản lý hệ thống */}
-                <Grid item xs={12} md={4}>
+                <Box sx={{ flex: '1 1 300px', minWidth: '250px' }}>
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
                         Quản lý hệ thống
                     </Typography>
@@ -726,8 +735,8 @@ export default function OrgDashboardPage() {
                             Lịch sử hoạt động
                         </Button>
                     </Stack>
-                </Grid>
-            </Grid>
+                </Box>
+            </Box>
         </Paper>
     );
 
@@ -937,14 +946,14 @@ export default function OrgDashboardPage() {
             {renderQuickActions()}
             {renderAdditionalFeatures()}
 
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} md={6}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
+                <Box sx={{ flex: '1 1 300px', minWidth: '250px' }}>
                     {/*{renderUnitTypeDistribution()}*/}
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </Box>
+                <Box sx={{ flex: '1 1 300px', minWidth: '250px' }}>
                     {renderTopUnits()}
-                </Grid>
-            </Grid>
+                </Box>
+            </Box>
 
             {/*{renderRecentActivities()}*/}
         </Container>

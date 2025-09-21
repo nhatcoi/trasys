@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { API_ROUTES } from '@/constants/routes';
+import { buildUrl } from '@/lib/api-handler';
 import {
   Box,
   Typography,
@@ -89,8 +91,17 @@ export default function ReportsPage() {
       totalEmployees: 0,
       activeUnits: 0,
       inactiveUnits: 0,
-      unitsWithoutHead: 0,
-      unitsWithoutStaff: 0,
+      departments: 0,
+      divisions: 0,
+      teams: 0,
+      branches: 0,
+      topUnits: [] as Array<{
+        id: string;
+        name: string;
+        code: string;
+        type: string;
+        employeeCount: number;
+      }>,
     },
     byType: [] as UnitTypeStats[],
     unitsWithoutHead: [] as UnitWithoutHead[],
@@ -100,10 +111,20 @@ export default function ReportsPage() {
   // API functions
   const fetchOrgStats = async (): Promise<OrgStats | null> => {
     try {
-      const response = await fetch('/api/org/stats');
+      const response = await fetch('/api/org/reports?type=overview');
       const result = await response.json();
       if (result.success) {
-        return result.data;
+        return {
+          totalUnits: result.data.totalUnits,
+          totalEmployees: result.data.totalEmployees,
+          activeUnits: result.data.activeUnits,
+          inactiveUnits: result.data.inactiveUnits,
+          departments: result.data.unitsWithEmployees,
+          divisions: 0,
+          teams: 0,
+          branches: 0,
+          topUnits: []
+        };
       }
       throw new Error(result.error || 'Failed to fetch org stats');
     } catch (error) {
@@ -115,10 +136,10 @@ export default function ReportsPage() {
   const fetchUnitsByType = async (): Promise<UnitTypeStats[]> => {
     try {
       // Get all units to calculate type distribution
-      const response = await fetch('/api/org/units?page=1&size=1000&sort=name&order=asc');
+      const response = await fetch(buildUrl(API_ROUTES.ORG.UNITS, { page: 1, size: 1000, sort: 'name', order: 'asc' }));
       const result = await response.json();
       if (result.success) {
-        const units = result.data || [];
+        const units = result.data?.items || result.data || [];
         const typeCounts: Record<string, number> = {};
         
         // Count units by type
@@ -145,42 +166,12 @@ export default function ReportsPage() {
 
   const fetchUnitsWithoutHead = async (): Promise<UnitWithoutHead[]> => {
     try {
-      // Get all units and check which ones don't have heads
-      const response = await fetch('/api/org/units?page=1&size=1000&sort=name&order=asc&include_employees=true');
+      const response = await fetch('/api/org/reports?type=units-without-head');
       const result = await response.json();
       if (result.success) {
-        const units = result.data || [];
-        const unitsWithoutHead: UnitWithoutHead[] = [];
-
-        units.forEach((unit: { 
-          id: string; 
-          name: string; 
-          code: string; 
-          type: string | null;
-          org_assignment?: Array<{ position_id: string | null }>;
-          created_at: string;
-        }) => {
-          // Check if unit has any assignments with position_id (indicating a head/leader)
-          const hasHead = unit.org_assignment?.some(assignment => assignment.position_id);
-          if (!hasHead) {
-            // Calculate days since creation (simplified)
-            const createdDate = new Date(unit.created_at);
-            const now = new Date();
-            const daysDiff = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-            
-            unitsWithoutHead.push({
-              id: unit.id,
-              name: unit.name,
-              code: unit.code,
-              type: unit.type,
-              days: daysDiff,
-            });
-          }
-        });
-
-        return unitsWithoutHead.sort((a, b) => b.days - a.days);
+        return result.data;
       }
-      throw new Error(result.error || 'Failed to fetch units');
+      throw new Error(result.error || 'Failed to fetch units without head');
     } catch (error) {
       console.error('Error fetching units without head:', error);
       throw error;
@@ -189,35 +180,12 @@ export default function ReportsPage() {
 
   const fetchUnitsWithoutStaff = async (): Promise<UnitWithoutStaff[]> => {
     try {
-      // Get all units and check which ones don't have staff
-      const response = await fetch('/api/org/units?page=1&size=1000&sort=name&order=asc&include_employees=true');
+      const response = await fetch('/api/org/reports?type=units-without-staff');
       const result = await response.json();
       if (result.success) {
-        const units = result.data || [];
-        const unitsWithoutStaff: UnitWithoutStaff[] = [];
-
-        units.forEach((unit: { 
-          id: string; 
-          name: string; 
-          code: string; 
-          type: string | null;
-          org_assignment?: Array<unknown>;
-        }) => {
-          const employeeCount = unit.org_assignment?.length || 0;
-          if (employeeCount === 0) {
-            unitsWithoutStaff.push({
-              id: unit.id,
-              name: unit.name,
-              code: unit.code,
-              type: unit.type,
-              employeeCount: 0,
-            });
-          }
-        });
-
-        return unitsWithoutStaff;
+        return result.data;
       }
-      throw new Error(result.error || 'Failed to fetch units');
+      throw new Error(result.error || 'Failed to fetch units without staff');
     } catch (error) {
       console.error('Error fetching units without staff:', error);
       throw error;
@@ -243,8 +211,11 @@ export default function ReportsPage() {
             totalEmployees: orgStats.totalEmployees,
             activeUnits: orgStats.activeUnits,
             inactiveUnits: orgStats.inactiveUnits,
-            unitsWithoutHead: unitsWithoutHead.length,
-            unitsWithoutStaff: unitsWithoutStaff.length,
+            departments: orgStats.departments,
+            divisions: orgStats.divisions,
+            teams: orgStats.teams,
+            branches: orgStats.branches,
+            topUnits: orgStats.topUnits,
           },
           byType: unitsByType,
           unitsWithoutHead,
@@ -370,10 +341,28 @@ export default function ReportsPage() {
               <WarningIcon sx={{ color: '#f57c00', fontSize: 32 }} />
               <Box>
                 <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                  {loading ? <CircularProgress size={24} /> : reportData.overview.unitsWithoutHead}
+                  {loading ? <CircularProgress size={24} /> : reportData.unitsWithoutHead.length}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Thiếu trưởng đơn vị
+                </Typography>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Box>
+
+      <Box sx={{ flex: '1 1 300px', minWidth: 0 }}>
+        <Card>
+          <CardContent>
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <GroupIcon sx={{ color: '#d32f2f', fontSize: 32 }} />
+              <Box>
+                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                  {loading ? <CircularProgress size={24} /> : reportData.unitsWithoutStaff.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Thiếu nhân sự
                 </Typography>
               </Box>
             </Stack>
@@ -418,7 +407,7 @@ export default function ReportsPage() {
           </Alert>
         ) : (
           <List>
-            {reportData.byType.map((type, index) => (
+            {(reportData.byType || []).map((type, index) => (
               <React.Fragment key={index}>
                 <ListItem>
                   <ListItemIcon>
@@ -476,7 +465,7 @@ export default function ReportsPage() {
           </Alert>
         ) : (
           <List>
-            {reportData.unitsWithoutHead.map((unit, index) => (
+            {(reportData.unitsWithoutHead || []).map((unit, index) => (
               <React.Fragment key={unit.id}>
                 <ListItem>
                   <ListItemIcon>
@@ -534,7 +523,7 @@ export default function ReportsPage() {
           </Alert>
         ) : (
           <List>
-            {reportData.unitsWithoutStaff.map((unit, index) => (
+            {(reportData.unitsWithoutStaff || []).map((unit, index) => (
               <React.Fragment key={unit.id}>
                 <ListItem>
                   <ListItemIcon>

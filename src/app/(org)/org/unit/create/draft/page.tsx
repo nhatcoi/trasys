@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { API_ROUTES } from '@/constants/routes';
 import {
   Box,
   Typography,
@@ -92,7 +93,7 @@ export default function CreateDraftPage() {
 
   // Fetch draft units from API
   const { data: draftUnitsResponse, isLoading, error, refetch } = useOrgUnits({
-    status: 'draft',
+    status: 'DRAFT',
     page: 1,
     size: 50,
     sort: 'created_at',
@@ -101,7 +102,7 @@ export default function CreateDraftPage() {
 
   // Fetch rejected units from API
   const { data: rejectedUnitsResponse, isLoading: rejectedLoading } = useOrgUnits({
-    status: 'rejected',
+    status: 'REJECTED',
     page: 1,
     size: 50,
     sort: 'created_at',
@@ -110,7 +111,7 @@ export default function CreateDraftPage() {
 
   // Fetch campuses from API
   const { data: campusesResponse, isLoading: campusesLoading } = useCampuses({
-    status: 'active',
+    status: 'ACTIVE',
   });
 
   // Fetch parent units from API
@@ -122,8 +123,8 @@ export default function CreateDraftPage() {
   // Get current user session
   const { data: session, status: sessionStatus } = useSession();
 
-  const draftUnits = draftUnitsResponse || [];
-  const rejectedUnits = rejectedUnitsResponse || [];
+  const draftUnits = draftUnitsResponse?.items || [];
+  const rejectedUnits = rejectedUnitsResponse?.items || [];
 
   // Create dynamic types from API data
   const dynamicTypes = [
@@ -140,7 +141,7 @@ export default function CreateDraftPage() {
     if (!parentUnitsResponse) return [];
     
     // Group units by type
-    const groupedUnits = parentUnitsResponse.reduce((acc: any, unit: any) => {
+    const groupedUnits = parentUnitsResponse.items.reduce((acc: any, unit: any) => {
       const type = unit.type || 'UNKNOWN';
       if (!acc[type]) {
         acc[type] = [];
@@ -178,10 +179,10 @@ export default function CreateDraftPage() {
 
   // Auto-select first parent unit for owner_org_id when data is loaded
   useEffect(() => {
-    if (parentUnitsResponse && parentUnitsResponse.length > 0 && !formData.owner_org_id) {
+    if (parentUnitsResponse?.items && parentUnitsResponse.items.length > 0 && !formData.owner_org_id) {
       setFormData(prev => ({
         ...prev,
-        owner_org_id: parentUnitsResponse[0].id
+        owner_org_id: parentUnitsResponse.items[0].id
       }));
     }
   }, [parentUnitsResponse, formData.owner_org_id]);
@@ -229,7 +230,7 @@ export default function CreateDraftPage() {
   const handleSubmitForReview = async () => {
     if (validateForm()) {
       try {
-        const response = await fetch('/api/org/initial-units', {
+        const response = await fetch(API_ROUTES.ORG.INITIAL_UNITS, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

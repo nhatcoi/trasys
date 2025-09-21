@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 // Định nghĩa quyền hạn cho từng route
 const ROUTE_PERMISSIONS: Record<string, string[]> = {
+    // HR Routes
     '/hr/dashboard': ['hr.dashboard.view'],
     '/hr/employees': ['hr.employees.view'],
     '/hr/employees/new': ['hr.employees.create'],
@@ -45,6 +46,19 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
     '/hr/reports': ['hr.reports.view'],
     '/hr/profile': ['hr.profile.view'],
     '/hr/change-password': ['hr.profile.update'],
+
+    // Org Routes
+    '/org/dashboard': ['org_unit.read'],
+    '/org/tree': ['org_unit.read'],
+    '/org/unit': ['org_unit.read'],
+    '/org/unit/new': ['org_unit.create'],
+    '/org/unit/[id]': ['org_unit.read'],
+    '/org/unit/[id]/edit': ['org_unit.update'],
+    '/org/config': ['org_unit.admin'],
+    '/org/reports': ['org_unit.read'],
+    '/org/assignments': ['org_unit.read'],
+    '/org/assignments/new': ['org_unit.create'],
+    '/org/assignments/[id]/edit': ['org_unit.update'],
 };
 
 // API routes permissions
@@ -98,6 +112,30 @@ const API_ROUTE_PERMISSIONS: Record<string, string[]> = {
     'POST:/api/hr/employments': ['hr.employments.create'],
     'PUT:/api/hr/employments/[id]': ['hr.employments.update'],
     'DELETE:/api/hr/employments/[id]': ['hr.employments.delete'],
+
+    // Org API Routes
+    'GET:/api/org/units': ['org_unit.read'],
+    'POST:/api/org/units': ['org_unit.create'],
+    'PUT:/api/org/units/[id]': ['org_unit.update'],
+    'DELETE:/api/org/units/[id]': ['org_unit.delete'],
+    'GET:/api/org/unit-relations': ['org_unit.read'],
+    'POST:/api/org/unit-relations': ['org_unit.create'],
+    'PUT:/api/org/unit-relations/[params]': ['org_unit.update'],
+    'DELETE:/api/org/unit-relations/[params]': ['org_unit.delete'],
+    'GET:/api/org/types': ['org_unit.read'],
+    'POST:/api/org/types': ['org_unit.admin'],
+    'PUT:/api/org/types/[id]': ['org_unit.admin'],
+    'DELETE:/api/org/types/[id]': ['org_unit.admin'],
+    'GET:/api/org/statuses': ['org_unit.read'],
+    'POST:/api/org/statuses': ['org_unit.admin'],
+    'PUT:/api/org/statuses/[id]': ['org_unit.admin'],
+    'DELETE:/api/org/statuses/[id]': ['org_unit.admin'],
+    'GET:/api/org/stats': ['org_unit.read'],
+    'GET:/api/org/reports': ['org_unit.read'],
+    'GET:/api/org/assignments': ['org_unit.read'],
+    'POST:/api/org/assignments': ['org_unit.create'],
+    'PUT:/api/org/assignments/[id]': ['org_unit.update'],
+    'DELETE:/api/org/assignments/[id]': ['org_unit.delete'],
 };
 
 export default withAuth(
@@ -108,7 +146,7 @@ export default withAuth(
         console.log('🔒 Middleware triggered for:', method, pathname);
 
         // Kiểm tra quyền hạn cho API routes
-        if (pathname.startsWith('/api/hr/')) {
+        if (pathname.startsWith('/api/hr/') || pathname.startsWith('/api/org/')) {
             const apiKey = `${method}:${pathname}`;
             const requiredPermissions = API_ROUTE_PERMISSIONS[apiKey];
 

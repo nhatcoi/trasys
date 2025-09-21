@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_ROUTES } from '@/constants/routes';
+import { buildUrl } from '@/lib/api-handler';
 import {
   Box,
   Typography,
@@ -44,7 +46,6 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { 
-  orgApi,
   type OrgUnit, 
   type OrgUnitRelation
 } from '@/features/org/api/api';
@@ -64,7 +65,7 @@ interface EditRelationData {
   relation_type: 'direct' | 'advisory' | 'support' | 'collab';
   effective_from: string;
   effective_to: string;
-  note: string;
+  description: string;
 }
 
 interface AddRelationData {
@@ -73,7 +74,7 @@ interface AddRelationData {
   related_unit_id: string;
   effective_from: string;
   effective_to: string;
-  note: string;
+  description: string;
 }
 
 // Extend OrgUnitRelation to include parent and child info
@@ -102,7 +103,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
     relation_type: 'direct',
     effective_from: '',
     effective_to: '',
-    note: '',
+    description: '',
   });
   const [addData, setAddData] = useState<AddRelationData>({
     relation_type: 'direct',
@@ -110,7 +111,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
     related_unit_id: '',
     effective_from: new Date().toISOString().split('T')[0],
     effective_to: '',
-    note: '',
+    description: '',
   });
   const [availableUnits, setAvailableUnits] = useState<OrgUnit[]>([]);
 
@@ -128,7 +129,18 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
       setIsLoading(true);
       setRelationsError(null);
       
-      const response = await orgApi.relations.getAllForUnit(unitId);
+        const [parentResponse, childResponse] = await Promise.all([
+          fetch(buildUrl(API_ROUTES.ORG.UNIT_RELATIONS, { parent_id: unitId })),
+          fetch(buildUrl(API_ROUTES.ORG.UNIT_RELATIONS, { child_id: unitId }))
+        ]);
+      
+      const parentData = await parentResponse.json();
+      const childData = await childResponse.json();
+      
+      const response = {
+        parentRelations: parentData.data?.items || [],
+        childRelations: childData.data?.items || []
+      };
       
       setRelationsData(response);
     } catch (err) {
@@ -142,7 +154,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
   const fetchAvailableUnits = async () => {
     try {
       // Gọi API trực tiếp để lấy tất cả đơn vị
-      const response = await fetch('/api/org/units?size=1000&page=1&sort=name&order=asc');
+      const response = await fetch(buildUrl(API_ROUTES.ORG.UNITS, { size: 1000, page: 1, sort: 'name', order: 'asc' }));
       const data = await response.json();
       
       if (data.success) {
@@ -155,7 +167,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
           rel.parent_id === unitId ? rel.child_id : rel.parent_id
         );
         
-        const filteredUnits = data.data.filter((unit: OrgUnit) => 
+        const filteredUnits = data.data.items.filter((unit: OrgUnit) => 
           unit.id !== unitId && !relatedUnitIds.includes(unit.id)
         );
         setAvailableUnits(filteredUnits);
@@ -176,9 +188,14 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
   const childRelations = relationsData?.childRelations || [];
 
   // Update relation function
-  const updateRelation = async (relationId: string, data: { relation_type?: string; effective_to?: string; note?: string }) => {
+  const updateRelation = async (relationKey: string, data: { relation_type?: string; effective_to?: string; description?: string }) => {
     try {
-      const result = await orgApi.relations.update(relationId, data);
+      const response = await fetch(`/api/org/unit-relations/${encodeURIComponent(relationKey)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
       
       if (result.success) {
         fetchRelationsData(); // Refresh data
@@ -200,10 +217,15 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
         relation_type: data.relation_type,
         effective_from: data.effective_from,
         effective_to: data.effective_to || undefined,
-        note: data.note || '',
+        description: data.description || '',
       };
       
-      const result = await orgApi.relations.create(relationData);
+      const response = await fetch(API_ROUTES.ORG.UNIT_RELATIONS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(relationData),
+      });
+      const result = await response.json();
       if (result.success) {
         fetchRelationsData(); // Refresh data
         return true;
@@ -216,9 +238,12 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
   };
 
   // Delete relation function
-  const deleteRelation = async (relationId: string) => {
+  const deleteRelation = async (relationKey: string) => {
     try {
-      const result = await orgApi.relations.delete(relationId);
+      const response = await fetch(`/api/org/unit-relations/${encodeURIComponent(relationKey)}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
       if (result.success) {
         fetchRelationsData(); // Refresh data
         return true;
@@ -252,7 +277,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
       relation_type: relation.relation_type as 'direct' | 'advisory' | 'support' | 'collab',
       effective_from: relation.effective_from ? new Date(relation.effective_from).toISOString().split('T')[0] : '',
       effective_to: relation.effective_to ? new Date(relation.effective_to).toISOString().split('T')[0] : '',
-      note: relation.note || '',
+      description: relation.note || '',
     });
     setEditDialogOpen(true);
   };
@@ -273,11 +298,12 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
       const updateData = {
         relation_type: editData.relation_type,
         effective_to: editData.effective_to || undefined,
-        note: editData.note || '',
+        description: editData.description || '',
       };
 
-      // Create a composite key for the relation
-      const relationKey = `${selectedRelation.parent_id}-${selectedRelation.child_id}-${selectedRelation.relation_type}-${selectedRelation.effective_from}`;
+      // Create a composite key for the relation (format: parent_id/child_id/relation_type/effective_from)
+      const effectiveFromDate = selectedRelation.effective_from ? selectedRelation.effective_from.split('T')[0] : '';
+      const relationKey = `${selectedRelation.parent_id}/${selectedRelation.child_id}/${selectedRelation.relation_type}/${effectiveFromDate}`;
       await updateRelation(relationKey, updateData);
       
       setEditDialogOpen(false);
@@ -309,7 +335,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
       related_unit_id: '',
       effective_from: new Date().toISOString().split('T')[0],
       effective_to: '',
-      note: '',
+      description: '',
     });
     fetchAvailableUnits();
     setAddDialogOpen(true);
@@ -335,7 +361,9 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
     if (!confirm('Bạn có chắc chắn muốn xóa quan hệ này?')) return;
     
     try {
-      const relationKey = `${relation.parent_id}-${relation.child_id}-${relation.relation_type}-${relation.effective_from}`;
+      // Create composite key with date-only format (format: parent_id/child_id/relation_type/effective_from)
+      const effectiveFromDate = relation.effective_from ? relation.effective_from.split('T')[0] : '';
+      const relationKey = `${relation.parent_id}/${relation.child_id}/${relation.relation_type}/${effectiveFromDate}`;
       await deleteRelation(relationKey);
       setSuccess('Xóa quan hệ thành công!');
       setTimeout(() => setSuccess(null), 3000);
@@ -453,7 +481,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
                                 {relation.child?.code}
                               </Typography>
                               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                {relation.note || 'Không có ghi chú'}
+                                {relation.note || 'Không có mô tả'}
                               </Typography>
                             </Box>
                           </Stack>
@@ -556,7 +584,7 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
                                 {relation.parent?.code}
                               </Typography>
                               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                {relation.note || 'Không có ghi chú'}
+                                {relation.note || 'Không có mô tả'}
                               </Typography>
                             </Box>
                           </Stack>
@@ -735,8 +763,8 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
               multiline
               rows={3}
               label="Ghi chú"
-              value={addData.note}
-              onChange={(e) => handleAddInputChange('note', e.target.value)}
+              value={addData.description}
+              onChange={(e) => handleAddInputChange('description', e.target.value)}
               placeholder="Nhập ghi chú về quan hệ..."
             />
           </Stack>
@@ -807,8 +835,8 @@ export default function RelationsTab({ unitId }: RelationsTabProps) {
               multiline
               rows={3}
               label="Ghi chú"
-              value={editData.note}
-              onChange={(e) => handleInputChange('note', e.target.value)}
+              value={editData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
               placeholder="Nhập ghi chú về quan hệ..."
             />
           </Stack>

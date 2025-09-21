@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { API_ROUTES } from '@/constants/routes';
+import { buildUrl } from '@/lib/api-handler';
 
 interface OrgUnitType {
   id: string;
@@ -47,11 +49,11 @@ export const useOrgTypesStatuses = (): UseOrgTypesStatusesReturn => {
       setTypesLoading(true);
       setError(null);
       
-      const response = await fetch('/api/org/types?include_inactive=true');
+      const response = await fetch(buildUrl(API_ROUTES.ORG.TYPES, { include_inactive: true }));
       const result = await response.json();
       
       if (result.success) {
-        setTypes(result.data);
+        setTypes(result.data || []);
       } else {
         setError(result.error || 'Failed to fetch types');
       }
@@ -68,7 +70,7 @@ export const useOrgTypesStatuses = (): UseOrgTypesStatusesReturn => {
       setStatusesLoading(true);
       setError(null);
       
-      const response = await fetch('/api/org/statuses?include_inactive=true');
+      const response = await fetch(buildUrl(API_ROUTES.ORG.STATUSES, { include_inactive: true }));
       const result = await response.json();
       
       if (result.success) {

@@ -34,6 +34,7 @@ interface UseEmployeeSearchResult {
   error: string | null;
   searchEmployees: (query: string) => void;
   clearSearch: () => void;
+  loadAllEmployees: () => void;
 }
 
 export const useEmployeeSearch = (): UseEmployeeSearchResult => {
@@ -48,10 +49,27 @@ export const useEmployeeSearch = (): UseEmployeeSearchResult => {
       clearTimeout(debounceRef.current);
     }
 
-    // Set new timeout for 1.5 seconds
+    // Set new timeout for 300ms
     debounceRef.current = setTimeout(async () => {
       if (!query.trim()) {
-        setEmployees([]);
+        // Load all employees when query is empty
+        setLoading(true);
+        setError(null);
+        
+        try {
+          const response = await fetch(`/api/hr/employees/search?q=&limit=10`);
+          const result = await response.json();
+          
+          if (result.success) {
+            setEmployees(result.data);
+          } else {
+            setError(result.error || 'Failed to load employees');
+          }
+        } catch (err: any) {
+          setError(err.message || 'Failed to load employees');
+        } finally {
+          setLoading(false);
+        }
         return;
       }
 
@@ -72,7 +90,7 @@ export const useEmployeeSearch = (): UseEmployeeSearchResult => {
       } finally {
         setLoading(false);
       }
-    }, 500); // 1.5 seconds delay
+    }, 500); // 500ms delay
   }, []);
 
   const clearSearch = useCallback(() => {
@@ -84,6 +102,26 @@ export const useEmployeeSearch = (): UseEmployeeSearchResult => {
     setError(null);
   }, []);
 
+  const loadAllEmployees = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`/api/hr/employees/search?q=&limit=50`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setEmployees(result.data);
+      } else {
+        setError(result.error || 'Failed to load employees');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load employees');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -93,5 +131,5 @@ export const useEmployeeSearch = (): UseEmployeeSearchResult => {
     };
   }, []);
 
-  return { employees, loading, error, searchEmployees, clearSearch };
+  return { employees, loading, error, searchEmployees, clearSearch, loadAllEmployees };
 };

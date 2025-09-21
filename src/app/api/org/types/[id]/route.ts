@@ -1,132 +1,75 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { withIdParam, withIdAndBody, serializeBigInt } from '@/lib/api-handler';
 import { db } from '@/lib/db';
 
 // GET /api/org/types/[id] - Get specific organization unit type
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
+export const GET = withIdParam(
+  async (id: string) => {
     const typeId = BigInt(id);
 
-    const type = await db.OrgUnitType.findUnique({
+    const type = await db.orgUnitType.findUnique({
       where: { id: typeId }
     });
 
     if (!type) {
-      return NextResponse.json(
-        { success: false, error: 'Type not found' },
-        { status: 404 }
-      );
+      throw new Error('Type not found');
     }
 
-    // Serialize BigInt fields
-    const serializedType = {
-      ...type,
-      id: type.id.toString(),
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: serializedType
-    });
-
-  } catch (error) {
-    console.error('Error fetching org unit type:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to fetch org unit type' 
-      },
-      { status: 500 }
-    );
-  }
-}
+    return type;
+  },
+  'fetch org unit type'
+);
 
 // PUT /api/org/types/[id] - Update organization unit type
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
+export const PUT = withIdAndBody(
+  async (id: string, body: unknown) => {
     const typeId = BigInt(id);
+    const data = body as Record<string, unknown>;
+    const { code, name, description, color, sort_order, is_active } = data;
 
-    const body = await request.json();
-    const { code, name, description, color, sort_order, is_active } = body;
+    // Simple validation
+    if (!code && !name && description === undefined && !color && sort_order === undefined && is_active === undefined) {
+      throw new Error('At least one field must be provided for update');
+    }
 
     // Update type
-    const updatedType = await db.OrgUnitType.update({
+    const updateData: {
+      code?: string;
+      name?: string;
+      description?: string | null;
+      color?: string;
+      sort_order?: number;
+      is_active?: boolean;
+    } = {};
+    if (code) updateData.code = (code as string).toUpperCase();
+    if (name) updateData.name = name as string;
+    if (description !== undefined) updateData.description = description as string || null;
+    if (color) updateData.color = color as string;
+    if (sort_order !== undefined) updateData.sort_order = sort_order as number;
+    if (is_active !== undefined) updateData.is_active = is_active as boolean;
+
+    const updatedType = await db.orgUnitType.update({
       where: { id: typeId },
-      data: {
-        ...(code && { code: code.toUpperCase() }),
-        ...(name && { name }),
-        ...(description !== undefined && { description }),
-        ...(color && { color }),
-        ...(sort_order !== undefined && { sort_order }),
-        ...(is_active !== undefined && { is_active })
-      }
+      data: updateData
     });
 
-    // Serialize BigInt fields
-    const serializedType = {
-      ...updatedType,
-      id: updatedType.id.toString(),
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: serializedType
-    });
-
-  } catch (error) {
-    console.error('Error updating org unit type:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to update org unit type' 
-      },
-      { status: 500 }
-    );
-  }
-}
+    return updatedType;
+  },
+  'update org unit type'
+);
 
 // DELETE /api/org/types/[id] - Soft delete organization unit type
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
+export const DELETE = withIdParam(
+  async (id: string) => {
     const typeId = BigInt(id);
 
     // Soft delete (set is_active to false)
-    const updatedType = await db.OrgUnitType.update({
+    const updatedType = await db.orgUnitType.update({
       where: { id: typeId },
       data: { is_active: false }
     });
 
-    // Serialize BigInt fields
-    const serializedType = {
-      ...updatedType,
-      id: updatedType.id.toString(),
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: serializedType,
-      message: 'Type deleted successfully'
-    });
-
-  } catch (error) {
-    console.error('Error deleting org unit type:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to delete org unit type' 
-      },
-      { status: 500 }
-    );
-  }
-}
+    return updatedType;
+  },
+  'delete org unit type'
+);

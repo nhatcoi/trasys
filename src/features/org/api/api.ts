@@ -15,6 +15,7 @@ export interface OrgUnit {
   effective_from: string | null;
   effective_to: string | null;
   campus_id?: string | null;
+  parent?: OrgUnit | null;
 }
 
 export interface OrgUnitHistory {
