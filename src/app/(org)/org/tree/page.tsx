@@ -22,7 +22,7 @@ import {
 import { OrgTreeNode } from '@/components/OrgTreeNode';
 import { buildTree } from '@/utils/tree-utils';
 import { API_ROUTES } from '@/constants/routes';
-import { buildUrl } from '@/lib/api-handler';
+import { buildUrl } from '@/lib/api/api-handler';
 
 interface OrgUnit {
   id: string;

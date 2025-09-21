@@ -1,6 +1,6 @@
 import {db} from '@/lib/db';
-import {validateSchema, withBody, withErrorHandling} from '@/lib/api-handler';
-import {Schemas} from '@/lib/api-schemas';
+import {validateSchema, withBody, withErrorHandling} from '@/lib/api/api-handler';
+import {Schemas} from '@/lib/api/api-schemas';
 
 export const GET = withErrorHandling(
   async (request: Request) => {

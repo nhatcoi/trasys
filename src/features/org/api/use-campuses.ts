@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetcher } from '@/lib/fetcher';
+import { fetcher } from '@/lib/api/fetcher';
 
 export interface Campus {
   id: string;

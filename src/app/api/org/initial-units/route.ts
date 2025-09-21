@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
-import { withErrorHandling, withBody } from '@/lib/api-handler';
+import { withErrorHandling, withBody } from '@/lib/api/api-handler';
 import { db } from '@/lib/db';
+import { serializeBigInt } from '@/utils/serialize';
 
 export const POST = withBody(
   async (body: unknown) => {
@@ -120,7 +121,7 @@ export const POST = withBody(
     });
 
     // 5. Create OrgUnitAttachments if attachments provided (outside transaction)
-    let attachments = [];
+    let attachments: any[] = [];
     // TODO: Temporarily disabled attachments creation to debug
     /*
     if (data.attachments && Array.isArray(data.attachments)) {
@@ -147,7 +148,7 @@ export const POST = withBody(
     */
 
     // Add attachments to result
-    result.attachments = attachments.map(att => ({
+    (result as any).attachments = attachments.map(att => ({
       ...att,
       id: att.id.toString(),
       org_unit_id: att.org_unit_id.toString(),

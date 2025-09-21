@@ -44,9 +44,9 @@ export function AdminOnly({ children, fallback }: { children: ReactNode; fallbac
   );
 }
 
-export function OrgUnitReadOnly({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
+export function OrgUnitViewOnly({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
   return (
-    <PermissionGuard permission="org_unit.read" fallback={fallback}>
+    <PermissionGuard permission="org_unit.unit.view" fallback={fallback}>
       {children}
     </PermissionGuard>
   );
@@ -54,7 +54,23 @@ export function OrgUnitReadOnly({ children, fallback }: { children: ReactNode; f
 
 export function OrgUnitAdminOnly({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
   return (
-    <PermissionGuard permission="org_unit.admin" fallback={fallback}>
+    <PermissionGuard permission="org_unit.type.admin" fallback={fallback}>
+      {children}
+    </PermissionGuard>
+  );
+}
+
+export function OrgAssignmentViewOnly({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
+  return (
+    <PermissionGuard permission="org_unit.assignment.view" fallback={fallback}>
+      {children}
+    </PermissionGuard>
+  );
+}
+
+export function OrgReportViewOnly({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
+  return (
+    <PermissionGuard permission="org_unit.report.view" fallback={fallback}>
       {children}
     </PermissionGuard>
   );

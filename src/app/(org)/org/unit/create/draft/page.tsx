@@ -360,7 +360,7 @@ export default function CreateDraftPage() {
     <Box>
       <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>
         <AddIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-        Khởi tạo đơn vị (Draft)
+        Đề xuất đơn vị mới
       </Typography>
 
       <Alert severity="info" sx={{ mb: 3 }}>
@@ -380,7 +380,7 @@ export default function CreateDraftPage() {
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom color="primary">
-              Draft Units
+              Đơn vị đang đề xuất
             </Typography>
             <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
               {isLoading ? <CircularProgress size={20} /> : draftUnits.length}
@@ -394,7 +394,7 @@ export default function CreateDraftPage() {
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom color="error">
-              Rejected Units
+              Đơn vị bị từ chối
             </Typography>
             <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
               {rejectedLoading ? <CircularProgress size={20} /> : rejectedUnits.length}
@@ -411,7 +411,7 @@ export default function CreateDraftPage() {
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h6">
-              {editingUnit ? 'Edit Unit' : 'Create New Unit'}
+              {editingUnit ? 'Chỉnh sửa đề xuất' : 'Tạo mới một đề xuất đơn vị'}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button
@@ -419,7 +419,7 @@ export default function CreateDraftPage() {
                 startIcon={<RefreshIcon />}
                 onClick={() => refetch()}
               >
-                Refresh
+                Làm mới
               </Button>
               {editingUnit && (
                 <Button
@@ -446,7 +446,7 @@ export default function CreateDraftPage() {
 
           {/* Basic Info */}
           <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
-            Basic Information
+            Thông tin cơ bản
           </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 4 }}>
             <TextField

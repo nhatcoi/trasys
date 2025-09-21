@@ -9,7 +9,7 @@ import {
   AdminPanelSettings as AdminIcon
 } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
-import { PermissionGuard, AdminOnly, OrgUnitReadOnly, OrgUnitAdminOnly } from '@/components/auth/PermissionGuard';
+import { PermissionGuard, AdminOnly, OrgUnitViewOnly, OrgUnitAdminOnly } from '@/components/auth/PermissionGuard';
 import { usePermissions } from '@/lib/auth/permission-utils';
 import { UserPermissionInfo } from '@/components/auth/UserPermissionInfo';
 
@@ -83,7 +83,7 @@ export default function PermissionsPage() {
           <Typography variant="h6" gutterBottom>
             Chỉ người có quyền xem đơn vị
           </Typography>
-          <OrgUnitReadOnly 
+          <OrgUnitViewOnly 
             fallback={
               <Alert severity="warning">
                 Bạn cần quyền xem đơn vị để thấy các nút này
@@ -98,7 +98,7 @@ export default function PermissionsPage() {
                 Xem sơ đồ tổ chức
               </Button>
             </Stack>
-          </OrgUnitReadOnly>
+          </OrgUnitViewOnly>
         </Box>
 
         {/* Org Unit Admin Only */}

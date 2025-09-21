@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { withIdParam, withIdAndBody, serializeBigInt } from '@/lib/api-handler';
+import { withIdParam, withIdAndBody, serializeBigInt } from '@/lib/api/api-handler';
 import { db } from '@/lib/db';
 import { canAccessOrgUnit } from '@/lib/auth/hierarchical-permissions';
 import { getServerSession } from 'next-auth';
@@ -123,13 +123,30 @@ export const PUT = withIdAndBody(
 // DELETE /api/org/units/[id] - Delete org unit
 export const DELETE = withIdParam(
   async (id: string) => {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      throw new Error('Unauthorized');
+    }
+
+    // Kiểm tra quyền xóa đơn vị
+    const hasAccess = await canAccessOrgUnit(session.user.id, id, 'delete');
+    if (!hasAccess) {
+      throw new Error('Không có quyền xóa đơn vị này');
+    }
+
     const unitId = BigInt(id);
 
-    const deletedUnit = await db.orgUnit.delete({
-      where: { id: unitId }
+    // Soft delete
+    const result = await db.orgUnit.update({
+      where: { id: unitId },
+      data: {
+        status: 'DELETED',
+        updated_at: new Date()
+      }
     });
 
-    return deletedUnit;
+    return result;
   },
   'delete org unit'
 );

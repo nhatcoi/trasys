@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { withErrorHandling, withBody } from '@/lib/api-handler';
+import { withErrorHandling, withBody } from '@/lib/api/api-handler';
 import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { getUserAccessibleUnits } from '@/lib/auth/hierarchical-permissions';
@@ -11,7 +11,7 @@ export const GET = withErrorHandling(
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      throw new Error('Unauthorized');
+      throw new Error('Không có quyền');
     }
 
     const { searchParams } = new URL(request.url);
@@ -33,6 +33,8 @@ export const GET = withErrorHandling(
     // Lấy danh sách đơn vị user có quyền truy cập
     const accessibleUnits = await getUserAccessibleUnits(session.user.id);
     const accessibleUnitIds = accessibleUnits.map(unit => BigInt(unit.id));
+
+    
     
     // Build where clause với hierarchical permission
     const where: Prisma.OrgUnitWhereInput = {
