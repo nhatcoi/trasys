@@ -59,8 +59,3 @@ export interface CourseQueryInput {
   workflowStage?: 'FACULTY' | 'ACADEMIC_OFFICE' | 'ACADEMIC_BOARD';
 }
 
-export interface WorkflowActionInput {
-  action: 'submit' | 'approve' | 'reject' | 'return' | 'publish';
-  comment?: string;
-  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
-}

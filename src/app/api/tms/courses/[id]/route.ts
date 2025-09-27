@@ -153,6 +153,7 @@ const updateCourse = async (id: string, body: unknown, request: Request) => {
         credits: courseData.credits,
         ...(courseData.org_unit_id && { org_unit_id: BigInt(courseData.org_unit_id) }),
         ...(courseData.type && { type: courseData.type }),
+        ...(courseData.status && { status: courseData.status }),
         description: courseData.description || null,
         updated_at: new Date(),
       }
@@ -310,7 +311,7 @@ const updateCourse = async (id: string, body: unknown, request: Request) => {
           from_status: 'DRAFT', // TODO: Get current status
           to_status: status,
           reviewer_id: BigInt(1), // TODO: Get from session
-          reviewer_role: workflowAction === 'approve' ? 'ACADEMIC_BOARD' : 'FACULTY', // Phê duyệt: Hội đồng, Từ chối: Khoa
+          reviewer_role: (courseData as any).reviewer_role || (workflowAction === 'approve' ? 'ACADEMIC_OFFICE' : 'ACADEMIC_OFFICE'),
           comments: comment,
           created_at: new Date()
         }
@@ -333,7 +334,9 @@ const updateCourse = async (id: string, body: unknown, request: Request) => {
     throw error; // Re-throw other errors
   });
 
-  return result;
+  // Sau khi update thành công, fetch lại dữ liệu đầy đủ
+  const updatedCourseData = await getCourseById(courseId.toString(), request);
+  return updatedCourseData;
 };
 
 // DELETE /api/tms/courses/[id] - Xóa course

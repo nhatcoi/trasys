@@ -73,6 +73,13 @@ export default function SubjectApprovalPage() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState({
+    pending: 0,
+    reviewing: 0,
+    approved: 0,
+    rejected: 0
+  });
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
 
   const approvalSteps = [
     { label: 'Khoa tạo', status: 'completed' },
@@ -81,55 +88,103 @@ export default function SubjectApprovalPage() {
     { label: 'Phê duyệt cuối cùng', status: 'pending' }
   ];
 
-  // Fetch subjects from API
-  useEffect(() => {
-    const fetchSubjects = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const params = new URLSearchParams({
-          page: '1',
-          limit: '50'
+  // Fetch stats from API
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/tms/courses/stats');
+      const result = await response.json();
+      
+      if (result.success) {
+        setStats({
+          pending: result.data.pending || 0,
+          reviewing: result.data.reviewing || 0,
+          approved: result.data.approved || 0,
+          rejected: result.data.rejected || 0
         });
-        
-        const response = await fetch(`/api/tms/courses/public?${params}`);
-        const result = await response.json();
-        
-        if (result.success && result.data?.items) {
-          // Transform API data to match UI format
-          const transformedSubjects = result.data.items.map((course: any) => ({
-            id: course.id,
-            code: course.code,
-            name: course.name_vi,
-            faculty: course.OrgUnit?.name || 'Chưa xác định',
-            status: course.status || 'DRAFT',
-            workflowStage: course.workflow_stage || 'FACULTY',
-            priority: course.workflow_priority || 'MEDIUM',
-            submittedBy: 'System', // TODO: Get from audit data
-            submittedAt: new Date(course.created_at).toISOString().split('T')[0],
-            currentReviewer: null, // TODO: Get from workflow data
-            credits: course.credits,
-            type: course.type === 'theory' ? 'Lý thuyết' : 
-                  course.type === 'practice' ? 'Thực hành' : 
-                  course.type === 'mixed' ? 'Lý thuyết + Thực hành' : course.type,
-            category: 'Kiến thức chuyên ngành' // Default category
-          }));
-          
-          setSubjects(transformedSubjects);
-        } else {
-          setError('Không thể tải danh sách học phần');
-        }
-      } catch (err) {
-        console.error('Error fetching subjects:', err);
-        setError('Lỗi khi tải dữ liệu');
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
 
-    fetchSubjects();
-  }, []);
+  // Fetch user permissions
+  const fetchUserPermissions = async () => {
+    try {
+      const response = await fetch('/api/auth/session');
+      const result = await response.json();
+      
+      if (result?.user?.permissions) {
+        setUserPermissions(result.user.permissions);
+      }
+    } catch (error) {
+      console.error('Error fetching user permissions:', error);
+    }
+  };
+
+  // Fetch subjects data
+  const fetchSubjectsData = async () => {
+    try {
+      const params = new URLSearchParams({
+        page: '1',
+        limit: '50'
+      });
+          
+      const response = await fetch(`/api/tms/courses/public?${params}`);
+      const result = await response.json();
+      
+      if (result.success && result.data?.items) {
+        // Transform API data to match UI format
+        const transformedSubjects = result.data.items.map((course: any) => ({
+          id: course.id,
+          code: course.code,
+          name: course.name_vi,
+          faculty: course.OrgUnit?.name || 'Chưa xác định',
+          status: course.status || 'DRAFT',
+          workflowStage: course.workflow_stage || 'FACULTY',
+          priority: course.workflow_priority || 'MEDIUM',
+          submittedBy: 'System', // TODO: Get from audit data
+          submittedAt: new Date(course.created_at).toISOString().split('T')[0],
+          currentReviewer: null, // TODO: Get from workflow data
+          credits: course.credits,
+          type: course.type === 'theory' ? 'Lý thuyết' : 
+                course.type === 'practice' ? 'Thực hành' : 
+                course.type === 'mixed' ? 'Lý thuyết + Thực hành' : course.type,
+          category: 'Kiến thức chuyên ngành' // Default category
+        }));
+        
+        setSubjects(transformedSubjects);
+      } else {
+        setError('Không thể tải danh sách học phần');
+      }
+    } catch (err) {
+      console.error('Error fetching subjects:', err);
+      setError('Lỗi khi tải dữ liệu');
+    }
+  };
+
+// Fetch subjects from API
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch subjects, stats, and user permissions
+      await Promise.all([
+        fetchSubjectsData(),
+        fetchStats(),
+        fetchUserPermissions()
+      ]);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Lỗi khi tải dữ liệu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -198,9 +253,46 @@ export default function SubjectApprovalPage() {
     setOpenDialog(true);
   };
 
-  const handleApprovalAction = (action: string, subjectId: number) => {
-    console.log(`Performing ${action} on subject ${subjectId}`);
-    setOpenDialog(false);
+  const handleApprovalAction = async (action: string, subjectId: number) => {
+    try {
+      console.log(`Performing ${action} on subject ${subjectId}`);
+      
+      if (action === 'approve') {
+        const response = await fetch(`/api/tms/courses/${subjectId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            workflow_action: 'approve',
+            status: 'APPROVED',
+            workflow_stage: 'ACADEMIC_OFFICE',
+            reviewer_role: 'ACADEMIC_OFFICE'
+          }),
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          // Refresh the data
+          await fetchSubjectsData();
+          await fetchStats();
+          alert('Phê duyệt thành công!');
+        } else {
+          alert('Lỗi khi phê duyệt: ' + result.error);
+        }
+      }
+      
+      setOpenDialog(false);
+    } catch (error) {
+      console.error('Error performing approval action:', error);
+      alert('Có lỗi xảy ra khi thực hiện thao tác');
+    }
+  };
+
+  // Check if user has permission to approve courses
+  const canApproveCourse = () => {
+    return userPermissions.includes('tms.course.approve');
   };
 
   const getActionButtons = (subject: any) => {
@@ -219,6 +311,25 @@ export default function SubjectApprovalPage() {
         Xem
       </Button>
     );
+
+    // Add approval button for DRAFT status courses
+    if (subject.status === 'DRAFT' && canApproveCourse()) {
+      buttons.push(
+        <Button
+          key="approve-draft"
+          size="small"
+          variant="contained"
+          color="success"
+          startIcon={<CheckCircleIcon />}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleApprovalAction('approve', subject.id);
+          }}
+        >
+          Phê duyệt
+        </Button>
+      );
+    }
 
     if (subject.status === 'SUBMITTED' && subject.workflowStage === 'ACADEMIC_OFFICE') {
       buttons.push(
@@ -415,25 +526,25 @@ export default function SubjectApprovalPage() {
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2 }}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
-              <Typography variant="h6" color="primary">8</Typography>
+              <Typography variant="h6" color="primary">{stats.pending}</Typography>
               <Typography variant="body2" color="text.secondary">Chờ duyệt</Typography>
             </CardContent>
           </Card>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
-              <Typography variant="h6" color="warning.main">5</Typography>
+              <Typography variant="h6" color="warning.main">{stats.reviewing}</Typography>
               <Typography variant="body2" color="text.secondary">Đang xem xét</Typography>
             </CardContent>
           </Card>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
-              <Typography variant="h6" color="success.main">12</Typography>
+              <Typography variant="h6" color="success.main">{stats.approved}</Typography>
               <Typography variant="body2" color="text.secondary">Đã phê duyệt</Typography>
             </CardContent>
           </Card>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
-              <Typography variant="h6" color="error.main">3</Typography>
+              <Typography variant="h6" color="error.main">{stats.rejected}</Typography>
               <Typography variant="body2" color="text.secondary">Từ chối</Typography>
             </CardContent>
           </Card>

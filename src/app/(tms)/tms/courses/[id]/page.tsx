@@ -49,6 +49,7 @@ import {
   Edit as EditIcon,
   Save as SaveIcon,
   Send as SendIcon,
+  Reply as ReplyIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
   Assignment as AssignmentIcon,
@@ -60,7 +61,9 @@ import {
   Assessment as AssessmentIcon,
   Person as PersonIcon,
   CalendarToday as CalendarIcon,
-  Flag as PriorityIcon
+  Flag as PriorityIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useRouter, useParams } from 'next/navigation';
 import { PermissionGuard } from '@/components/auth/permission-guard';
@@ -174,35 +177,39 @@ export default function CourseDetailPage() {
     duration: number;
     isExamWeek: boolean;
   }>>([]);
-  const [editingSyllabus, setEditingSyllabus] = useState(false);
 
   const [newInstructor, setNewInstructor] = useState<{ id: string; role: string; qualification: string; level?: string } | null>(null);
   
   const [workflowComment, setWorkflowComment] = useState('');
-  
-  const [editData, setEditData] = useState({
-    name_vi: '',
-    name_en: '',
-    code: '',
-    credits: 0,
-    description: ''
-  });
+  const [orgUnits, setOrgUnits] = useState<any[]>([]);
+  const [editingAssessment, setEditingAssessment] = useState(false);
+  const [assessmentMethods, setAssessmentMethods] = useState<any[]>([]);
+  const [learningObjectives, setLearningObjectives] = useState<any[]>([]);
+  const [openAssessmentModal, setOpenAssessmentModal] = useState(false);
+  const [openObjectivesModal, setOpenObjectivesModal] = useState(false);
+  const [openBasicInfoModal, setOpenBasicInfoModal] = useState(false);
+  const [openSyllabusModal, setOpenSyllabusModal] = useState(false);
 
+  // Sync editData with courseDetail when opening basic info modal
   useEffect(() => {
-    if (!courseDetail) return;
-   
-    if (!isEditing) {
+    if (openBasicInfoModal && courseDetail) {
       setEditData({
         name_vi: courseDetail.name_vi || '',
         name_en: courseDetail.name_en || '',
         code: courseDetail.code || '',
         credits: courseDetail.credits || 0,
-        description: courseDetail.description || ''
+        description: courseDetail.description || '',
+        status: courseDetail.status || 'DRAFT',
+        org_unit_id: courseDetail.org_unit_id || '',
+        type: courseDetail.type || ''
       });
     }
+  }, [openBasicInfoModal, courseDetail]);
 
-    if (!editingSyllabus) {
-      setSyllabusData((courseDetail.course_syllabus || []).map((item, idx) => ({
+  // Sync syllabusData with courseDetail when opening syllabus modal
+  useEffect(() => {
+    if (openSyllabusModal && courseDetail) {
+      setSyllabusData((courseDetail?.course_syllabus || []).map((item, idx) => ({
         id: `${item.week}-${idx}`,
         week: item.week,
         topic: item.topic,
@@ -213,7 +220,45 @@ export default function CourseDetailPage() {
         isExamWeek: item.isExamWeek || false
       })));
     }
-  }, [courseDetail, isEditing, editingSyllabus]);
+  }, [openSyllabusModal, courseDetail]);
+  
+  const [editData, setEditData] = useState({
+    name_vi: '',
+    name_en: '',
+    code: '',
+    credits: 0,
+    description: '',
+    status: '',
+    org_unit_id: '',
+    type: ''
+  });
+
+  useEffect(() => {
+    fetchOrgUnits();
+  }, []);
+
+  useEffect(() => {
+    if (!courseDetail) return;
+   
+    if (!isEditing) {
+      setEditData({
+        name_vi: courseDetail.name_vi || '',
+        name_en: courseDetail.name_en || '',
+        code: courseDetail.code || '',
+        credits: courseDetail.credits || 0,
+        description: courseDetail.description || '',
+        status: courseDetail.status || '',
+        org_unit_id: courseDetail.org_unit_id || '',
+        type: courseDetail.type || ''
+      });
+    }
+
+
+    if (!editingAssessment) {
+      setAssessmentMethods(courseDetail.contents?.[0]?.assessment_methods || []);
+      setLearningObjectives(courseDetail.contents?.[0]?.learning_objectives || []);
+    }
+  }, [courseDetail, isEditing]);
 
 
   useEffect(() => {
@@ -315,11 +360,60 @@ export default function CourseDetailPage() {
     }));
   };
 
+  // Fetch org units for dropdown
+  const fetchOrgUnits = async () => {
+    try {
+      const response = await fetch('/api/org/units?limit=100');
+      const result = await response.json();
+      if (result.success) {
+        setOrgUnits(result.data.items || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch org units:', error);
+    }
+  };
 
-  const handleSyllabusSave = async () => {
+  // Assessment methods handlers
+  const handleAssessmentMethodChange = (index: number, field: string, value: any) => {
+    setAssessmentMethods(prev => prev.map((method, i) => 
+      i === index ? { ...method, [field]: value } : method
+    ));
+  };
+
+  const addAssessmentMethod = () => {
+    setAssessmentMethods(prev => [...prev, {
+      method: 'assignment',
+      weight: 0,
+      description: ''
+    }]);
+  };
+
+  const removeAssessmentMethod = (index: number) => {
+    setAssessmentMethods(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Learning objectives handlers
+  const handleLearningObjectiveChange = (index: number, field: string, value: string) => {
+    setLearningObjectives(prev => prev.map((objective, i) => 
+      i === index ? { ...objective, [field]: value } : objective
+    ));
+  };
+
+  const addLearningObjective = () => {
+    setLearningObjectives(prev => [...prev, {
+      type: 'knowledge',
+      objective: ''
+    }]);
+  };
+
+  const removeLearningObjective = (index: number) => {
+    setLearningObjectives(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Save assessment data
+  const handleAssessmentSave = async () => {
     try {
       setSaving(true);
-      setError(null);
       
       const response = await fetch(`/api/tms/courses/${routeId}`, {
         method: 'PUT',
@@ -327,39 +421,135 @@ export default function CourseDetailPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          syllabus: syllabusData.map(item => ({
-            week: item.week,
-            topic: item.topic,
-            objectives: item.objectives,
-            materials: item.materials,
-            assignments: item.assignments,
-            duration: item.duration,
-            isExamWeek: item.isExamWeek
-          }))
+          assessment_methods: assessmentMethods,
+          learning_objectives: learningObjectives
         }),
       });
-      
+
       const result = await response.json();
       
       if (result.success) {
-
-        setCourseDetail(prev => prev ? {
-          ...prev,
-          syllabus: syllabusData
-        } : null);
+        // Cập nhật courseDetail với dữ liệu mới
+        setCourseDetail(result.data);
         
-        setEditingSyllabus(false);
-        setToast({ open: true, message: 'Lưu giáo trình thành công!', severity: 'success' });
+        // Cập nhật local state để hiển thị ngay lập tức
+        const newAssessmentMethods = result.data.contents?.[0]?.assessment_methods || [];
+        const newLearningObjectives = result.data.contents?.[0]?.learning_objectives || [];
+        
+        setAssessmentMethods(newAssessmentMethods);
+        setLearningObjectives(newLearningObjectives);
+        
+        setOpenAssessmentModal(false);
+        alert('Cập nhật thành công!');
       } else {
-        setError(result.error || 'Có lỗi xảy ra khi lưu giáo trình');
+        alert('Lỗi khi cập nhật: ' + result.error);
       }
-    } catch (err) {
-      setError('Có lỗi xảy ra khi lưu giáo trình');
-      console.error('Syllabus save error:', err);
+    } catch (error) {
+      console.error('Error saving assessment:', error);
+      alert('Lỗi khi lưu dữ liệu');
     } finally {
       setSaving(false);
     }
   };
+
+  const handleObjectivesSave = async () => {
+    try {
+      setSaving(true);
+      const response = await fetch(`/api/tms/courses/${routeId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          learning_objectives: learningObjectives
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setCourseDetail(result.data);
+        const newLearningObjectives = result.data.contents?.[0]?.learning_objectives || [];
+        setLearningObjectives(newLearningObjectives);
+        setOpenObjectivesModal(false);
+        alert('Cập nhật thành công!');
+      } else {
+        alert('Lỗi khi cập nhật: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error saving objectives:', error);
+      alert('Lỗi khi lưu dữ liệu');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBasicInfoSave = async () => {
+    try {
+      setSaving(true);
+      const response = await fetch(`/api/tms/courses/${routeId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name_vi: editData.name_vi,
+          name_en: editData.name_en,
+          code: editData.code,
+          credits: editData.credits,
+          description: editData.description,
+          status: editData.status
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Cập nhật courseDetail với dữ liệu mới
+        setCourseDetail(result.data);
+        setOpenBasicInfoModal(false);
+        alert('Cập nhật thành công!');
+      } else {
+        alert('Lỗi khi cập nhật: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error saving basic info:', error);
+      alert('Lỗi khi lưu dữ liệu');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSyllabusModalSave = async () => {
+    try {
+      setSaving(true);
+      const response = await fetch(`/api/tms/courses/${routeId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          syllabus: syllabusData
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setCourseDetail(result.data);
+        setOpenSyllabusModal(false);
+        alert('Cập nhật thành công!');
+      } else {
+        alert('Lỗi khi cập nhật: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error saving syllabus:', error);
+      alert('Lỗi khi lưu dữ liệu');
+    } finally {
+      setSaving(false);
+    }
+  };
+
 
   // Handle syllabus item change
   const handleSyllabusItemChange = (index: number, field: string, value: any) => {
@@ -467,24 +657,52 @@ export default function CourseDetailPage() {
     setWorkflowComment('');
   };
 
-  // Handle workflow actions (approve/reject)
+  // Handle workflow actions (approve/reject/request_changes/forward/return/final_approve/final_reject)
   const handleWorkflowAction = async (action: string) => {
     try {
       setSaving(true);
       setError(null);
       
+      // Map actions to status, workflow stage, and reviewer role
+      const actionMapping: Record<string, { status: string; workflow_stage: string; reviewer_role: string }> = {
+        'approve': { status: 'APPROVED', workflow_stage: 'ACADEMIC_OFFICE', reviewer_role: 'ACADEMIC_OFFICE' },
+        'reject': { status: 'REJECTED', workflow_stage: 'FACULTY', reviewer_role: 'ACADEMIC_OFFICE' },
+        'request_changes': { status: 'DRAFT', workflow_stage: 'FACULTY', reviewer_role: 'ACADEMIC_OFFICE' },
+        'forward': { status: 'SUBMITTED', workflow_stage: 'ACADEMIC_BOARD', reviewer_role: 'ACADEMIC_OFFICE' },
+        'return': { status: 'DRAFT', workflow_stage: 'FACULTY', reviewer_role: 'ACADEMIC_OFFICE' },
+        'final_approve': { status: 'PUBLISHED', workflow_stage: 'ACADEMIC_BOARD', reviewer_role: 'ACADEMIC_BOARD' },
+        'final_reject': { status: 'REJECTED', workflow_stage: 'ACADEMIC_BOARD', reviewer_role: 'ACADEMIC_BOARD' },
+        'delete': { status: 'DELETED', workflow_stage: 'ACADEMIC_OFFICE', reviewer_role: 'ACADEMIC_OFFICE' }
+      };
+      
+      const mapping = actionMapping[action];
+      if (!mapping) {
+        throw new Error(`Unknown workflow action: ${action}`);
+      }
+      
       const payload = {
         workflow_action: action,
         comment: workflowComment,
-        status: action === 'approve' ? 'APPROVED' : 'REJECTED',
-        workflow_stage: action === 'approve' ? 'ACADEMIC_BOARD' : 'FACULTY' // Use valid workflow stages
+        status: mapping.status,
+        workflow_stage: mapping.workflow_stage,
+        reviewer_role: mapping.reviewer_role
       };
       
-      const response = await fetch(`/api/tms/courses/${routeId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      let response;
+      if (action === 'delete') {
+        // For delete action, use DELETE method
+        response = await fetch(`/api/tms/courses/${routeId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } else {
+        // For other actions, use PUT method
+        response = await fetch(`/api/tms/courses/${routeId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
       
       const result = await response.json();
       
@@ -494,8 +712,8 @@ export default function CourseDetailPage() {
           ...prev,
           workflows: prev.workflows?.map((wf, index) => index === 0 ? {
             ...wf,
-            status: action === 'approve' ? 'APPROVED' : 'REJECTED',
-            workflow_stage: action === 'approve' ? 'ACADEMIC_BOARD' : 'FACULTY',
+            status: mapping.status,
+            workflow_stage: mapping.workflow_stage,
             notes: workflowComment || wf.notes,
             updated_at: new Date().toISOString()
           } : wf) || [],
@@ -503,28 +721,61 @@ export default function CourseDetailPage() {
             ...(prev.course_approval_history || []),
             {
               id: Date.now().toString(),
-              action: action === 'approve' ? 'APPROVED' : 'REJECTED',
+              action: action.toUpperCase(),
               from_status: prev.status || 'DRAFT',
-              to_status: action === 'approve' ? 'APPROVED' : 'REJECTED',
-              reviewer_role: action === 'approve' ? 'ACADEMIC_BOARD' : 'FACULTY',
+              to_status: mapping.status,
+              reviewer_role: mapping.reviewer_role,
               comments: workflowComment,
               created_at: new Date().toISOString()
             }
           ]
         } : prev);
         
+        const successMessages: Record<string, string> = {
+          'approve': 'Phê duyệt thành công!',
+          'reject': 'Từ chối thành công!',
+          'request_changes': 'Yêu cầu chỉnh sửa đã gửi!',
+          'forward': 'Chuyển tiếp thành công!',
+          'return': 'Trả về Khoa thành công!',
+          'final_approve': 'Phê duyệt cuối cùng thành công!',
+          'final_reject': 'Từ chối cuối cùng thành công!',
+          'delete': 'Xóa học phần thành công!'
+        };
+        
         setToast({ 
           open: true, 
-          message: action === 'approve' ? 'Phê duyệt thành công!' : 'Từ chối thành công!', 
-          severity: 'success' 
+          message: successMessages[action] || 'Thao tác thành công!', 
+          severity: action === 'delete' ? 'warning' : 'success' 
         });
         handleCloseDialog();
       } else {
-        setError(result.error || `Không thể ${action === 'approve' ? 'phê duyệt' : 'từ chối'} học phần`);
+        const errorMessages: Record<string, string> = {
+          'approve': 'Không thể phê duyệt học phần',
+          'reject': 'Không thể từ chối học phần',
+          'request_changes': 'Không thể yêu cầu chỉnh sửa',
+          'forward': 'Không thể chuyển tiếp',
+          'return': 'Không thể trả về Khoa',
+          'final_approve': 'Không thể phê duyệt cuối cùng',
+          'final_reject': 'Không thể từ chối cuối cùng',
+          'delete': 'Không thể xóa học phần'
+        };
+        
+        setError(result.error || errorMessages[action] || 'Không thể thực hiện thao tác');
       }
     } catch (err) {
       console.error(err);
-      setError(`Có lỗi khi ${action === 'approve' ? 'phê duyệt' : 'từ chối'} học phần`);
+      const catchErrorMessages: Record<string, string> = {
+        'approve': 'Có lỗi khi phê duyệt học phần',
+        'reject': 'Có lỗi khi từ chối học phần',
+        'request_changes': 'Có lỗi khi yêu cầu chỉnh sửa',
+        'forward': 'Có lỗi khi chuyển tiếp',
+        'return': 'Có lỗi khi trả về Khoa',
+        'final_approve': 'Có lỗi khi phê duyệt cuối cùng',
+        'final_reject': 'Có lỗi khi từ chối cuối cùng',
+        'delete': 'Có lỗi khi xóa học phần'
+      };
+      
+      setError(catchErrorMessages[action] || 'Có lỗi khi thực hiện thao tác');
     } finally {
       setSaving(false);
     }
@@ -647,7 +898,10 @@ export default function CourseDetailPage() {
                         name_en: courseDetail.name_en || '',
                         code: courseDetail.code || '',
                         credits: courseDetail.credits || 0,
-                        description: courseDetail.description || ''
+                        description: courseDetail.description || '',
+                        status: courseDetail.status || '',
+                        org_unit_id: courseDetail.org_unit_id || '',
+                        type: courseDetail.type || ''
                       });
                     }
                   }}
@@ -727,52 +981,61 @@ export default function CourseDetailPage() {
         <TabPanel value={activeTab} index={0}>
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, gap: 3 }}>
             <Card>
-              <CardHeader title="Thông tin cơ bản" />
+              <CardHeader 
+                title="Thông tin cơ bản" 
+                action={
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<EditIcon />}
+                    onClick={() => setOpenBasicInfoModal(true)}
+                  >
+                    Chỉnh sửa
+                  </Button>
+                }
+              />
               <CardContent>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="Tên học phần (Tiếng Việt)"
-                    value={isEditing ? editData.name_vi : courseDetail.name_vi}
-                    onChange={(e) => handleInputChange('name_vi', e.target.value)}
-                    disabled={!isEditing}
-                    variant={isEditing ? 'outlined' : 'filled'}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Tên học phần (Tiếng Anh)"
-                    value={isEditing ? editData.name_en : courseDetail.name_en}
-                    onChange={(e) => handleInputChange('name_en', e.target.value)}
-                    disabled={!isEditing}
-                    variant={isEditing ? 'outlined' : 'filled'}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Mã học phần"
-                    value={isEditing ? editData.code : courseDetail.code}
-                    onChange={(e) => handleInputChange('code', e.target.value)}
-                    disabled={!isEditing}
-                    variant={isEditing ? 'outlined' : 'filled'}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Số tín chỉ"
-                    type="number"
-                    value={isEditing ? editData.credits : courseDetail.credits}
-                    onChange={(e) => handleInputChange('credits', parseInt(e.target.value) || 0)}
-                    disabled={!isEditing}
-                    variant={isEditing ? 'outlined' : 'filled'}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Mô tả"
-                    multiline
-                    rows={4}
-                    value={isEditing ? editData.description : courseDetail.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    disabled={!isEditing}
-                    variant={isEditing ? 'outlined' : 'filled'}
-                  />
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>
+                      Tên học phần (Tiếng Việt)
+                    </Typography>
+                    <Typography variant="body1" sx={{ mt: 0.5 }}>
+                      {courseDetail.name_vi}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>
+                      Tên học phần (Tiếng Anh)
+                    </Typography>
+                    <Typography variant="body1" sx={{ mt: 0.5 }}>
+                      {courseDetail.name_en || 'Chưa có'}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>
+                      Mã học phần
+                    </Typography>
+                    <Typography variant="body1" sx={{ mt: 0.5 }}>
+                      {courseDetail.code}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>
+                      Số tín chỉ
+                    </Typography>
+                    <Typography variant="body1" sx={{ mt: 0.5 }}>
+                      {courseDetail.credits}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>
+                      Mô tả
+                    </Typography>
+                    <Typography variant="body1" sx={{ mt: 0.5 }}>
+                      {courseDetail.description || 'Chưa có mô tả'}
+                    </Typography>
+                  </Box>
                 </Box>
               </CardContent>
             </Card>
@@ -897,147 +1160,43 @@ export default function CourseDetailPage() {
             <CardHeader 
               title="Giáo trình học" 
               action={
-                editingSyllabus ? (
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                      variant="contained"
-                      startIcon={<SaveIcon />}
-                      onClick={handleSyllabusSave}
-                      disabled={saving}
-                    >
-                      {saving ? 'Đang lưu...' : 'Lưu'}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={() => {
-                        setEditingSyllabus(false);
-                        setSyllabusData((courseDetail?.course_syllabus || []).map((item, idx) => ({
-                          id: `${item.week}-${idx}`,
-                          week: item.week,
-                          topic: item.topic,
-                          objectives: item.objectives || '',
-                          materials: item.materials || '',
-                          assignments: item.assignments || '',
-                          duration: item.duration || 3,
-                          isExamWeek: item.isExamWeek || false
-                        })));
-                      }}
-                    >
-                      Hủy
-                    </Button>
-                  </Box>
-                ) : (
-                  <Button
-                    variant="outlined"
-                    startIcon={<EditIcon />}
-                    onClick={() => setEditingSyllabus(true)}
-                  >
-                    Chỉnh sửa
-                  </Button>
-                )
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<EditIcon />}
+                  onClick={() => setOpenSyllabusModal(true)}
+                >
+                  Chỉnh sửa
+                </Button>
               }
             />
             <CardContent>
-              {editingSyllabus ? (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {syllabusData.map((item, index) => (
-                    <Card key={item.id} variant="outlined">
-                      <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                          <TextField
-                            label="Tuần"
-                            type="number"
-                            value={item.week}
-                            onChange={(e) => handleSyllabusItemChange(index, 'week', parseInt(e.target.value) || 0)}
-                            sx={{ width: 100 }}
-                          />
-                          <TextField
-                            fullWidth
-                            label="Chủ đề"
-                            value={item.topic}
-                            onChange={(e) => handleSyllabusItemChange(index, 'topic', e.target.value)}
-                          />
-                          <TextField
-                            label="Thời lượng (giờ)"
-                            type="number"
-                            value={item.duration}
-                            onChange={(e) => handleSyllabusItemChange(index, 'duration', parseFloat(e.target.value) || 0)}
-                            sx={{ width: 150 }}
-                          />
-                          <IconButton 
-                            color="error" 
-                            onClick={() => removeSyllabusItem(index)}
-                            disabled={syllabusData.length === 1}
-                          >
-                            <CancelIcon />
-                          </IconButton>
-                        </Box>
-                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 2 }}>
-                          <TextField
-                            fullWidth
-                            label="Mục tiêu học tập"
-                            multiline
-                            rows={2}
-                            value={item.objectives}
-                            onChange={(e) => handleSyllabusItemChange(index, 'objectives', e.target.value)}
-                          />
-                          <TextField
-                            fullWidth
-                            label="Tài liệu học tập"
-                            multiline
-                            rows={2}
-                            value={item.materials}
-                            onChange={(e) => handleSyllabusItemChange(index, 'materials', e.target.value)}
-                          />
-                        </Box>
-                        <TextField
-                          fullWidth
-                          label="Bài tập"
-                          multiline
-                          rows={2}
-                          value={item.assignments}
-                          onChange={(e) => handleSyllabusItemChange(index, 'assignments', e.target.value)}
-                        />
-                      </CardContent>
-                    </Card>
-                  ))}
-                  <Button
-                    variant="outlined"
-                    startIcon={<EditIcon />}
-                    onClick={addSyllabusItem}
-                    sx={{ alignSelf: 'flex-start' }}
-                  >
-                    Thêm tuần học
-                  </Button>
-                </Box>
-              ) : (
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Tuần</TableCell>
-                        <TableCell>Chủ đề</TableCell>
-                        <TableCell>Mục tiêu</TableCell>
-                        <TableCell>Tài liệu</TableCell>
-                        <TableCell>Bài tập</TableCell>
-                        <TableCell>Thời lượng</TableCell>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Tuần</TableCell>
+                      <TableCell>Chủ đề</TableCell>
+                      <TableCell>Mục tiêu</TableCell>
+                      <TableCell>Tài liệu</TableCell>
+                      <TableCell>Bài tập</TableCell>
+                      <TableCell>Thời lượng</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {courseDetail.course_syllabus?.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{item.week}</TableCell>
+                        <TableCell>{item.topic}</TableCell>
+                        <TableCell>{item.objectives}</TableCell>
+                        <TableCell>{item.materials}</TableCell>
+                        <TableCell>{item.assignments}</TableCell>
+                        <TableCell>{item.duration}h</TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {courseDetail.course_syllabus?.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{item.week}</TableCell>
-                          <TableCell>{item.topic}</TableCell>
-                          <TableCell>{item.objectives}</TableCell>
-                          <TableCell>{item.materials}</TableCell>
-                          <TableCell>{item.assignments}</TableCell>
-                          <TableCell>{item.duration}h</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </CardContent>
           </Card>
         </TabPanel>
@@ -1046,12 +1205,24 @@ export default function CourseDetailPage() {
         <TabPanel value={activeTab} index={2}>
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, gap: 3 }}>
             <Card>
-              <CardHeader title="Phương thức đánh giá" />
+    <CardHeader 
+      title="Phương thức đánh giá" 
+      action={
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<EditIcon />}
+          onClick={() => setOpenAssessmentModal(true)}
+        >
+          Chỉnh sửa
+        </Button>
+      }
+    />
               <CardContent>
-                {courseDetail.contents?.[0]?.assessment_methods && courseDetail.contents[0].assessment_methods.length > 0 ? (
-                <List>
-                    {courseDetail.contents[0].assessment_methods.map((method, index) => (
-                      <ListItem key={index} sx={{ px: 0 }}>
+                {assessmentMethods.length > 0 ? (
+                  <List>
+                    {assessmentMethods.map((method, index) => (
+                      <ListItem key={`assessment-display-${index}-${method.method}`} sx={{ px: 0 }}>
                         <Box sx={{ flexGrow: 1 }}>
                           <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>
                             {method.method === 'attendance' ? 'Điểm danh' :
@@ -1070,26 +1241,36 @@ export default function CourseDetailPage() {
                             </Typography>
                           )}
                         </Box>
-                  </ListItem>
+                      </ListItem>
                     ))}
-                </List>
+                  </List>
                 ) : (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Chưa có phương thức đánh giá
-                    </Typography>
-                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Chưa có phương thức đánh giá nào.
+                  </Typography>
                 )}
               </CardContent>
             </Card>
             
             <Card>
-              <CardHeader title="Mục tiêu học tập" />
+              <CardHeader 
+                title="Mục tiêu học tập" 
+                action={
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<EditIcon />}
+                    onClick={() => setOpenObjectivesModal(true)}
+                  >
+                    Chỉnh sửa
+                  </Button>
+                }
+              />
               <CardContent>
-                {courseDetail.contents?.[0]?.learning_objectives && courseDetail.contents[0].learning_objectives.length > 0 ? (
-                <List>
-                    {courseDetail.contents[0].learning_objectives.map((objective, index) => (
-                      <ListItem key={index} sx={{ px: 0 }}>
+                {learningObjectives.length > 0 ? (
+                  <List>
+                    {learningObjectives.map((objective, index) => (
+                      <ListItem key={`objective-display-${index}-${objective.type}`} sx={{ px: 0 }}>
                         <Box sx={{ flexGrow: 1 }}>
                           <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
                             <Typography component="span" variant="body2" color="primary" fontWeight="bold" sx={{ mr: 1 }}>
@@ -1104,15 +1285,13 @@ export default function CourseDetailPage() {
                             {objective.objective}
                           </Typography>
                         </Box>
-                    </ListItem>
-                  ))}
-                </List>
+                      </ListItem>
+                    ))}
+                  </List>
                 ) : (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Chưa có mục tiêu học tập
-                    </Typography>
-                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Chưa có mục tiêu học tập nào.
+                  </Typography>
                 )}
               </CardContent>
             </Card>
@@ -1319,7 +1498,12 @@ export default function CourseDetailPage() {
               <CardHeader title="Hành động" />
               <CardContent>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <PermissionGuard requiredPermissions={['tms.course.approve']}>
+                  {/* Phòng Đào Tạo - Quyền quản lý workflow */}
+                  <PermissionGuard requiredPermissions={['tms.course.manage']}>
+                    <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>
+                      Phòng Đào Tạo
+                    </Typography>
+                    
                     <Button
                       variant="contained"
                       color="success"
@@ -1329,8 +1513,7 @@ export default function CourseDetailPage() {
                     >
                       Phê duyệt
                     </Button>
-                  </PermissionGuard>
-                  <PermissionGuard requiredPermissions={['tms.course.reject']}>
+                    
                     <Button
                       variant="contained"
                       color="error"
@@ -1340,21 +1523,76 @@ export default function CourseDetailPage() {
                     >
                       Từ chối
                     </Button>
+                    
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      startIcon={<EditIcon />}
+                      onClick={() => handleOpenDialog('request_changes')}
+                      disabled={courseDetail.status === 'DRAFT'}
+                    >
+                      Yêu cầu chỉnh sửa
+                    </Button>
+                    
+                    <Button
+                      variant="outlined"
+                      color="info"
+                      startIcon={<SendIcon />}
+                      onClick={() => handleOpenDialog('forward')}
+                      disabled={courseDetail.status === 'APPROVED'}
+                    >
+                      Chuyển tiếp
+                    </Button>
+                    
+                    <Button
+                      variant="outlined"
+                      color="secondary"
+                      startIcon={<ReplyIcon />}
+                      onClick={() => handleOpenDialog('return')}
+                      disabled={courseDetail.status === 'DRAFT'}
+                    >
+                      Trả về Khoa
+                    </Button>
+                    
+                    
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => handleOpenDialog('delete')}
+                      disabled={courseDetail.status === 'PUBLISHED'}
+                    >
+                      Xóa học phần
+                    </Button>
                   </PermissionGuard>
-                  <Button
-                    variant="outlined"
-                    startIcon={<CommentIcon />}
-                    onClick={() => handleOpenDialog('comment')}
-                  >
-                    Thêm bình luận
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<AttachFileIcon />}
-                    onClick={() => handleOpenDialog('attachment')}
-                  >
-                    Đính kèm file
-                  </Button>
+
+                  {/* Hội đồng Khoa học - Quyền phê duyệt cuối cùng */}
+                  <PermissionGuard requiredPermissions={['tms.course.final_approve']}>
+                    <Typography variant="subtitle2" color="secondary" sx={{ mb: 1, mt: 2 }}>
+                      Hội đồng Khoa học
+                    </Typography>
+                    
+                    <Button
+                      variant="contained"
+                      color="success"
+                      startIcon={<CheckCircleIcon />}
+                      onClick={() => handleOpenDialog('final_approve')}
+                      disabled={courseDetail.status === 'PUBLISHED'}
+                    >
+                      Phê duyệt cuối cùng
+                    </Button>
+                    
+                    <Button
+                      variant="contained"
+                      color="error"
+                      startIcon={<CancelIcon />}
+                      onClick={() => handleOpenDialog('final_reject')}
+                      disabled={courseDetail.status === 'REJECTED'}
+                    >
+                      Từ chối cuối cùng
+                    </Button>
+                  </PermissionGuard>
+
                 </Box>
               </CardContent>
             </Card>
@@ -1369,8 +1607,12 @@ export default function CourseDetailPage() {
           {dialogType === 'instructor' && 'Thêm giảng viên'}
           {dialogType === 'approve' && 'Phê duyệt học phần'}
           {dialogType === 'reject' && 'Từ chối học phần'}
-          {dialogType === 'comment' && 'Thêm bình luận'}
-          {dialogType === 'attachment' && 'Đính kèm file'}
+          {dialogType === 'request_changes' && 'Yêu cầu chỉnh sửa học phần'}
+          {dialogType === 'forward' && 'Chuyển tiếp học phần'}
+          {dialogType === 'return' && 'Trả về Khoa'}
+          {dialogType === 'final_approve' && 'Phê duyệt cuối cùng'}
+          {dialogType === 'final_reject' && 'Từ chối cuối cùng'}
+          {dialogType === 'delete' && 'Xóa học phần'}
         </DialogTitle>
         <DialogContent>
           {dialogType === 'instructor' && (
@@ -1449,16 +1691,122 @@ export default function CourseDetailPage() {
               />
             </Box>
           )}
-          
-          {dialogType === 'comment' && (
-            <TextField
-              fullWidth
-              label="Bình luận"
-              multiline
-              rows={4}
-              placeholder="Nhập bình luận của bạn"
-            />
+
+          {dialogType === 'request_changes' && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              <TextField
+                fullWidth
+                label="Yêu cầu chỉnh sửa"
+                multiline
+                rows={4}
+                value={workflowComment}
+                onChange={(e) => setWorkflowComment(e.target.value)}
+                placeholder="Nhập chi tiết yêu cầu chỉnh sửa học phần"
+                required
+              />
+            </Box>
           )}
+
+          {dialogType === 'forward' && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              <TextField
+                fullWidth
+                label="Ghi chú chuyển tiếp"
+                multiline
+                rows={3}
+                value={workflowComment}
+                onChange={(e) => setWorkflowComment(e.target.value)}
+                placeholder="Nhập ghi chú khi chuyển tiếp lên Hội đồng Khoa học"
+              />
+            </Box>
+          )}
+
+          {dialogType === 'return' && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              <TextField
+                fullWidth
+                label="Lý do trả về"
+                multiline
+                rows={3}
+                value={workflowComment}
+                onChange={(e) => setWorkflowComment(e.target.value)}
+                placeholder="Nhập lý do trả về Khoa để chỉnh sửa"
+                required
+              />
+            </Box>
+          )}
+
+          {dialogType === 'final_approve' && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              <Alert severity="success">
+                Học phần sẽ được phê duyệt cuối cùng và chuyển sang trạng thái PUBLISHED.
+              </Alert>
+              <TextField
+                fullWidth
+                label="Ghi chú phê duyệt cuối cùng"
+                multiline
+                rows={3}
+                value={workflowComment}
+                onChange={(e) => setWorkflowComment(e.target.value)}
+                placeholder="Nhập ghi chú phê duyệt cuối cùng (nếu có)"
+              />
+            </Box>
+          )}
+
+          {dialogType === 'final_reject' && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              <Alert severity="error">
+                Học phần sẽ bị từ chối cuối cùng và không thể sử dụng.
+              </Alert>
+              <TextField
+                fullWidth
+                label="Lý do từ chối cuối cùng"
+                multiline
+                rows={3}
+                value={workflowComment}
+                onChange={(e) => setWorkflowComment(e.target.value)}
+                placeholder="Nhập lý do từ chối cuối cùng"
+                required
+              />
+            </Box>
+          )}
+
+
+
+          {dialogType === 'delete' && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              <Alert severity="error">
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  ⚠️ CẢNH BÁO: Hành động này không thể hoàn tác!
+                </Typography>
+                <Typography>
+                  Học phần sẽ bị xóa vĩnh viễn khỏi hệ thống. Tất cả dữ liệu liên quan sẽ bị mất.
+                </Typography>
+              </Alert>
+              <TextField
+                fullWidth
+                label="Lý do xóa"
+                multiline
+                rows={4}
+                value={workflowComment}
+                onChange={(e) => setWorkflowComment(e.target.value)}
+                placeholder="Nhập lý do xóa học phần (bắt buộc)"
+                required
+              />
+              <Alert severity="info">
+                <Typography variant="body2">
+                  Để xác nhận xóa, vui lòng nhập "XÓA" vào ô bên dưới:
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Xác nhận xóa"
+                  placeholder="Nhập 'XÓA' để xác nhận"
+                  sx={{ mt: 1 }}
+                />
+              </Alert>
+            </Box>
+          )}
+          
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Hủy</Button>
@@ -1474,11 +1822,310 @@ export default function CourseDetailPage() {
             <Button variant="contained" color="error" onClick={() => handleWorkflowAction('reject')} disabled={saving}>
               {saving ? 'Đang xử lý...' : 'Từ chối'}
             </Button>
+          ) : dialogType === 'request_changes' ? (
+            <Button variant="contained" color="warning" onClick={() => handleWorkflowAction('request_changes')} disabled={saving}>
+              {saving ? 'Đang xử lý...' : 'Yêu cầu chỉnh sửa'}
+            </Button>
+          ) : dialogType === 'forward' ? (
+            <Button variant="contained" color="info" onClick={() => handleWorkflowAction('forward')} disabled={saving}>
+              {saving ? 'Đang xử lý...' : 'Chuyển tiếp'}
+            </Button>
+          ) : dialogType === 'return' ? (
+            <Button variant="contained" color="secondary" onClick={() => handleWorkflowAction('return')} disabled={saving}>
+              {saving ? 'Đang xử lý...' : 'Trả về Khoa'}
+            </Button>
+          ) : dialogType === 'final_approve' ? (
+            <Button variant="contained" color="success" onClick={() => handleWorkflowAction('final_approve')} disabled={saving}>
+              {saving ? 'Đang xử lý...' : 'Phê duyệt cuối cùng'}
+            </Button>
+          ) : dialogType === 'final_reject' ? (
+            <Button variant="contained" color="error" onClick={() => handleWorkflowAction('final_reject')} disabled={saving}>
+              {saving ? 'Đang xử lý...' : 'Từ chối cuối cùng'}
+            </Button>
+          ) : dialogType === 'delete' ? (
+            <Button variant="contained" color="error" onClick={() => handleWorkflowAction('delete')} disabled={saving}>
+              {saving ? 'Đang xử lý...' : 'Xóa vĩnh viễn'}
+            </Button>
           ) : (
             <Button variant="contained" onClick={handleCloseDialog}>
               Lưu
             </Button>
           )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Assessment Methods Modal */}
+      <Dialog open={openAssessmentModal} onClose={() => setOpenAssessmentModal(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Chỉnh sửa phương thức đánh giá</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            {assessmentMethods.map((method, index) => (
+              <Card key={`modal-assessment-${index}-${method.method}`} variant="outlined" sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <FormControl sx={{ minWidth: 120 }}>
+                    <InputLabel>Loại</InputLabel>
+                    <Select
+                      value={method.method}
+                      onChange={(e) => handleAssessmentMethodChange(index, 'method', e.target.value)}
+                      size="small"
+                    >
+                      <MenuItem value="attendance">Điểm danh</MenuItem>
+                      <MenuItem value="assignment">Bài tập</MenuItem>
+                      <MenuItem value="midterm">Giữa kỳ</MenuItem>
+                      <MenuItem value="final">Cuối kỳ</MenuItem>
+                      <MenuItem value="participation">Tham gia</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <TextField
+                    label="Trọng số (%)"
+                    type="number"
+                    value={method.weight}
+                    onChange={(e) => handleAssessmentMethodChange(index, 'weight', parseInt(e.target.value) || 0)}
+                    size="small"
+                    sx={{ width: 120 }}
+                  />
+                  <IconButton
+                    color="error"
+                    onClick={() => removeAssessmentMethod(index)}
+                    size="small"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+                <TextField
+                  label="Mô tả"
+                  value={method.description}
+                  onChange={(e) => handleAssessmentMethodChange(index, 'description', e.target.value)}
+                  fullWidth
+                  multiline
+                  rows={2}
+                  sx={{ mt: 1 }}
+                />
+              </Card>
+            ))}
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={addAssessmentMethod}
+              sx={{ alignSelf: 'flex-start' }}
+            >
+              Thêm phương thức
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenAssessmentModal(false)}>Hủy</Button>
+          <Button variant="contained" onClick={handleAssessmentSave} disabled={saving}>
+            {saving ? 'Đang lưu...' : 'Lưu'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Learning Objectives Modal */}
+      <Dialog open={openObjectivesModal} onClose={() => setOpenObjectivesModal(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Chỉnh sửa mục tiêu học tập</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            {learningObjectives.map((objective, index) => (
+              <Card key={`modal-objective-${index}-${objective.type}`} variant="outlined" sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                  <FormControl sx={{ minWidth: 120 }}>
+                    <InputLabel>Loại</InputLabel>
+                    <Select
+                      value={objective.type}
+                      onChange={(e) => handleLearningObjectiveChange(index, 'type', e.target.value)}
+                      size="small"
+                    >
+                      <MenuItem value="knowledge">Kiến thức</MenuItem>
+                      <MenuItem value="skill">Kỹ năng</MenuItem>
+                      <MenuItem value="attitude">Thái độ</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <TextField
+                    label="Mục tiêu"
+                    value={objective.objective}
+                    onChange={(e) => handleLearningObjectiveChange(index, 'objective', e.target.value)}
+                    fullWidth
+                    multiline
+                    rows={2}
+                  />
+                  <IconButton
+                    color="error"
+                    onClick={() => removeLearningObjective(index)}
+                    size="small"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              </Card>
+            ))}
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={addLearningObjective}
+              sx={{ alignSelf: 'flex-start' }}
+            >
+              Thêm mục tiêu
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenObjectivesModal(false)}>Hủy</Button>
+          <Button variant="contained" onClick={handleObjectivesSave} disabled={saving}>
+            {saving ? 'Đang lưu...' : 'Lưu'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Basic Info Modal */}
+      <Dialog open={openBasicInfoModal} onClose={() => setOpenBasicInfoModal(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Chỉnh sửa thông tin cơ bản</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Tên học phần (Tiếng Việt)"
+              value={editData.name_vi}
+              onChange={(e) => handleInputChange('name_vi', e.target.value)}
+              variant="outlined"
+            />
+            <TextField
+              fullWidth
+              label="Tên học phần (Tiếng Anh)"
+              value={editData.name_en}
+              onChange={(e) => handleInputChange('name_en', e.target.value)}
+              variant="outlined"
+            />
+            <TextField
+              fullWidth
+              label="Mã học phần"
+              value={editData.code}
+              onChange={(e) => handleInputChange('code', e.target.value)}
+              variant="outlined"
+            />
+            <TextField
+              fullWidth
+              label="Số tín chỉ"
+              type="number"
+              value={editData.credits}
+              onChange={(e) => handleInputChange('credits', parseInt(e.target.value) || 0)}
+              variant="outlined"
+            />
+            <FormControl fullWidth>
+              <InputLabel>Trạng thái</InputLabel>
+              <Select
+                value={editData.status}
+                onChange={(e) => handleInputChange('status', e.target.value)}
+                variant="outlined"
+              >
+                <MenuItem value="DRAFT">Bản nháp</MenuItem>
+                <MenuItem value="SUBMITTED">Đã gửi</MenuItem>
+                <MenuItem value="REVIEWING">Đang xem xét</MenuItem>
+                <MenuItem value="APPROVED">Đã phê duyệt</MenuItem>
+                <MenuItem value="REJECTED">Bị từ chối</MenuItem>
+                <MenuItem value="PUBLISHED">Đã xuất bản</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              label="Mô tả"
+              multiline
+              rows={4}
+              value={editData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              variant="outlined"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenBasicInfoModal(false)}>Hủy</Button>
+          <Button variant="contained" onClick={handleBasicInfoSave} disabled={saving}>
+            {saving ? 'Đang lưu...' : 'Lưu'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Syllabus Modal */}
+      <Dialog open={openSyllabusModal} onClose={() => setOpenSyllabusModal(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>Chỉnh sửa giáo trình học</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            {syllabusData.map((item, index) => (
+              <Card key={item.id} variant="outlined">
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <TextField
+                      label="Tuần"
+                      type="number"
+                      value={item.week}
+                      onChange={(e) => handleSyllabusItemChange(index, 'week', parseInt(e.target.value) || 0)}
+                      sx={{ width: 100 }}
+                    />
+                    <TextField
+                      fullWidth
+                      label="Chủ đề"
+                      value={item.topic}
+                      onChange={(e) => handleSyllabusItemChange(index, 'topic', e.target.value)}
+                    />
+                    <TextField
+                      label="Thời lượng (giờ)"
+                      type="number"
+                      value={item.duration}
+                      onChange={(e) => handleSyllabusItemChange(index, 'duration', parseFloat(e.target.value) || 0)}
+                      sx={{ width: 150 }}
+                    />
+                    <IconButton 
+                      color="error" 
+                      onClick={() => removeSyllabusItem(index)}
+                      disabled={syllabusData.length === 1}
+                    >
+                      <CancelIcon />
+                    </IconButton>
+                  </Box>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 2 }}>
+                    <TextField
+                      fullWidth
+                      label="Mục tiêu học tập"
+                      multiline
+                      rows={2}
+                      value={item.objectives}
+                      onChange={(e) => handleSyllabusItemChange(index, 'objectives', e.target.value)}
+                    />
+                    <TextField
+                      fullWidth
+                      label="Tài liệu học tập"
+                      multiline
+                      rows={2}
+                      value={item.materials}
+                      onChange={(e) => handleSyllabusItemChange(index, 'materials', e.target.value)}
+                    />
+                  </Box>
+                  <TextField
+                    fullWidth
+                    label="Bài tập"
+                    multiline
+                    rows={2}
+                    value={item.assignments}
+                    onChange={(e) => handleSyllabusItemChange(index, 'assignments', e.target.value)}
+                  />
+                </CardContent>
+              </Card>
+            ))}
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={addSyllabusItem}
+              sx={{ alignSelf: 'flex-start' }}
+            >
+              Thêm tuần học
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenSyllabusModal(false)}>Hủy</Button>
+          <Button variant="contained" onClick={handleSyllabusModalSave} disabled={saving}>
+            {saving ? 'Đang lưu...' : 'Lưu'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>
