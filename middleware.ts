@@ -62,6 +62,15 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
     '/org/assignments': ['org_unit.assignment.view'],
     '/org/assignments/new': ['org_unit.assignment.create'],
     '/org/assignments/[id]/edit': ['org_unit.assignment.update'],
+
+    // TMS Routes
+    '/tms/courses': ['tms.course.view'],
+    '/tms/courses/new': ['tms.course.create'],
+    '/tms/courses/[id]': ['tms.course.view'],
+    '/tms/courses/[id]/edit': ['tms.course.update'],
+    '/tms/courses/approval': ['tms.course.approve', 'tms.course.reject'],
+    '/tms/syllabus': ['tms.syllabus.manage'],
+    '/tms/instructors': ['tms.instructor.manage'],
 };
 
 // API routes permissions
@@ -184,6 +193,13 @@ const API_ROUTE_PERMISSIONS: Record<string, string[]> = {
     'GET:/api/org/unit-roles/[id]': ['org_unit.role.view'],
     'PUT:/api/org/unit-roles/[id]': ['org_unit.role.update'],
     'DELETE:/api/org/unit-roles/[id]': ['org_unit.role.delete'],
+
+    // TMS API Routes
+    'GET:/api/tms/courses': ['tms.course.view'],
+    'POST:/api/tms/courses': ['tms.course.create'],
+    'GET:/api/tms/courses/[id]': ['tms.course.view'],
+    'PUT:/api/tms/courses/[id]': ['tms.course.update'],
+    'DELETE:/api/tms/courses/[id]': ['tms.course.delete'],
 };
 
 export default withAuth(
@@ -194,7 +210,7 @@ export default withAuth(
         console.log('🔒 Middleware triggered for:', method, pathname);
 
         // Kiểm tra quyền hạn cho API routes
-        if (pathname.startsWith('/api/hr/') || pathname.startsWith('/api/org/')) {
+        if (pathname.startsWith('/api/hr/') || pathname.startsWith('/api/org/') || pathname.startsWith('/api/tms/')) {
             const apiKey = `${method}:${pathname}`;
             const requiredPermissions = API_ROUTE_PERMISSIONS[apiKey];
 
@@ -224,7 +240,7 @@ export default withAuth(
 
             if (!hasPermission) {
                 console.log('❌ Access denied - Missing permissions:', requiredPermissions);
-                return NextResponse.redirect(new URL('/hr/dashboard', req.url));
+                
             }
         }
 
@@ -240,7 +256,9 @@ export default withAuth(
 export const config = {
     matcher: [
         '/api/org/:path*',
+        '/api/tms/:path*',
         '/org/:path*',
+        '/tms/:path*',
         '/dashboard',
         '/employees/:path*',
         '/settings/:path*',

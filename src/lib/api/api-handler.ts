@@ -15,6 +15,88 @@ export type ApiHandler<T = unknown> = (
   context?: { params?: Promise<{ id: string }> }
 ) => Promise<NextResponse<ApiResponse<T>>>;
 
+// Only stringify BigInt values for fields that look like identifiers or actor/size fields
+function isIdKey(key: string): boolean {
+  // normalize to lower-case and check common suffix/patterns
+  const k = key.toLowerCase();
+  return (
+    k === 'id' ||
+    k.endsWith('_id') ||
+    k.endsWith('id') ||
+    k.endsWith('_by') ||
+    k.endsWith('_size')
+  );
+}
+
+export function serializeIdsOnly<T extends Record<string, unknown>>(obj: T): T {
+  const serialized = { ...obj } as Record<string, unknown>;
+  for (const key in serialized) {
+    const value = serialized[key] as unknown;
+    if (typeof value === 'bigint') {
+      if (isIdKey(key)) {
+        serialized[key] = value.toString();
+      } else {
+        // leave non-id BigInt as-is (will surface quickly if present unexpected)
+        serialized[key] = value;
+      }
+    } else if (value instanceof Date) {
+      serialized[key] = value.toISOString();
+    } else if (Array.isArray(value)) {
+      serialized[key] = serializeIdsOnlyArray(value as unknown[]);
+    } else if (value && typeof value === 'object') {
+      // Prisma Decimal object detection — always convert to number
+      if (value && 's' in (value as Record<string, unknown>) && 'e' in (value as Record<string, unknown>) && 'd' in (value as Record<string, unknown>)) {
+        const decimal = value as unknown as { s: number; e: number; d: number[] };
+        const sign = decimal.s;
+        const exponent = decimal.e;
+        const digits = decimal.d;
+        let result = 0;
+        for (let i = 0; i < digits.length; i++) {
+          result += digits[i] * Math.pow(10, exponent - i);
+        }
+        if (exponent < 0) {
+          result = result / Math.pow(10, Math.abs(exponent));
+        }
+        serialized[key] = sign * result;
+      } else {
+        serialized[key] = serializeIdsOnly(value as Record<string, unknown>);
+      }
+    }
+  }
+  return serialized as T;
+}
+
+export function serializeIdsOnlyArray<T extends unknown[]>(arr: T): T {
+  return arr.map((item: unknown) => {
+    if (typeof item === 'bigint') {
+      // No key context in arrays; stringify BigInt to avoid JSON errors
+      return item.toString();
+    } else if (item instanceof Date) {
+      return item.toISOString();
+    } else if (Array.isArray(item)) {
+      return serializeIdsOnlyArray(item);
+    } else if (item && typeof item === 'object') {
+      // Prisma Decimal object detection — always convert to number
+      if (item && 's' in (item as Record<string, unknown>) && 'e' in (item as Record<string, unknown>) && 'd' in (item as Record<string, unknown>)) {
+        const decimal = item as unknown as { s: number; e: number; d: number[] };
+        const sign = decimal.s;
+        const exponent = decimal.e;
+        const digits = decimal.d;
+        let result = 0;
+        for (let i = 0; i < digits.length; i++) {
+          result += digits[i] * Math.pow(10, exponent - i);
+        }
+        if (exponent < 0) {
+          result = result / Math.pow(10, Math.abs(exponent));
+        }
+        return sign * result;
+      }
+      return serializeIdsOnly(item as Record<string, unknown>);
+    }
+    return item;
+  }) as T;
+}
+
 export function serializeBigInt<T extends Record<string, unknown>>(obj: T): T {
   const serialized = { ...obj } as Record<string, unknown>;
   
@@ -164,11 +246,11 @@ export function withErrorHandling<T>(
       const result = await handler(request, handlerContext);
       // Handle arrays separately to avoid converting to objects
       if (Array.isArray(result)) {
-        const serializedResult = serializeBigIntArray(result);
-        return createSuccessResponse(serializedResult);
+        const serializedResult = serializeIdsOnlyArray(result) as unknown as T;
+        return createSuccessResponse<T>(serializedResult);
       } else {
-        const serializedResult = serializeBigInt(result as Record<string, unknown>);
-        return createSuccessResponse(serializedResult);
+        const serializedResult = serializeIdsOnly(result as Record<string, unknown>) as unknown as T;
+        return createSuccessResponse<T>(serializedResult);
       }
     } catch (error) {
       return handleApiError(error, context) as NextResponse<ApiResponse<T>>;

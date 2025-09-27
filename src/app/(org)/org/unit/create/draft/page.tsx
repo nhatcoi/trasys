@@ -365,7 +365,7 @@ export default function CreateDraftPage() {
 
       <Alert severity="info" sx={{ mb: 3 }}>
         <AlertTitle>Quy trình khởi tạo</AlertTitle>
-        Tạo đơn vị mới ở trạng thái nháp với thông tin cơ bản. Sau khi hoàn thành có thể gửi thẩm định.
+        Tạo đơn vị mới ở trạng thái nháp với thông tin cơ bản. Sau khi hoàn thành có thể gửi cấp trên thẩm định.
       </Alert>
 
       {apiError && (

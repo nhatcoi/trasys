@@ -35,6 +35,7 @@ import {
   Menu,
   ListItemIcon,
   ListItemText,
+  Autocomplete,
 } from '@mui/material';
 import { 
   orgApi,
@@ -73,6 +74,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useOrgUnitsPagination } from '@/hooks/use-org-units-pagination';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 
 interface CreateUnitData {
   name: string;
@@ -112,6 +114,65 @@ export default function OrgUnitManagementPage() {
     type: 'all',
     status: 'all',
   });
+
+  // Async searchable parent unit options (independent from paginated orgUnits)
+  const [parentOptions, setParentOptions] = React.useState<OrgUnit[]>([]);
+  const [parentQuery, setParentQuery] = React.useState('');
+  const [parentLoading, setParentLoading] = React.useState(false);
+
+  // Debounced fetch for parent options
+  React.useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    const trimmed = parentQuery.trim();
+
+    // Only fetch when user types at least 2 characters
+    if (trimmed.length < 2) {
+      setParentOptions([]);
+      setParentLoading(false);
+      return () => {
+        active = false;
+        controller.abort();
+      };
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        setParentLoading(true);
+        const params = new URLSearchParams({
+          page: '1',
+          size: '10',
+          sort: 'name',
+          order: 'asc',
+        });
+        params.set('search', trimmed);
+        const res = await fetch(`/api/org/units?${params.toString()}`, { signal: controller.signal });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || 'Failed to fetch units');
+        const items = Array.isArray(json?.items)
+          ? json.items
+          : Array.isArray(json?.data?.items)
+          ? json.data.items
+          : Array.isArray(json?.data)
+          ? json.data
+          : Array.isArray(json)
+          ? json
+          : [];
+        if (active) setParentOptions(items as any);
+      } catch (e) {
+        if (active) setParentOptions([]);
+        // swallow for now
+      } finally {
+        if (active) setParentLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      controller.abort();
+      clearTimeout(timeout);
+    };
+  }, [parentQuery]);
 
   // Fetch data function
   const fetchData = async () => {
@@ -452,14 +513,16 @@ export default function OrgUnitManagementPage() {
               >
                 Làm mới
               </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setOpenCreateDialog(true)}
-                sx={{ backgroundColor: '#2e4c92' }}
-              >
-                Thêm đơn vị
-              </Button>
+              <PermissionGuard permission="org_unit.unit.create">
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => setOpenCreateDialog(true)}
+                  sx={{ backgroundColor: '#2e4c92' }}
+                >
+                  Thêm đơn vị
+                </Button>
+              </PermissionGuard>
             </Stack>
           </Stack>
         </CardContent>
@@ -715,21 +778,28 @@ export default function OrgUnitManagementPage() {
               multiline
               rows={3}
             />
-            <FormControl fullWidth>
-              <InputLabel>Đơn vị cha</InputLabel>
-              <Select
-                value={formData.parent_id || ''}
-                label="Đơn vị cha"
-                onChange={(e) => setFormData({ ...formData, parent_id: e.target.value ? Number(e.target.value) : null })}
-              >
-                <MenuItem value="">Không có</MenuItem>
-                {orgUnits.map((unit) => (
-                  <MenuItem key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              fullWidth
+              options={Array.isArray(parentOptions) ? parentOptions : []}
+              getOptionLabel={(option) => option.name || ''}
+              value={(Array.isArray(parentOptions) ? parentOptions : []).find(u => String(u.id) === String(formData.parent_id ?? '')) || null}
+              onChange={(_, newValue) => {
+                setFormData({ ...formData, parent_id: newValue ? Number(newValue.id) : null });
+              }}
+              onInputChange={(_, value) => setParentQuery(value)}
+              isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+              loading={parentLoading}
+              ListboxProps={{
+                style: { maxHeight: 320, overflow: 'auto' },
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Đơn vị cha" placeholder="Tìm kiếm đơn vị..." />
+              )}
+              onOpen={() => {
+                if (!parentOptions || parentOptions.length === 0) setParentQuery('');
+              }}
+              clearOnEscape
+            />
             <FormControl fullWidth>
               <InputLabel>Trạng thái</InputLabel>
               <Select
@@ -816,21 +886,29 @@ export default function OrgUnitManagementPage() {
               multiline
               rows={3}
             />
-            <FormControl fullWidth>
-              <InputLabel>Đơn vị cha</InputLabel>
-              <Select
-                value={formData.parent_id || ''}
-                label="Đơn vị cha"
-                onChange={(e) => setFormData({ ...formData, parent_id: e.target.value ? Number(e.target.value) : null })}
-              >
-                <MenuItem value="">Không có</MenuItem>
-                {orgUnits.filter(unit => unit.id !== selectedUnit?.id).map((unit) => (
-                  <MenuItem key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              fullWidth
+              options={(Array.isArray(parentOptions) ? parentOptions : []).filter(unit => String(unit.id) !== String(selectedUnit?.id ?? ''))}
+              getOptionLabel={(option) => option.name || ''}
+              value={parentOptions.find(u => String(u.id) === String(formData.parent_id ?? '')) || null}
+              onChange={(_, newValue) => {
+                setFormData({ ...formData, parent_id: newValue ? Number(newValue.id) : null });
+              }}
+              onInputChange={(_, value) => setParentQuery(value)}
+              isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+              loading={parentLoading}
+              ListboxProps={{
+                style: { maxHeight: 320, overflow: 'auto' },
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Đơn vị cha" placeholder="Tìm kiếm đơn vị..." />
+              )}
+              onOpen={() => {
+                // trigger initial fetch when opening if options empty
+                if (parentOptions.length === 0) setParentQuery('');
+              }}
+              clearOnEscape
+            />
             <FormControl fullWidth>
               <InputLabel>Trạng thái</InputLabel>
               <Select
