@@ -57,6 +57,16 @@ import {
   Attachment as AttachmentIcon
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
+import {
+  COURSE_PRIORITIES,
+  COURSE_TYPES,
+  CoursePriority,
+  CourseType,
+  getCourseTypeLabel,
+  getPriorityLabel,
+  getStatusColor,
+  getStatusLabel,
+} from '@/constants/courses';
 
 interface FormData {
   basicInfo: {
@@ -65,7 +75,7 @@ interface FormData {
     nameEn: string;
     credits: number;
     orgUnitId: string;
-    type: string;
+    type: CourseType;
     description: string;
   };
   prerequisites: string[];
@@ -98,7 +108,7 @@ interface FormData {
     description: string;
   };
   workflow: {
-    priority: string;
+    priority: CoursePriority;
     notes: string;
     attachments: string[];
   };
@@ -113,13 +123,10 @@ const steps = [
   'Xác nhận'
 ];
 
-const courseTypes = [
-  { value: 'theory', label: 'Lý thuyết' },
-  { value: 'practice', label: 'Thực hành' },
-  { value: 'mixed', label: 'Lý thuyết + Thực hành' },
-  { value: 'thesis', label: 'Khóa luận/Đồ án' },
-  { value: 'internship', label: 'Thực tập' }
-];
+const courseTypeOptions = COURSE_TYPES.map((type) => ({
+  value: type,
+  label: getCourseTypeLabel(type),
+}));
 
 const assessmentMethods = [
   { value: 'midterm', label: 'Giữa kỳ' },
@@ -158,7 +165,7 @@ export default function CreateCoursePage() {
       nameEn: '',
       credits: 0,
       orgUnitId: '',
-      type: 'theory',
+      type: CourseType.THEORY,
       description: ''
     },
     prerequisites: [] as string[],
@@ -179,7 +186,7 @@ export default function CreateCoursePage() {
       description: ''
     },
     workflow: {
-      priority: 'medium',
+      priority: CoursePriority.MEDIUM,
       notes: '',
       attachments: [] as string[]
     }
@@ -234,7 +241,7 @@ export default function CreateCoursePage() {
         syllabus: formData.syllabus || [],
         
         // Workflow
-        workflow_priority: 'medium',
+        workflow_priority: formData.workflow.priority.toLowerCase(),
         workflow_notes: 'Draft course saved'
       };
 
@@ -300,7 +307,7 @@ export default function CreateCoursePage() {
         syllabus: formData.syllabus || [],
         
         // Workflow
-        workflow_priority: 'high',
+        workflow_priority: formData.workflow.priority.toLowerCase(),
         workflow_notes: 'Course submitted for approval'
       };
 
@@ -579,7 +586,7 @@ export default function CreateCoursePage() {
                 <InputLabel>Loại môn học *</InputLabel>
                 <Select
                   value={formData.basicInfo.type}
-                  onChange={(e) => updateFormData('basicInfo', { type: e.target.value })}
+                  onChange={(e) => updateFormData('basicInfo', { type: e.target.value as CourseType })}
                   label="Loại môn học *"
                   MenuProps={{
                     PaperProps: {
@@ -590,7 +597,7 @@ export default function CreateCoursePage() {
                     },
                   }}
                 >
-                  {courseTypes.map((type) => (
+                  {courseTypeOptions.map((type) => (
                     <MenuItem key={type.value} value={type.value}>
                       {type.label}
                     </MenuItem>
@@ -667,16 +674,10 @@ export default function CreateCoursePage() {
                         color="primary"
                       />
                       <Chip 
-                        label={option.status} 
+                        label={getStatusLabel(option.status || '')} 
                         size="small" 
                         variant="outlined"
-                        color={
-                          option.status === 'APPROVED' ? 'success' :
-                          option.status === 'PUBLISHED' ? 'success' :
-                          option.status === 'REVIEWING' ? 'warning' :
-                          option.status === 'SUBMITTED' ? 'info' :
-                          'default'
-                        }
+                        color={getStatusColor(option.status || '') as any}
                       />
                     </Box>
                   </Box>
@@ -999,7 +1000,7 @@ export default function CreateCoursePage() {
                 <InputLabel>Độ ưu tiên</InputLabel>
                 <Select
                   value={formData.workflow.priority}
-                  onChange={(e) => updateFormData('workflow', { priority: e.target.value })}
+                  onChange={(e) => updateFormData('workflow', { priority: e.target.value as CoursePriority })}
                   label="Độ ưu tiên"
                   MenuProps={{
                     PaperProps: {
@@ -1010,9 +1011,11 @@ export default function CreateCoursePage() {
                     },
                   }}
                 >
-                  <MenuItem value="low">Thấp</MenuItem>
-                  <MenuItem value="medium">Trung bình</MenuItem>
-                  <MenuItem value="high">Cao</MenuItem>
+                  {COURSE_PRIORITIES.map((priority) => (
+                    <MenuItem key={priority} value={priority}>
+                      {getPriorityLabel(priority)}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
               <TextField

@@ -1,6 +1,12 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { withErrorHandling } from '@/lib/api/api-handler';
+import {
+  CourseStatus,
+  CourseType,
+  WorkflowStage,
+  normalizeCoursePriority,
+} from '@/constants/courses';
 
 // Public API endpoints không cần authentication để demo
 
@@ -8,10 +14,12 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '10');
-  const status = searchParams.get('status');
+  const statusParam = searchParams.get('status');
+  const normalizedStatus = statusParam?.toUpperCase();
   const search = searchParams.get('search') || undefined;
   const orgUnitId = searchParams.get('orgUnitId');
-  const workflowStage = searchParams.get('workflowStage');
+  const workflowStageParam = searchParams.get('workflowStage');
+  const normalizedWorkflowStage = workflowStageParam?.toUpperCase();
   const listMode = searchParams.get('list') === 'true';
 
   const skip = (page - 1) * limit;
@@ -27,12 +35,12 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   }
   
   // Filter by course status and workflow stage
-  if (status) {
-    where.status = status;
+  if (normalizedStatus && (Object.values(CourseStatus) as string[]).includes(normalizedStatus)) {
+    where.status = normalizedStatus as CourseStatus;
   }
-  if (workflowStage) {
+  if (normalizedWorkflowStage && (Object.values(WorkflowStage) as string[]).includes(normalizedWorkflowStage)) {
     where.workflows = {
-      some: { workflow_stage: workflowStage }
+      some: { workflow_stage: normalizedWorkflowStage as WorkflowStage }
     };
   }
 
@@ -88,9 +96,9 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
         credits: parseFloat(course.credits.toString()),
         
         // Flatten workflow data
-        status: course.workflows?.[0]?.status || 'DRAFT',
-        workflow_stage: course.workflows?.[0]?.workflow_stage || 'FACULTY',
-        workflow_priority: course.workflows?.[0]?.priority || 'medium',
+        status: (course.workflows?.[0]?.status || CourseStatus.DRAFT) as CourseStatus,
+        workflow_stage: (course.workflows?.[0]?.workflow_stage || WorkflowStage.FACULTY) as WorkflowStage,
+        workflow_priority: normalizeCoursePriority(course.workflows?.[0]?.priority).toLowerCase(),
         
         // Flatten content data
         prerequisites: course.contents?.[0]?.prerequisites || null,
@@ -141,6 +149,10 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   const nextId = lastCourse ? lastCourse.id + BigInt(1) : BigInt(1);
 
   const prerequisitesString = courseData.prerequisites?.map(p => typeof p === 'string' ? p : p.label).join(', ') || null;
+  const workflowPriorityValue = normalizeCoursePriority(courseData.workflow_priority).toLowerCase();
+  const courseTypeValue = (Object.values(CourseType) as string[]).includes(courseData.type)
+    ? (courseData.type as CourseType)
+    : CourseType.THEORY;
 
   const result = await db.$transaction(async (tx) => {
     // 1. Create main course record
@@ -152,7 +164,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
         name_en: courseData.name_en || null,
         credits: courseData.credits,
         org_unit_id: BigInt(courseData.org_unit_id),
-        type: courseData.type,
+        type: courseTypeValue,
         description: courseData.description || null,
         created_at: new Date(),
         updated_at: new Date(),
@@ -169,9 +181,9 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
       data: {
         id: nextWorkflowId,
         course_id: course.id,
-        status: 'DRAFT',
-        workflow_stage: 'FACULTY',
-        priority: courseData.workflow_priority || 'medium',
+        status: CourseStatus.DRAFT,
+        workflow_stage: WorkflowStage.FACULTY,
+        priority: workflowPriorityValue,
         notes: courseData.workflow_notes || null,
       }
     });

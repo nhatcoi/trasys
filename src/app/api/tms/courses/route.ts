@@ -4,6 +4,13 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { withErrorHandling, withBody, createSuccessResponse, createErrorResponse } from '@/lib/api/api-handler';
 import { CreateCourseInput, CourseQueryInput } from '@/lib/api/schemas/course';
+import {
+  CoursePrerequisiteType,
+  CourseStatus,
+  CourseType,
+  WorkflowStage,
+  normalizeCoursePriority,
+} from '@/constants/courses';
 
 
 // GET /api/tms/courses
@@ -17,10 +24,12 @@ export const GET = withErrorHandling(
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
-    const status = searchParams.get('status');
+    const statusParam = searchParams.get('status');
+    const normalizedStatus = statusParam?.toUpperCase();
     const search = searchParams.get('search') || undefined;
     const orgUnitId = searchParams.get('orgUnitId');
-    const workflowStage = searchParams.get('workflowStage');
+    const workflowStageParam = searchParams.get('workflowStage');
+    const normalizedWorkflowStage = workflowStageParam?.toUpperCase();
     const listMode = searchParams.get('list') === 'true';
 
     const skip = (page - 1) * limit;
@@ -36,12 +45,12 @@ export const GET = withErrorHandling(
     }
     
     // Filter by course status and workflow stage
-    if (status) {
-        where.status = status;
+    if (normalizedStatus && (Object.values(CourseStatus) as string[]).includes(normalizedStatus)) {
+        where.status = normalizedStatus as CourseStatus;
     }
-    if (workflowStage) {
+    if (normalizedWorkflowStage && (Object.values(WorkflowStage) as string[]).includes(normalizedWorkflowStage)) {
         where.workflows = {
-            some: { workflow_stage: workflowStage }
+            some: { workflow_stage: normalizedWorkflowStage as WorkflowStage }
         };
     }
 
@@ -78,53 +87,10 @@ export const GET = withErrorHandling(
         })
     ]);
 
-    // Serialize BigInt values and flatten structure
-    const serializedCourses = listMode 
-        ? courses.map(course => ({
-            id: course.id.toString(),
-            code: course.code,
-            name_vi: course.name_vi,
-            name_en: course.name_en || '',
-            credits: parseFloat(course.credits.toString()),
-            type: course.type,
-            label: `${course.code} - ${course.name_vi}`,
-            value: `${course.code} - ${course.name_vi}`
-        }))
-        : courses.map(course => ({
-            ...course,
-            id: course.id.toString(),
-            org_unit_id: course.org_unit_id.toString(),
-            credits: parseFloat(course.credits.toString()),
-            
-            // Flatten workflow data
-            status: course.workflows?.[0]?.status || 'DRAFT',
-            workflow_stage: course.workflows?.[0]?.workflow_stage || 'FACULTY',
-            workflow_priority: course.workflows?.[0]?.priority || 'medium',
-            
-            // Flatten content data
-            prerequisites: course.contents?.[0]?.prerequisites || null,
-            learning_objectives: course.contents?.[0]?.learning_objectives || null,
-            assessment_methods: course.contents?.[0]?.assessment_methods || null,
-            passing_grade: course.contents?.[0]?.passing_grade ? parseFloat(course.contents[0].passing_grade.toString()) : null,
-            
-            // Flatten audit data
-            created_by: course.audits?.[0]?.created_by?.toString() || null,
-            created_at: course.audits?.[0]?.created_at || course.created_at,
-            
-            // OrgUnit data
-            OrgUnit: course.OrgUnit ? {
-            ...course.OrgUnit,
-            id: course.OrgUnit.id?.toString()
-            } : null,
-            
-            // Remove nested arrays for cleaner response
-            workflows: undefined,
-            contents: undefined,
-            audits: undefined
-        }));
+    
 
     return {
-        items: serializedCourses,
+        items: courses,
         pagination: {
         page,
         limit,
@@ -160,6 +126,11 @@ export const POST = withBody(
     });
     const nextId = lastCourse ? lastCourse.id + BigInt(1) : BigInt(1);
 
+    const workflowPriorityValue = normalizeCoursePriority(courseData.workflow_priority).toLowerCase();
+    const courseTypeValue = (Object.values(CourseType) as string[]).includes(courseData.type)
+      ? (courseData.type as CourseType)
+      : CourseType.THEORY;
+
     const result = await db.$transaction(async (tx) => {
       // 1. Create main course record
       const course = await tx.course.create({
@@ -170,7 +141,7 @@ export const POST = withBody(
           name_en: courseData.name_en || null,
           credits: courseData.credits,
           org_unit_id: BigInt(courseData.org_unit_id),
-          type: courseData.type,
+          type: courseTypeValue,
           description: courseData.description || null,
           created_at: new Date(),
           updated_at: new Date(),
@@ -187,9 +158,9 @@ export const POST = withBody(
         data: {
           id: nextWorkflowId,
           course_id: course.id,
-          status: 'DRAFT',
-          workflow_stage: 'FACULTY',
-          priority: courseData.workflow_priority || 'medium',
+          status: CourseStatus.DRAFT,
+          workflow_stage: WorkflowStage.FACULTY,
+          priority: workflowPriorityValue,
           notes: courseData.workflow_notes || null,
           created_at: new Date(),
           updated_at: new Date(),
@@ -236,8 +207,8 @@ export const POST = withBody(
       const courseVersion = await tx.courseVersion.create({
         data: {
           course_id: course.id,
-          version: "1",
-          status: "DRAFT",
+          version: '1',
+          status: CourseStatus.DRAFT,
           effective_from: new Date(),
           effective_to: null,
         }
@@ -256,7 +227,7 @@ export const POST = withBody(
             data: {
               course_id: course.id,
               prerequisite_course_id: BigInt(prereqId),
-              prerequisite_type: "RECOMMENDED", // Required field
+              prerequisite_type: CoursePrerequisiteType.PRIOR,
               min_grade: 5.0,
               description: "Prerequisite course",
               created_at: new Date(),

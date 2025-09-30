@@ -4,6 +4,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { withErrorHandling, withIdParam, withIdAndBody, createErrorResponse, createSuccessResponse } from '@/lib/api/api-handler';
 import { UpdateCourseInput } from '@/lib/api/schemas/course';
+import {
+  CourseStatus,
+  CourseType,
+  WorkflowStage,
+  normalizeCoursePriority,
+} from '@/constants/courses';
 
 // GET /api/tms/courses/[id] - Lấy chi tiết course
 const getCourseById = async (id: string, request: Request) => {
@@ -142,6 +148,50 @@ const updateCourse = async (id: string, body: unknown, request: Request) => {
   const courseData = body as any;
   const prerequisitesString = courseData.prerequisites?.map((p: any) => typeof p === 'string' ? p : p.label).join(', ') || null;
 
+  const toCourseStatus = (value: unknown): CourseStatus | undefined => {
+    if (!value) return undefined;
+    const upper = String(value).toUpperCase();
+    return (Object.values(CourseStatus) as string[]).includes(upper) ? (upper as CourseStatus) : undefined;
+  };
+
+  const toWorkflowStage = (value: unknown): WorkflowStage | undefined => {
+    if (!value) return undefined;
+    const upper = String(value).toUpperCase();
+    return (Object.values(WorkflowStage) as string[]).includes(upper) ? (upper as WorkflowStage) : undefined;
+  };
+
+  const toCourseType = (value: unknown): CourseType | undefined => {
+    if (!value) return undefined;
+    const str = String(value);
+    return (Object.values(CourseType) as string[]).includes(str) ? (str as CourseType) : undefined;
+  };
+
+  const resolvedStatus = toCourseStatus(courseData.status);
+  const resolvedWorkflowStage = toWorkflowStage(courseData.workflow_stage);
+  const resolvedPriority = normalizeCoursePriority(courseData.workflow_priority).toLowerCase();
+  const resolvedType = toCourseType(courseData.type);
+
+  // Determine current user's active role
+  let currentUserRoleName: string | null = null;
+  let currentUserRoleDescription: string | null = null;
+  try {
+    const activeUserRole = await db.userRole.findFirst({
+      where: { user_id: BigInt(session.user.id), is_active: true },
+      include: { Role: { select: { name: true, description: true } } },
+      orderBy: { assigned_at: 'desc' }
+    });
+    const rawName = (activeUserRole?.Role as any)?.name as string | undefined;
+    currentUserRoleName = rawName ? rawName.toLowerCase() : null;
+    const rawDesc = (activeUserRole?.Role as any)?.description as string | undefined;
+    currentUserRoleDescription = rawDesc ?? null;
+  } catch (e) {
+    // fallback silently
+    currentUserRoleName = null;
+    currentUserRoleDescription = null;
+  }
+
+  // Remove role-to-stage mapping: we will store reviewer_role exactly as current user role
+
   const result = await db.$transaction(async (tx) => {
     // 1. Update main course record
     const updatedCourse = await tx.course.update({
@@ -152,8 +202,8 @@ const updateCourse = async (id: string, body: unknown, request: Request) => {
         name_en: courseData.name_en || null,
         credits: courseData.credits,
         ...(courseData.org_unit_id && { org_unit_id: BigInt(courseData.org_unit_id) }),
-        ...(courseData.type && { type: courseData.type }),
-        ...(courseData.status && { status: courseData.status }),
+        ...(resolvedType && { type: resolvedType }),
+        ...(resolvedStatus && { status: resolvedStatus }),
         description: courseData.description || null,
         updated_at: new Date(),
       }
@@ -163,9 +213,9 @@ const updateCourse = async (id: string, body: unknown, request: Request) => {
     const updatedWorkflow = await tx.courseWorkflow.updateMany({
       where: { course_id: BigInt(courseId) },
       data: {
-        status: (courseData as any).status || 'DRAFT',
-        workflow_stage: (courseData as any).workflow_stage || 'FACULTY',
-        priority: (courseData as any).workflow_priority || 'medium',
+        status: resolvedStatus ?? CourseStatus.DRAFT,
+        workflow_stage: resolvedWorkflowStage ?? WorkflowStage.FACULTY,
+        priority: resolvedPriority,
         notes: (courseData as any).workflow_notes || null,
         updated_at: new Date(),
       }
@@ -215,7 +265,7 @@ const updateCourse = async (id: string, body: unknown, request: Request) => {
           data: {
             course_id: BigInt(courseId),
             version: '1',
-            status: 'DRAFT'
+            status: CourseStatus.DRAFT,
           }
         });
       }
@@ -267,8 +317,29 @@ const updateCourse = async (id: string, body: unknown, request: Request) => {
     if ((courseData as any).workflow_action) {
       const workflowAction = (courseData as any).workflow_action;
       const comment = (courseData as any).comment || '';
-      const status = (courseData as any).status;
-      const workflowStage = (courseData as any).workflow_stage;
+      // Only accept status and comment from request; compute stage by action
+      const status = toCourseStatus((courseData as any).status) ?? CourseStatus.DRAFT;
+      const workflowStage = (() => {
+        const map: Record<string, WorkflowStage> = {
+          approve: WorkflowStage.ACADEMIC_OFFICE,
+          reject: WorkflowStage.FACULTY,
+          request_changes: WorkflowStage.FACULTY,
+          forward: WorkflowStage.ACADEMIC_BOARD,
+          final_approve: WorkflowStage.ACADEMIC_BOARD,
+          final_reject: WorkflowStage.ACADEMIC_BOARD,
+          delete: WorkflowStage.ACADEMIC_OFFICE,
+        };
+        return map[workflowAction] || WorkflowStage.FACULTY;
+      })();
+
+      // Debug logs for role and stage resolution
+      console.log('[CourseWorkflow]', {
+        courseId,
+        action: workflowAction,
+        requestedStatus: status,
+        resolvedStage: workflowStage,
+        currentUserRoleName,
+      });
 
       // Check permissions for workflow actions
       const session = await getServerSession(authOptions);
@@ -287,7 +358,7 @@ const updateCourse = async (id: string, body: unknown, request: Request) => {
       await tx.courseWorkflow.updateMany({
         where: { course_id: BigInt(courseId) },
         data: {
-          status: status,
+          status,
           workflow_stage: workflowStage,
           notes: comment,
           updated_at: new Date()
@@ -298,21 +369,51 @@ const updateCourse = async (id: string, body: unknown, request: Request) => {
       await tx.course.update({
         where: { id: BigInt(courseId) },
         data: {
-          status: status,
+          status,
           updated_at: new Date()
         }
       });
+
+      // Build human-readable reviewer note: "role - description - action"
+      const actionLabelMap: Record<string, string> = {
+        'approve': 'đã phê duyệt',
+        'reject': 'đã từ chối',
+        'request_changes': 'đã yêu cầu chỉnh sửa',
+        'forward': 'đã chuyển tiếp',
+        'final_approve': 'đã công bố',
+        'final_reject': 'đã từ chối cuối cùng',
+        'delete': 'đã xóa'
+      };
+      const reviewerNoteParts = [
+        currentUserRoleName ?? undefined,
+        currentUserRoleDescription ?? undefined,
+        actionLabelMap[workflowAction] ?? undefined
+      ].filter(Boolean) as string[];
+      const reviewerNote = reviewerNoteParts.join(' - ');
+
+      // Map workflow_action to DB-allowed history action enum
+      const historyActionMap: Record<string, 'SUBMIT' | 'APPROVE' | 'REJECT' | 'RETURN' | 'PUBLISH' | 'ARCHIVE'> = {
+        approve: 'APPROVE',
+        reject: 'REJECT',
+        request_changes: 'RETURN',
+        forward: 'SUBMIT',
+        final_approve: 'PUBLISH',
+        final_reject: 'REJECT',
+        delete: 'ARCHIVE',
+      };
+      const historyAction = historyActionMap[workflowAction] || 'SUBMIT';
 
       // Create approval history entry
       await tx.courseApprovalHistory.create({
         data: {
           course_id: BigInt(courseId),
-          action: workflowAction.toUpperCase(),
-          from_status: 'DRAFT', // TODO: Get current status
+          action: historyAction,
+          from_status: CourseStatus.DRAFT, // TODO: Get current status
           to_status: status,
-          reviewer_id: BigInt(1), // TODO: Get from session
-          reviewer_role: (courseData as any).reviewer_role || (workflowAction === 'approve' ? 'ACADEMIC_OFFICE' : 'ACADEMIC_OFFICE'),
-          comments: comment,
+          reviewer_id: BigInt(session.user.id),
+          // Store current user's role name directly (constraint removed on DB)
+          reviewer_role: currentUserRoleName ?? 'unknown',
+          comments: reviewerNote ? (comment ? `${reviewerNote} | ${comment}` : reviewerNote) : comment,
           created_at: new Date()
         }
       });

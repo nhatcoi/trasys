@@ -147,7 +147,7 @@ export default function OrgLayout({
 
   const handleLogout = async () => {
     handleUserMenuClose();
-    await signOut({ callbackUrl: '/auth/signin' });
+    await signOut({ callbackUrl: '/' });
   };
 
   const handleDrawerToggle = () => {

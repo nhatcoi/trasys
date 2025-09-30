@@ -54,6 +54,7 @@ import {
   Category as CategoryIcon,
   Class as ClassIcon,
   SchoolOutlined as SchoolOutlinedIcon,
+  ViewModule as ViewModuleIcon,
 } from '@mui/icons-material';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -152,7 +153,7 @@ export default function TmsLayout({
 
   const handleLogout = async () => {
     handleUserMenuClose();
-    await signOut({ callbackUrl: '/auth/signin' });
+    await signOut({ callbackUrl: '/' });
   };
 
   const handleDrawerToggle = () => {
@@ -200,6 +201,18 @@ export default function TmsLayout({
           icon: <AddIcon />,
           label: 'Tạo chương trình mới',
           permissions: ['tms.program.create'],
+        },
+        {
+          key: '/tms/programs/blocks',
+          icon: <ViewModuleIcon />,
+          label: 'Quản lý khối học phần',
+          permissions: ['tms.program.read'],
+        },
+        {
+          key: '/tms/programs/map',
+          icon: <ClassIcon />,
+          label: 'Bản đồ học phần chương trình',
+          permissions: ['tms.program.read'],
         },
         {
           key: '/tms/programs/review',

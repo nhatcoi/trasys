@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../../lib/auth/auth';
 import { db } from '../../../../../lib/db';
+import { CourseStatus } from '@/constants/courses';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,20 +32,22 @@ export async function GET(request: NextRequest) {
     stats.forEach(stat => {
       const count = stat._count.id;
       result.total += count;
-      
-      switch (stat.status) {
-        case 'DRAFT':
-        case 'SUBMITTED':
+
+      const status = (stat.status || '').toUpperCase() as CourseStatus | 'CANCELLED' | '';
+
+      switch (status) {
+        case CourseStatus.DRAFT:
+        case CourseStatus.SUBMITTED:
           result.pending += count;
           break;
-        case 'REVIEWING':
+        case CourseStatus.REVIEWING:
           result.reviewing += count;
           break;
-        case 'APPROVED':
-        case 'PUBLISHED':
+        case CourseStatus.APPROVED:
+        case CourseStatus.PUBLISHED:
           result.approved += count;
           break;
-        case 'REJECTED':
+        case CourseStatus.REJECTED:
         case 'CANCELLED':
           result.rejected += count;
           break;

@@ -43,6 +43,7 @@ import {
   Tab,
   Avatar
 } from '@mui/material';
+import Tooltip from '@mui/material/Tooltip';
 import Snackbar from '@mui/material/Snackbar';
 import {
   ArrowBack as ArrowBackIcon,
@@ -67,6 +68,22 @@ import {
 } from '@mui/icons-material';
 import { useRouter, useParams } from 'next/navigation';
 import { PermissionGuard } from '@/components/auth/permission-guard';
+import {
+  COURSE_STATUSES,
+  CoursePrerequisiteType,
+  CoursePriority,
+  CourseStatus,
+  CourseType,
+  WorkflowStage,
+  getCourseTypeLabel,
+  getPrereqChipColor,
+  getPrereqLabelVi,
+  getPriorityLabel,
+  getStatusColor,
+  getStatusLabel,
+  getWorkflowStageLabel,
+  normalizeCoursePriority,
+} from '@/constants/courses';
 
 interface CourseDetail {
   id: string;
@@ -74,8 +91,8 @@ interface CourseDetail {
   name_vi: string;
   name_en?: string;
   credits: number;
-  type: string;
-  status: string;
+  type: CourseType | string;
+  status: CourseStatus | string;
   org_unit_id: string;
   created_at: string;
   updated_at: string;
@@ -86,9 +103,9 @@ interface CourseDetail {
   };
   workflows?: Array<{
     id: string;
-  status: string;
-    workflow_stage: string;
-    priority: string;
+    status: CourseStatus | string;
+    workflow_stage: WorkflowStage | string;
+    priority: CoursePriority | string;
     notes?: string;
     created_at: string;
     updated_at: string;
@@ -158,7 +175,7 @@ export default function CourseDetailPage() {
   const routeParams = useParams<{ id: string }>();
   const routeId = routeParams?.id as string;
   const [activeTab, setActiveTab] = useState(0);
-  const [isEditing, setIsEditing] = useState(false);
+  // Removed edit mode; using request flow instead
   const [toast, setToast] = useState<{ open: boolean; message: string; severity: 'success' | 'info' | 'warning' | 'error' }>({ open: false, message: '', severity: 'success' });
   const [openDialog, setOpenDialog] = useState(false);
   const [dialogType, setDialogType] = useState('');
@@ -166,10 +183,12 @@ export default function CourseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [userRoles, setUserRoles] = useState<Array<{ name: string; description?: string }>>([]);
+  const hasAcademicBoardRole = userRoles.some(r => r.name === 'academic_board');
   
   const [syllabusData, setSyllabusData] = useState<Array<{
     id: string;
-    week: number;
+    week_number: number;
     topic: string;
     objectives: string;
     materials: string;
@@ -199,7 +218,7 @@ export default function CourseDetailPage() {
         code: courseDetail.code || '',
         credits: courseDetail.credits || 0,
         description: courseDetail.description || '',
-        status: courseDetail.status || 'DRAFT',
+        status: courseDetail.status || CourseStatus.DRAFT,
         org_unit_id: courseDetail.org_unit_id || '',
         type: courseDetail.type || ''
       });
@@ -210,8 +229,8 @@ export default function CourseDetailPage() {
   useEffect(() => {
     if (openSyllabusModal && courseDetail) {
       setSyllabusData((courseDetail?.course_syllabus || []).map((item, idx) => ({
-        id: `${item.week}-${idx}`,
-        week: item.week,
+        id: `${item.week_number}-${idx}`,
+        week_number: item.week_number,
         topic: item.topic,
         objectives: item.objectives || '',
         materials: item.materials || '',
@@ -237,28 +256,44 @@ export default function CourseDetailPage() {
     fetchOrgUnits();
   }, []);
 
+  // Fetch current user's roles
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const rolesRes = await fetch('/api/hr/user-roles/current');
+        const rolesJson: { success: boolean; data?: Array<{ role?: { name?: string; description?: string } }> } = await rolesRes.json();
+        if (rolesJson?.success && Array.isArray(rolesJson.data)) {
+          const roles: Array<{ name: string; description?: string }> = rolesJson.data
+            .map((ur) => ({ name: ur?.role?.name || '', description: ur?.role?.description }))
+            .filter((r) => !!r.name);
+          const uniqueByName = Array.from(new Map(roles.map((r) => [r.name, r])).values());
+          setUserRoles(uniqueByName);
+        }
+      } catch (e) {
+        console.error('Failed to fetch user roles', e);
+      }
+    };
+    fetchRoles();
+  }, []);
+
   useEffect(() => {
     if (!courseDetail) return;
-   
-    if (!isEditing) {
-      setEditData({
-        name_vi: courseDetail.name_vi || '',
-        name_en: courseDetail.name_en || '',
-        code: courseDetail.code || '',
-        credits: courseDetail.credits || 0,
-        description: courseDetail.description || '',
-        status: courseDetail.status || '',
-        org_unit_id: courseDetail.org_unit_id || '',
-        type: courseDetail.type || ''
-      });
-    }
-
+    setEditData({
+      name_vi: courseDetail.name_vi || '',
+      name_en: courseDetail.name_en || '',
+      code: courseDetail.code || '',
+      credits: courseDetail.credits || 0,
+      description: courseDetail.description || '',
+      status: courseDetail.status || '',
+      org_unit_id: courseDetail.org_unit_id || '',
+      type: courseDetail.type || ''
+    });
 
     if (!editingAssessment) {
       setAssessmentMethods(courseDetail.contents?.[0]?.assessment_methods || []);
       setLearningObjectives(courseDetail.contents?.[0]?.learning_objectives || []);
     }
-  }, [courseDetail, isEditing]);
+  }, [courseDetail]);
 
 
   useEffect(() => {
@@ -313,7 +348,7 @@ export default function CourseDetailPage() {
     }
   }, [routeId]);
 
-  // Save course data
+  // Submit request for approval with any changes
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -324,7 +359,11 @@ export default function CourseDetailPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editData),
+        body: JSON.stringify({
+          ...editData,
+          status: CourseStatus.SUBMITTED,
+          workflow_stage: WorkflowStage.ACADEMIC_OFFICE
+        }),
       });
       
       const result = await response.json();
@@ -339,14 +378,80 @@ export default function CourseDetailPage() {
           description: editData.description
         } : null);
         
-        setIsEditing(false);
-        setToast({ open: true, message: 'Lưu thông tin thành công!', severity: 'success' });
+        // no edit mode; we just show toast
+        setToast({ open: true, message: 'Đã gửi yêu cầu phê duyệt!', severity: 'success' });
       } else {
         setError(result.error || 'Có lỗi xảy ra khi lưu thông tin');
       }
     } catch (err) {
       setError('Có lỗi xảy ra khi lưu thông tin');
       console.error('Save error:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Request to revert course to DRAFT for further edits
+  const handleRequestDraft = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      const response = await fetch(`/api/tms/courses/${routeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: CourseStatus.DRAFT, workflow_stage: WorkflowStage.FACULTY })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setCourseDetail(prev => prev ? {
+          ...prev,
+          status: CourseStatus.DRAFT,
+          workflows: prev.workflows ? [{
+            ...prev.workflows[0],
+            status: CourseStatus.DRAFT,
+            workflow_stage: WorkflowStage.FACULTY
+          }, ...prev.workflows.slice(1)] : prev.workflows
+        } : prev);
+        setToast({ open: true, message: 'Đã gửi yêu cầu. Học phần chuyển về trạng thái Nháp.', severity: 'success' });
+      } else {
+        setError(result.error || 'Không thể gửi yêu cầu');
+      }
+    } catch (err) {
+      setError('Có lỗi khi gửi yêu cầu');
+      console.error('Request draft error:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Academic Board publish action -> set status to PUBLISHED
+  const handlePublishAcademicBoard = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      const response = await fetch(`/api/tms/courses/${routeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: CourseStatus.PUBLISHED, workflow_stage: WorkflowStage.ACADEMIC_BOARD })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setCourseDetail(prev => prev ? {
+          ...prev,
+          status: CourseStatus.PUBLISHED,
+          workflows: prev.workflows ? [{
+            ...prev.workflows[0],
+            status: CourseStatus.PUBLISHED,
+            workflow_stage: WorkflowStage.ACADEMIC_BOARD
+          }, ...prev.workflows.slice(1)] : prev.workflows
+        } : prev);
+        setToast({ open: true, message: 'Hội đồng khoa học đã công bố học phần.', severity: 'success' });
+      } else {
+        setError(result.error || 'Không thể công bố học phần');
+      }
+    } catch (err) {
+      setError('Có lỗi khi công bố học phần');
+      console.error('Publish error:', err);
     } finally {
       setSaving(false);
     }
@@ -561,10 +666,10 @@ export default function CourseDetailPage() {
 
   // Add new syllabus item
   const addSyllabusItem = () => {
-    const newWeek = Math.max(...syllabusData.map(item => item.week), 0) + 1;
+    const newWeek = Math.max(...syllabusData.map(item => item.week_number), 0) + 1;
     setSyllabusData(prev => [...prev, {
       id: `new-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      week: newWeek,
+      week_number: newWeek,
       topic: '',
       objectives: '',
       materials: '',
@@ -607,40 +712,6 @@ export default function CourseDetailPage() {
       </Container>
     );
   }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'PUBLISHED': return 'success';
-      case 'APPROVED': return 'success';
-      case 'REVIEWING': return 'warning';
-      case 'SUBMITTED': return 'info';
-      case 'DRAFT': return 'default';
-      case 'REJECTED': return 'error';
-      default: return 'default';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'PUBLISHED': return 'Đã xuất bản';
-      case 'APPROVED': return 'Đã phê duyệt';
-      case 'REVIEWING': return 'Đang xem xét';
-      case 'SUBMITTED': return 'Đã nộp';
-      case 'DRAFT': return 'Bản nháp';
-      case 'REJECTED': return 'Bị từ chối';
-      default: return status;
-    }
-  };
-
-  const getWorkflowStageLabel = (stage: string) => {
-    switch (stage) {
-      case 'FACULTY': return 'Khoa';
-      case 'ACADEMIC_OFFICE': return 'Phòng đào tạo';
-      case 'ACADEMIC_BOARD': return 'Hội đồng khoa học';
-      default: return stage;
-    }
-  };
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
@@ -664,15 +735,14 @@ export default function CourseDetailPage() {
       setError(null);
       
       // Map actions to status, workflow stage, and reviewer role
-      const actionMapping: Record<string, { status: string; workflow_stage: string; reviewer_role: string }> = {
-        'approve': { status: 'APPROVED', workflow_stage: 'ACADEMIC_OFFICE', reviewer_role: 'ACADEMIC_OFFICE' },
-        'reject': { status: 'REJECTED', workflow_stage: 'FACULTY', reviewer_role: 'ACADEMIC_OFFICE' },
-        'request_changes': { status: 'DRAFT', workflow_stage: 'FACULTY', reviewer_role: 'ACADEMIC_OFFICE' },
-        'forward': { status: 'SUBMITTED', workflow_stage: 'ACADEMIC_BOARD', reviewer_role: 'ACADEMIC_OFFICE' },
-        'return': { status: 'DRAFT', workflow_stage: 'FACULTY', reviewer_role: 'ACADEMIC_OFFICE' },
-        'final_approve': { status: 'PUBLISHED', workflow_stage: 'ACADEMIC_BOARD', reviewer_role: 'ACADEMIC_BOARD' },
-        'final_reject': { status: 'REJECTED', workflow_stage: 'ACADEMIC_BOARD', reviewer_role: 'ACADEMIC_BOARD' },
-        'delete': { status: 'DELETED', workflow_stage: 'ACADEMIC_OFFICE', reviewer_role: 'ACADEMIC_OFFICE' }
+      const actionMapping: Record<string, { status: string; workflow_stage: WorkflowStage; reviewer_role: WorkflowStage | string }> = {
+        approve: { status: CourseStatus.APPROVED, workflow_stage: WorkflowStage.ACADEMIC_OFFICE, reviewer_role: WorkflowStage.ACADEMIC_OFFICE },
+        reject: { status: CourseStatus.REJECTED, workflow_stage: WorkflowStage.FACULTY, reviewer_role: WorkflowStage.ACADEMIC_OFFICE },
+        request_changes: { status: CourseStatus.DRAFT, workflow_stage: WorkflowStage.FACULTY, reviewer_role: WorkflowStage.ACADEMIC_OFFICE },
+        forward: { status: CourseStatus.SUBMITTED, workflow_stage: WorkflowStage.ACADEMIC_BOARD, reviewer_role: WorkflowStage.ACADEMIC_OFFICE },
+        final_approve: { status: CourseStatus.PUBLISHED, workflow_stage: WorkflowStage.ACADEMIC_BOARD, reviewer_role: WorkflowStage.ACADEMIC_BOARD },
+        final_reject: { status: CourseStatus.REJECTED, workflow_stage: WorkflowStage.ACADEMIC_BOARD, reviewer_role: WorkflowStage.ACADEMIC_BOARD },
+        delete: { status: 'DELETED', workflow_stage: WorkflowStage.ACADEMIC_OFFICE, reviewer_role: WorkflowStage.ACADEMIC_OFFICE }
       };
       
       const mapping = actionMapping[action];
@@ -684,9 +754,7 @@ export default function CourseDetailPage() {
         workflow_action: action,
         comment: workflowComment,
         status: mapping.status,
-        workflow_stage: mapping.workflow_stage,
-        reviewer_role: mapping.reviewer_role
-      };
+      } as const;
       
       let response;
       if (action === 'delete') {
@@ -722,7 +790,7 @@ export default function CourseDetailPage() {
             {
               id: Date.now().toString(),
               action: action.toUpperCase(),
-              from_status: prev.status || 'DRAFT',
+              from_status: prev.status || CourseStatus.DRAFT,
               to_status: mapping.status,
               reviewer_role: mapping.reviewer_role,
               comments: workflowComment,
@@ -736,7 +804,6 @@ export default function CourseDetailPage() {
           'reject': 'Từ chối thành công!',
           'request_changes': 'Yêu cầu chỉnh sửa đã gửi!',
           'forward': 'Chuyển tiếp thành công!',
-          'return': 'Trả về Khoa thành công!',
           'final_approve': 'Phê duyệt cuối cùng thành công!',
           'final_reject': 'Từ chối cuối cùng thành công!',
           'delete': 'Xóa học phần thành công!'
@@ -754,7 +821,6 @@ export default function CourseDetailPage() {
           'reject': 'Không thể từ chối học phần',
           'request_changes': 'Không thể yêu cầu chỉnh sửa',
           'forward': 'Không thể chuyển tiếp',
-          'return': 'Không thể trả về Khoa',
           'final_approve': 'Không thể phê duyệt cuối cùng',
           'final_reject': 'Không thể từ chối cuối cùng',
           'delete': 'Không thể xóa học phần'
@@ -769,7 +835,6 @@ export default function CourseDetailPage() {
         'reject': 'Có lỗi khi từ chối học phần',
         'request_changes': 'Có lỗi khi yêu cầu chỉnh sửa',
         'forward': 'Có lỗi khi chuyển tiếp',
-        'return': 'Có lỗi khi trả về Khoa',
         'final_approve': 'Có lỗi khi phê duyệt cuối cùng',
         'final_reject': 'Có lỗi khi từ chối cuối cùng',
         'delete': 'Có lỗi khi xóa học phần'
@@ -864,63 +929,45 @@ export default function CourseDetailPage() {
             <Typography variant="h6" color="text.secondary">
               {courseDetail.code} - {courseDetail.credits} tín chỉ
             </Typography>
+          {userRoles.length > 0 && (
+            <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {userRoles.map((r) => (
+                <Tooltip key={r.name} title={r.description || ''}>
+                  <Chip size="small" label={`Vai trò: ${r.name} - ${r.description}`} />
+                </Tooltip>
+              ))}
+            </Box>
+          )}
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Chip
-              label={getStatusLabel(courseDetail.status || 'DRAFT')}
-              color={getStatusColor(courseDetail.status || 'DRAFT') as any}
+              label={getStatusLabel(courseDetail.status || CourseStatus.DRAFT)}
+              color={getStatusColor(courseDetail.status || CourseStatus.DRAFT) as any}
               sx={{ mr: 1 }}
             />
             <Chip
-              label={getWorkflowStageLabel(courseDetail.workflows?.[0]?.workflow_stage || 'FACULTY')}
+              label={getWorkflowStageLabel(courseDetail.workflows?.[0]?.workflow_stage || WorkflowStage.FACULTY)}
               variant="outlined"
               sx={{ mr: 1 }}
             />
-            {isEditing ? (
-              <>
-                <Button
-                  variant="contained"
-                  startIcon={<SaveIcon />}
-                  onClick={handleSave}
-                  disabled={saving}
-                  sx={{ mr: 1 }}
-                >
-                  {saving ? 'Đang lưu...' : 'Lưu'}
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setIsEditing(false);
-                    // Reset edit data to original values
-                    if (courseDetail) {
-                      setEditData({
-                        name_vi: courseDetail.name_vi || '',
-                        name_en: courseDetail.name_en || '',
-                        code: courseDetail.code || '',
-                        credits: courseDetail.credits || 0,
-                        description: courseDetail.description || '',
-                        status: courseDetail.status || '',
-                        org_unit_id: courseDetail.org_unit_id || '',
-                        type: courseDetail.type || ''
-                      });
-                    }
-                  }}
-                >
-                  Hủy
-                </Button>
-              </>
-            ) : (
             <Button
-              variant="outlined"
-              startIcon={<EditIcon />}
-                onClick={() => setIsEditing(true)}
+              variant="contained"
+              endIcon={<SendIcon />}
+              disabled={saving}
+              onClick={handleRequestDraft}
             >
-                Chỉnh sửa
+              {courseDetail.status === CourseStatus.REJECTED ? 'Gửi yêu cầu lại' :
+               (courseDetail.status === CourseStatus.APPROVED || courseDetail.status === CourseStatus.PUBLISHED) ? 'Gửi yêu cầu chỉnh sửa' : 'Gửi yêu cầu chỉnh sửa'}
             </Button>
-            )}
           </Box>
         </Box>
       </Box>
+
+    {courseDetail.status === CourseStatus.REJECTED && (
+      <Alert severity="error" sx={{ mb: 3 }}>
+        Học phần bị từ chối - thực hiện chỉnh sửa lại và gửi yêu cầu đi
+      </Alert>
+    )}
 
       {/* Course Information Cards */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
@@ -957,7 +1004,7 @@ export default function CourseDetailPage() {
         <Card>
           <CardContent sx={{ textAlign: 'center' }}>
             <AssessmentIcon sx={{ fontSize: 40, color: 'error.main', mb: 1 }} />
-              <Typography variant="h6">{courseDetail.type === 'theory' ? 'Lý thuyết' : 'Thực hành'}</Typography>
+              <Typography variant="h6">{getCourseTypeLabel(courseDetail.type || '')}</Typography>
             <Typography variant="body2" color="text.secondary">
               Loại học phần
             </Typography>
@@ -1056,9 +1103,9 @@ export default function CourseDetailPage() {
                               {prereq.prerequisite_course?.code}
                             </Typography>
                             <Chip 
-                              label={prereq.prerequisite_type === 'REQUIRED' ? 'Bắt buộc' : 'Khuyến nghị'} 
+                              label={getPrereqLabelVi(prereq.prerequisite_type)} 
                               size="small" 
-                              color={prereq.prerequisite_type === 'REQUIRED' ? 'error' : 'warning'}
+                              color={getPrereqChipColor(prereq.prerequisite_type) as any}
                               variant="outlined"
                             />
                             {/* {prereq.min_grade && (
@@ -1186,7 +1233,7 @@ export default function CourseDetailPage() {
                   <TableBody>
                     {courseDetail.course_syllabus?.map((item, index) => (
                       <TableRow key={index}>
-                        <TableCell>{item.week}</TableCell>
+                        <TableCell>{item.week_number}</TableCell>
                         <TableCell>{item.topic}</TableCell>
                         <TableCell>{item.objectives}</TableCell>
                         <TableCell>{item.materials}</TableCell>
@@ -1357,15 +1404,15 @@ export default function CourseDetailPage() {
                   <ListItem sx={{ px: 0 }}>
                     <ListItemIcon sx={{ minWidth: 40 }}>
                       <Avatar sx={{ 
-                        bgcolor: courseDetail.status === 'DRAFT' ? 'warning.main' : 
-                                 courseDetail.status === 'APPROVED' ? 'success.main' :
-                                 courseDetail.status === 'REJECTED' ? 'error.main' : 'info.main',
+                        bgcolor: courseDetail.status === CourseStatus.DRAFT ? 'warning.main' : 
+                                 courseDetail.status === CourseStatus.APPROVED ? 'success.main' :
+                                 courseDetail.status === CourseStatus.REJECTED ? 'error.main' : 'info.main',
                         width: 32,
                         height: 32
                       }}>
-                        {courseDetail.status === 'DRAFT' ? <EditIcon /> :
-                         courseDetail.status === 'APPROVED' ? <CheckCircleIcon /> :
-                         courseDetail.status === 'REJECTED' ? <CancelIcon /> : <SendIcon />}
+                        {courseDetail.status === CourseStatus.DRAFT ? <EditIcon /> :
+                         courseDetail.status === CourseStatus.APPROVED ? <CheckCircleIcon /> :
+                         courseDetail.status === CourseStatus.REJECTED ? <CancelIcon /> : <SendIcon />}
                       </Avatar>
                     </ListItemIcon>
                     <Box sx={{ flexGrow: 1 }}>
@@ -1373,9 +1420,9 @@ export default function CourseDetailPage() {
                         Trạng thái
                       </Typography>
                       <Typography variant="h6" sx={{ mt: 0.5 }}>
-                        {courseDetail.status === 'DRAFT' ? 'Bản nháp' :
-                         courseDetail.status === 'APPROVED' ? 'Đã phê duyệt' :
-                         courseDetail.status === 'REJECTED' ? 'Bị từ chối' : 
+                        {courseDetail.status === CourseStatus.DRAFT ? 'Bản nháp' :
+                         courseDetail.status === CourseStatus.APPROVED ? 'Đã phê duyệt' :
+                         courseDetail.status === CourseStatus.REJECTED ? 'Bị từ chối' : 
                          courseDetail.status || 'Chưa xác định'}
                       </Typography>
                     </Box>
@@ -1390,9 +1437,9 @@ export default function CourseDetailPage() {
                         Giai đoạn
                       </Typography>
                       <Typography variant="body2" sx={{ mt: 0.5 }}>
-                        {courseDetail.workflows?.[0]?.workflow_stage === 'FACULTY' ? 'Khoa' :
-                         courseDetail.workflows?.[0]?.workflow_stage === 'ACADEMIC_OFFICE' ? 'Phòng Đào tạo' :
-                         courseDetail.workflows?.[0]?.workflow_stage === 'ACADEMIC_BOARD' ? 'Hội đồng khoa học' :
+                        {courseDetail.workflows?.[0]?.workflow_stage === WorkflowStage.FACULTY ? 'Khoa' :
+                         courseDetail.workflows?.[0]?.workflow_stage === WorkflowStage.ACADEMIC_OFFICE ? 'Phòng Đào tạo' :
+                         courseDetail.workflows?.[0]?.workflow_stage === WorkflowStage.ACADEMIC_BOARD ? 'Hội đồng khoa học' :
                          courseDetail.workflows?.[0]?.workflow_stage || 'Chưa xác định'}
                       </Typography>
                     </Box>
@@ -1407,10 +1454,11 @@ export default function CourseDetailPage() {
                         Độ ưu tiên
                       </Typography>
                       <Typography variant="body2" sx={{ mt: 0.5 }}>
-                        {courseDetail.workflows?.[0]?.priority === 'high' ? 'Cao' :
-                         courseDetail.workflows?.[0]?.priority === 'medium' ? 'Trung bình' :
-                         courseDetail.workflows?.[0]?.priority === 'low' ? 'Thấp' :
-                         courseDetail.workflows?.[0]?.priority || 'Chưa xác định'}
+                        {courseDetail.workflows?.[0]?.priority
+                          ? getPriorityLabel(
+                              normalizeCoursePriority(courseDetail.workflows[0].priority)
+                            )
+                          : 'Chưa xác định'}
                       </Typography>
                     </Box>
                   </ListItem>
@@ -1458,13 +1506,49 @@ export default function CourseDetailPage() {
                     <React.Fragment key={index}>
                       <ListItem alignItems="flex-start">
                         <ListItemIcon>
-                          <Avatar sx={{ 
-                            bgcolor: 'success.main',
-                            width: 32,
-                            height: 32
-                          }}>
-                              <CheckCircleIcon />
-                          </Avatar>
+                          {(() => {
+                            const action = (item.action || '').toUpperCase();
+                            if (action === 'APPROVE' || action === 'FINAL_APPROVE' || action === 'PUBLISH') {
+                              return (
+                                <Avatar sx={{ bgcolor: 'success.main', width: 32, height: 32 }}>
+                                  <CheckCircleIcon />
+                                </Avatar>
+                              );
+                            }
+                            if (action === 'REJECT' || action === 'FINAL_REJECT') {
+                              return (
+                                <Avatar sx={{ bgcolor: 'error.main', width: 32, height: 32 }}>
+                                  <CancelIcon />
+                                </Avatar>
+                              );
+                            }
+                            if (action === 'REQUEST_CHANGES' || action === 'RETURN') {
+                              return (
+                                <Avatar sx={{ bgcolor: 'warning.main', width: 32, height: 32 }}>
+                                  <EditIcon />
+                                </Avatar>
+                              );
+                            }
+                            if (action === 'FORWARD') {
+                              return (
+                                <Avatar sx={{ bgcolor: 'info.main', width: 32, height: 32 }}>
+                                  <SendIcon />
+                                </Avatar>
+                              );
+                            }
+                            if (action === 'DELETE') {
+                              return (
+                                <Avatar sx={{ bgcolor: 'grey.700', width: 32, height: 32 }}>
+                                  <DeleteIcon />
+                                </Avatar>
+                              );
+                            }
+                            return (
+                              <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
+                                <CheckCircleIcon />
+                              </Avatar>
+                            );
+                          })()}
                         </ListItemIcon>
                           <Box sx={{ flexGrow: 1 }}>
                             <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>
@@ -1509,7 +1593,7 @@ export default function CourseDetailPage() {
                       color="success"
                       startIcon={<CheckCircleIcon />}
                       onClick={() => handleOpenDialog('approve')}
-                      disabled={courseDetail.status === 'APPROVED'}
+                      disabled={courseDetail.status !== CourseStatus.DRAFT}
                     >
                       Phê duyệt
                     </Button>
@@ -1519,7 +1603,7 @@ export default function CourseDetailPage() {
                       color="error"
                       startIcon={<CancelIcon />}
                       onClick={() => handleOpenDialog('reject')}
-                      disabled={courseDetail.status === 'REJECTED'}
+                      disabled={courseDetail.status !== CourseStatus.DRAFT}
                     >
                       Từ chối
                     </Button>
@@ -1529,38 +1613,29 @@ export default function CourseDetailPage() {
                       color="warning"
                       startIcon={<EditIcon />}
                       onClick={() => handleOpenDialog('request_changes')}
-                      disabled={courseDetail.status === 'DRAFT'}
+                      disabled={courseDetail.status === CourseStatus.DRAFT}
                     >
                       Yêu cầu chỉnh sửa
                     </Button>
                     
-                    <Button
-                      variant="outlined"
-                      color="info"
-                      startIcon={<SendIcon />}
-                      onClick={() => handleOpenDialog('forward')}
-                      disabled={courseDetail.status === 'APPROVED'}
-                    >
-                      Chuyển tiếp
-                    </Button>
-                    
-                    <Button
-                      variant="outlined"
-                      color="secondary"
-                      startIcon={<ReplyIcon />}
-                      onClick={() => handleOpenDialog('return')}
-                      disabled={courseDetail.status === 'DRAFT'}
-                    >
-                      Trả về Khoa
-                    </Button>
-                    
+                    {hasAcademicBoardRole && (
+                      <Button
+                        variant="outlined"
+                        color="info"
+                        startIcon={<SendIcon />}
+                        onClick={handlePublishAcademicBoard}
+                        disabled={courseDetail.status !== 'APPROVED'}
+                      >
+                        Hội đồng khoa học công bố
+                      </Button>
+                    )}
                     
                     <Button
                       variant="outlined"
                       color="error"
                       startIcon={<DeleteIcon />}
                       onClick={() => handleOpenDialog('delete')}
-                      disabled={courseDetail.status === 'PUBLISHED'}
+                      disabled={courseDetail.status === CourseStatus.PUBLISHED}
                     >
                       Xóa học phần
                     </Button>
@@ -1577,7 +1652,7 @@ export default function CourseDetailPage() {
                       color="success"
                       startIcon={<CheckCircleIcon />}
                       onClick={() => handleOpenDialog('final_approve')}
-                      disabled={courseDetail.status === 'PUBLISHED'}
+                      disabled={courseDetail.status === CourseStatus.PUBLISHED}
                     >
                       Phê duyệt cuối cùng
                     </Button>
@@ -1587,7 +1662,7 @@ export default function CourseDetailPage() {
                       color="error"
                       startIcon={<CancelIcon />}
                       onClick={() => handleOpenDialog('final_reject')}
-                      disabled={courseDetail.status === 'REJECTED'}
+                      disabled={courseDetail.status === CourseStatus.REJECTED}
                     >
                       Từ chối cuối cùng
                     </Button>
@@ -1606,10 +1681,9 @@ export default function CourseDetailPage() {
           {dialogType === 'syllabus' && 'Chỉnh sửa Giáo trình'}
           {dialogType === 'instructor' && 'Thêm giảng viên'}
           {dialogType === 'approve' && 'Phê duyệt học phần'}
-          {dialogType === 'reject' && 'Từ chối học phần'}
+          {dialogType === 'reject' && 'Từ chối học phần -> Trả về Khoa'}
           {dialogType === 'request_changes' && 'Yêu cầu chỉnh sửa học phần'}
           {dialogType === 'forward' && 'Chuyển tiếp học phần'}
-          {dialogType === 'return' && 'Trả về Khoa'}
           {dialogType === 'final_approve' && 'Phê duyệt cuối cùng'}
           {dialogType === 'final_reject' && 'Từ chối cuối cùng'}
           {dialogType === 'delete' && 'Xóa học phần'}
@@ -1721,20 +1795,7 @@ export default function CourseDetailPage() {
             </Box>
           )}
 
-          {dialogType === 'return' && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-              <TextField
-                fullWidth
-                label="Lý do trả về"
-                multiline
-                rows={3}
-                value={workflowComment}
-                onChange={(e) => setWorkflowComment(e.target.value)}
-                placeholder="Nhập lý do trả về Khoa để chỉnh sửa"
-                required
-              />
-            </Box>
-          )}
+          
 
           {dialogType === 'final_approve' && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
@@ -1829,10 +1890,6 @@ export default function CourseDetailPage() {
           ) : dialogType === 'forward' ? (
             <Button variant="contained" color="info" onClick={() => handleWorkflowAction('forward')} disabled={saving}>
               {saving ? 'Đang xử lý...' : 'Chuyển tiếp'}
-            </Button>
-          ) : dialogType === 'return' ? (
-            <Button variant="contained" color="secondary" onClick={() => handleWorkflowAction('return')} disabled={saving}>
-              {saving ? 'Đang xử lý...' : 'Trả về Khoa'}
             </Button>
           ) : dialogType === 'final_approve' ? (
             <Button variant="contained" color="success" onClick={() => handleWorkflowAction('final_approve')} disabled={saving}>
@@ -2015,15 +2072,14 @@ export default function CourseDetailPage() {
               <InputLabel>Trạng thái</InputLabel>
               <Select
                 value={editData.status}
-                onChange={(e) => handleInputChange('status', e.target.value)}
+                onChange={(e) => handleInputChange('status', e.target.value as CourseStatus)}
                 variant="outlined"
               >
-                <MenuItem value="DRAFT">Bản nháp</MenuItem>
-                <MenuItem value="SUBMITTED">Đã gửi</MenuItem>
-                <MenuItem value="REVIEWING">Đang xem xét</MenuItem>
-                <MenuItem value="APPROVED">Đã phê duyệt</MenuItem>
-                <MenuItem value="REJECTED">Bị từ chối</MenuItem>
-                <MenuItem value="PUBLISHED">Đã xuất bản</MenuItem>
+                {COURSE_STATUSES.map((status) => (
+                  <MenuItem key={status} value={status}>
+                    {getStatusLabel(status)}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
             <TextField
@@ -2057,7 +2113,7 @@ export default function CourseDetailPage() {
                     <TextField
                       label="Tuần"
                       type="number"
-                      value={item.week}
+                      value={item.week_number}
                       onChange={(e) => handleSyllabusItemChange(index, 'week', parseInt(e.target.value) || 0)}
                       sx={{ width: 100 }}
                     />

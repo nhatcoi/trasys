@@ -36,10 +36,3 @@ ENV PORT=3000
 # Start (via entrypoint to run migrations first)
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["npm", "run", "start"]
-
-
-# build and push to docker hub
-# docker buildx build \
-#   --platform linux/amd64,linux/arm64 \
-#   -t noahdev206/trasy-app:latest \
-#   --push .

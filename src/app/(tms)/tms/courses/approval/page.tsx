@@ -59,14 +59,31 @@ import {
   Assignment as AssignmentIcon,
   Assessment as AssessmentIcon,
   School as SchoolIcon,
-  Schedule as ScheduleIcon
+  Schedule as ScheduleIcon,
+  Domain as DomainIcon,
+  Science as ScienceIcon
 } from '@mui/icons-material';
+import {
+  COURSE_PRIORITIES,
+  COURSE_STATUSES,
+  WORKFLOW_STAGES,
+  CoursePriority,
+  CourseStatus,
+  WorkflowStage,
+  getCourseTypeLabel,
+  getPriorityColor,
+  getPriorityLabel,
+  getStatusColor,
+  getStatusLabel,
+  getWorkflowStageLabel,
+  normalizeCoursePriority,
+} from '@/constants/courses';
 
 export default function SubjectApprovalPage() {
   const router = useRouter();
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [selectedStage, setSelectedStage] = useState<string>('all');
-  const [selectedPriority, setSelectedPriority] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<CourseStatus | 'all'>('all');
+  const [selectedStage, setSelectedStage] = useState<WorkflowStage | 'all'>('all');
+  const [selectedPriority, setSelectedPriority] = useState<CoursePriority | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<any>(null);
@@ -79,16 +96,16 @@ export default function SubjectApprovalPage() {
     approved: 0,
     rejected: 0
   });
-  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [hasAcademicBoardRole, setHasAcademicBoardRole] = useState<boolean>(false);
+  const [processIndex, setProcessIndex] = useState<number>(0);
 
   const approvalSteps = [
     { label: 'Khoa tạo', status: 'completed' },
     { label: 'Văn phòng đào tạo', status: 'active' },
-    { label: 'Hội đồng khoa học', status: 'pending' },
-    { label: 'Phê duyệt cuối cùng', status: 'pending' }
+    { label: 'Hội đồng khoa học', status: 'pending' }
   ];
 
-  // Fetch stats from API
+
   const fetchStats = async () => {
     try {
       const response = await fetch('/api/tms/courses/stats');
@@ -107,21 +124,20 @@ export default function SubjectApprovalPage() {
     }
   };
 
-  // Fetch user permissions
-  const fetchUserPermissions = async () => {
+  const fetchCurrentUserRoles = async () => {
     try {
-      const response = await fetch('/api/auth/session');
+      const response = await fetch('/api/hr/user-roles/current');
       const result = await response.json();
-      
-      if (result?.user?.permissions) {
-        setUserPermissions(result.user.permissions);
+      if (result?.success && Array.isArray(result.data)) {
+        const hasRole = result.data.some((item: any) => (item?.role?.name || '').toLowerCase() === 'academic_board');
+        setHasAcademicBoardRole(hasRole);
       }
     } catch (error) {
-      console.error('Error fetching user permissions:', error);
+      console.error('Error fetching current user roles:', error);
+      setHasAcademicBoardRole(false);
     }
   };
 
-  // Fetch subjects data
   const fetchSubjectsData = async () => {
     try {
       const params = new URLSearchParams({
@@ -129,28 +145,31 @@ export default function SubjectApprovalPage() {
         limit: '50'
       });
           
-      const response = await fetch(`/api/tms/courses/public?${params}`);
+      const response = await fetch(`/api/tms/courses?${params}`);
       const result = await response.json();
       
       if (result.success && result.data?.items) {
-        // Transform API data to match UI format
-        const transformedSubjects = result.data.items.map((course: any) => ({
-          id: course.id,
-          code: course.code,
-          name: course.name_vi,
-          faculty: course.OrgUnit?.name || 'Chưa xác định',
-          status: course.status || 'DRAFT',
-          workflowStage: course.workflow_stage || 'FACULTY',
-          priority: course.workflow_priority || 'MEDIUM',
-          submittedBy: 'System', // TODO: Get from audit data
-          submittedAt: new Date(course.created_at).toISOString().split('T')[0],
-          currentReviewer: null, // TODO: Get from workflow data
-          credits: course.credits,
-          type: course.type === 'theory' ? 'Lý thuyết' : 
-                course.type === 'practice' ? 'Thực hành' : 
-                course.type === 'mixed' ? 'Lý thuyết + Thực hành' : course.type,
-          category: 'Kiến thức chuyên ngành' // Default category
-        }));
+        const transformedSubjects = result.data.items.map((course: any) => {
+          const status = (course.status || CourseStatus.DRAFT) as CourseStatus;
+          const workflowStage = (course.workflow_stage || WorkflowStage.FACULTY) as WorkflowStage;
+          const priority = normalizeCoursePriority(course.workflow_priority || course.priority);
+
+          return {
+            id: course.id,
+            code: course.code,
+            name: course.name_vi,
+            faculty: course.OrgUnit?.name || 'Chưa xác định',
+            status,
+            workflowStage,
+            priority,
+            submittedBy: 'System', // TODO: Get from audit data
+            submittedAt: new Date(course.created_at).toISOString().split('T')[0],
+            currentReviewer: null, // TODO: Get from workflow data
+            credits: course.credits,
+            type: getCourseTypeLabel(course.type),
+            category: 'Kiến thức chuyên ngành', // Default category
+          };
+        });
         
         setSubjects(transformedSubjects);
       } else {
@@ -169,11 +188,11 @@ useEffect(() => {
       setLoading(true);
       setError(null);
       
-      // Fetch subjects, stats, and user permissions
+      // Fetch data
       await Promise.all([
         fetchSubjectsData(),
         fetchStats(),
-        fetchUserPermissions()
+        fetchCurrentUserRoles(),
       ]);
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -186,54 +205,16 @@ useEffect(() => {
   fetchData();
 }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return 'default';
-      case 'SUBMITTED': return 'primary';
-      case 'REVIEWING': return 'warning';
-      case 'APPROVED': return 'success';
-      case 'REJECTED': return 'error';
-      case 'PUBLISHED': return 'info';
-      default: return 'default';
-    }
-  };
+  const getProcessIndexBySubject = (subject: any): number => {
+    if (subject?.status === CourseStatus.DRAFT) return 0; // Khoa
+    if (subject?.status === CourseStatus.APPROVED) return 1; // Phòng Đào Tạo
+    if (subject?.status === CourseStatus.PUBLISHED) return 2; // Hội Đồng KH
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return 'Nháp';
-      case 'SUBMITTED': return 'Đã gửi';
-      case 'REVIEWING': return 'Đang xem xét';
-      case 'APPROVED': return 'Đã phê duyệt';
-      case 'REJECTED': return 'Từ chối';
-      case 'PUBLISHED': return 'Đã xuất bản';
-      default: return status;
-    }
-  };
-
-  const getStageLabel = (stage: string) => {
-    switch (stage) {
-      case 'FACULTY': return 'Khoa';
-      case 'ACADEMIC_OFFICE': return 'Văn phòng đào tạo';
-      case 'ACADEMIC_BOARD': return 'Hội đồng khoa học';
-      default: return stage;
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'HIGH': return 'error';
-      case 'MEDIUM': return 'warning';
-      case 'LOW': return 'success';
-      default: return 'default';
-    }
-  };
-
-  const getPriorityLabel = (priority: string) => {
-    switch (priority) {
-      case 'HIGH': return 'Cao';
-      case 'MEDIUM': return 'Trung bình';
-      case 'LOW': return 'Thấp';
-      default: return priority;
+    switch (subject?.workflowStage) {
+      case WorkflowStage.FACULTY: return 0;
+      case WorkflowStage.ACADEMIC_OFFICE: return 1;
+      case WorkflowStage.ACADEMIC_BOARD: return 2;
+      default: return 0;
     }
   };
 
@@ -249,8 +230,7 @@ useEffect(() => {
   });
 
   const handleViewDetails = (subject: any) => {
-    setSelectedSubject(subject);
-    setOpenDialog(true);
+    router.push(`/tms/courses/${subject.id}`);
   };
 
   const handleApprovalAction = async (action: string, subjectId: number) => {
@@ -265,9 +245,7 @@ useEffect(() => {
           },
           body: JSON.stringify({
             workflow_action: 'approve',
-            status: 'APPROVED',
-            workflow_stage: 'ACADEMIC_OFFICE',
-            reviewer_role: 'ACADEMIC_OFFICE'
+            status: CourseStatus.APPROVED
           }),
         });
 
@@ -283,6 +261,29 @@ useEffect(() => {
         }
       }
       
+      if (action === 'publish') {
+        const response = await fetch(`/api/tms/courses/${subjectId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            workflow_action: 'final_approve',
+            status: CourseStatus.PUBLISHED
+          }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          await fetchSubjectsData();
+          await fetchStats();
+          alert('Xuất bản thành công!');
+        } else {
+          alert('Lỗi khi xuất bản: ' + result.error);
+        }
+      }
+      
       setOpenDialog(false);
     } catch (error) {
       console.error('Error performing approval action:', error);
@@ -290,10 +291,7 @@ useEffect(() => {
     }
   };
 
-  // Check if user has permission to approve courses
-  const canApproveCourse = () => {
-    return userPermissions.includes('tms.course.approve');
-  };
+  // Use PermissionGuard for per-button permission enforcement
 
   const getActionButtons = (subject: any) => {
     const buttons = [];
@@ -312,26 +310,26 @@ useEffect(() => {
       </Button>
     );
 
-    // Add approval button for DRAFT status courses
-    if (subject.status === 'DRAFT' && canApproveCourse()) {
+    if (subject.status === CourseStatus.DRAFT) {
       buttons.push(
-        <Button
-          key="approve-draft"
-          size="small"
-          variant="contained"
-          color="success"
-          startIcon={<CheckCircleIcon />}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleApprovalAction('approve', subject.id);
-          }}
-        >
-          Phê duyệt
-        </Button>
+        <PermissionGuard key="approve-draft" requiredPermissions={['tms.course.approve']}>
+          <Button
+            size="small"
+            variant="contained"
+            color="success"
+            startIcon={<CheckCircleIcon />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleApprovalAction('approve', subject.id);
+            }}
+          >
+            Phê duyệt
+          </Button>
+        </PermissionGuard>
       );
     }
 
-    if (subject.status === 'SUBMITTED' && subject.workflowStage === 'ACADEMIC_OFFICE') {
+    if (subject.status === CourseStatus.SUBMITTED && subject.workflowStage === WorkflowStage.ACADEMIC_OFFICE) {
       buttons.push(
         <Button
           key="review"
@@ -348,8 +346,8 @@ useEffect(() => {
       );
     }
 
-    if (subject.status === 'REVIEWING') {
-      if (subject.workflowStage === 'ACADEMIC_OFFICE') {
+    if (subject.status === CourseStatus.REVIEWING) {
+      if (subject.workflowStage === WorkflowStage.ACADEMIC_OFFICE) {
         buttons.push(
           <PermissionGuard key="approve" requiredPermissions={['tms.course.approve']}>
             <Button
@@ -384,7 +382,7 @@ useEffect(() => {
       }
     }
 
-    if (subject.status === 'APPROVED') {
+    if (subject.status === CourseStatus.APPROVED) {
       buttons.push(
         <Button
           key="publish"
@@ -392,6 +390,7 @@ useEffect(() => {
           variant="contained"
           color="info"
           startIcon={<PublishIcon />}
+          disabled={!hasAcademicBoardRole}
           onClick={(e) => {
             e.stopPropagation();
             handleApprovalAction('publish', subject.id);
@@ -416,6 +415,9 @@ useEffect(() => {
           <Typography variant="body1" color="text.secondary">
             Xem xét và phê duyệt các học phần trong hệ thống
           </Typography>
+          <Alert severity="info" sx={{ mt: 2 }}>
+            Chỉ có <strong>Văn phòng đào tạo</strong> và <strong>Hội đồng khoa học</strong> mới được phê duyệt.
+          </Alert>
         </Box>
 
       {/* Loading and Error States */}
@@ -452,16 +454,15 @@ useEffect(() => {
             <InputLabel>Trạng thái</InputLabel>
             <Select
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              onChange={(e) => setSelectedStatus(e.target.value as CourseStatus | 'all')}
               label="Trạng thái"
             >
               <MenuItem value="all">Tất cả</MenuItem>
-              <MenuItem value="DRAFT">Nháp</MenuItem>
-              <MenuItem value="SUBMITTED">Đã gửi</MenuItem>
-              <MenuItem value="REVIEWING">Đang xem xét</MenuItem>
-              <MenuItem value="APPROVED">Đã phê duyệt</MenuItem>
-              <MenuItem value="REJECTED">Từ chối</MenuItem>
-              <MenuItem value="PUBLISHED">Đã xuất bản</MenuItem>
+              {COURSE_STATUSES.map((status) => (
+                <MenuItem key={status} value={status}>
+                  {getStatusLabel(status)}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
@@ -469,13 +470,15 @@ useEffect(() => {
             <InputLabel>Giai đoạn</InputLabel>
             <Select
               value={selectedStage}
-              onChange={(e) => setSelectedStage(e.target.value)}
+              onChange={(e) => setSelectedStage(e.target.value as WorkflowStage | 'all')}
               label="Giai đoạn"
             >
               <MenuItem value="all">Tất cả</MenuItem>
-              <MenuItem value="FACULTY">Khoa</MenuItem>
-              <MenuItem value="ACADEMIC_OFFICE">Văn phòng đào tạo</MenuItem>
-              <MenuItem value="ACADEMIC_BOARD">Hội đồng khoa học</MenuItem>
+              {WORKFLOW_STAGES.map((stage) => (
+                <MenuItem key={stage} value={stage}>
+                  {getWorkflowStageLabel(stage)}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
@@ -483,13 +486,15 @@ useEffect(() => {
             <InputLabel>Độ ưu tiên</InputLabel>
             <Select
               value={selectedPriority}
-              onChange={(e) => setSelectedPriority(e.target.value)}
+              onChange={(e) => setSelectedPriority(e.target.value as CoursePriority | 'all')}
               label="Độ ưu tiên"
             >
               <MenuItem value="all">Tất cả</MenuItem>
-              <MenuItem value="HIGH">Cao</MenuItem>
-              <MenuItem value="MEDIUM">Trung bình</MenuItem>
-              <MenuItem value="LOW">Thấp</MenuItem>
+              {COURSE_PRIORITIES.map((priority) => (
+                <MenuItem key={priority} value={priority}>
+                  {getPriorityLabel(priority)}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
@@ -514,14 +519,89 @@ useEffect(() => {
           Quy trình phê duyệt
         </Typography>
         <Divider sx={{ mb: 2 }} />
-        
-        <Stepper orientation="horizontal" activeStep={1} sx={{ mb: 3 }}>
-          {approvalSteps.map((step, index) => (
-            <Step key={index} completed={step.status === 'completed'} active={step.status === 'active'}>
-              <StepLabel>{step.label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
+
+        {/* Enhanced animated progress bar with icons and knob */}
+        <Box sx={{ position: 'relative', px: 1, py: 3 }}>
+          {(() => {
+            const progress = (processIndex / 2) * 100; // 0, 50, 100
+            const stages = [
+              { label: 'Khoa', Icon: SchoolIcon },
+              { label: 'Văn phòng đào tạo', Icon: DomainIcon },
+              { label: 'Hội đồng khoa học', Icon: ScienceIcon },
+            ];
+            return (
+              <>
+                {/* Keyframes */}
+                <Box sx={{
+                  '@keyframes glow': {
+                    '0%': { boxShadow: '0 0 0 0 rgba(25,118,210,0.5)' },
+                    '70%': { boxShadow: '0 0 0 12px rgba(25,118,210,0)' },
+                    '100%': { boxShadow: '0 0 0 0 rgba(25,118,210,0)' },
+                  },
+                  '@keyframes pulse': {
+                    '0%': { transform: 'scale(1)' },
+                    '50%': { transform: 'scale(1.06)' },
+                    '100%': { transform: 'scale(1)' },
+                  }
+                }} />
+
+                {/* Track */}
+                <Box sx={{ position: 'relative', height: 10, bgcolor: 'action.hover', borderRadius: 9999 }}>
+                  {/* Fill */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      height: 10,
+                      width: `${progress}%`,
+                      background: 'linear-gradient(90deg, #42a5f5 0%, #1e88e5 50%, #1565c0 100%)',
+                      borderRadius: 9999,
+                      transition: 'width 500ms cubic-bezier(0.22, 1, 0.36, 1)',
+                    }}
+                  />
+
+                  {/* Knob removed per request */}
+                </Box>
+
+                {/* Stage markers */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1.5 }}>
+                  {stages.map((s, idx) => {
+                    const ActiveIcon = s.Icon as any;
+                    const active = idx <= processIndex;
+                    return (
+                      <Box key={s.label} sx={{ textAlign: 'center', minWidth: 0 }}>
+                        <Box sx={{ position: 'relative', height: 28 }}>
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              width: 24,
+                              height: 24,
+                              borderRadius: '50%',
+                              backgroundColor: active ? 'primary.main' : 'divider',
+                              color: active ? 'primary.contrastText' : 'text.secondary',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'background-color 250ms ease',
+                            }}
+                          >
+                            <ActiveIcon sx={{ fontSize: 16 }} />
+                          </Box>
+                        </Box>
+                        <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
+                          {s.label}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </>
+            );
+          })()}
+        </Box>
 
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2 }}>
           <Card>
@@ -580,9 +660,9 @@ useEffect(() => {
               {filteredSubjects.map((subject) => (
                 <TableRow 
                   key={subject.id} 
-                  hover 
-                  onClick={() => router.push(`/tms/courses/${subject.id}`)}
-                  sx={{ cursor: 'pointer' }}
+                  hover
+                  onClick={() => setProcessIndex(getProcessIndexBySubject(subject))}
+                  sx={{ cursor: 'default' }}
                 >
                   <TableCell>
                     <Typography variant="subtitle2" fontWeight="bold">
@@ -610,7 +690,7 @@ useEffect(() => {
                   </TableCell>
                   <TableCell align="center">
                     <Chip
-                      label={getStageLabel(subject.workflowStage)}
+                      label={getWorkflowStageLabel(subject.workflowStage)}
                       variant="outlined"
                       size="small"
                     />
@@ -707,7 +787,7 @@ useEffect(() => {
                   </Box>
                   <Box>
                     <Typography variant="body2" color="text.secondary">Giai đoạn:</Typography>
-                    <Typography variant="body1">{getStageLabel(selectedSubject.workflowStage)}</Typography>
+                    <Typography variant="body1">{getWorkflowStageLabel(selectedSubject.workflowStage)}</Typography>
                   </Box>
                 </Box>
               </Box>
@@ -741,7 +821,7 @@ useEffect(() => {
                     </ListItemIcon>
                     <ListItemText
                       primary="Đang chờ duyệt"
-                      secondary={`Tại ${getStageLabel(selectedSubject.workflowStage)}`}
+                      secondary={`Tại ${getWorkflowStageLabel(selectedSubject.workflowStage)}`}
                     />
                   </ListItem>
                 </List>

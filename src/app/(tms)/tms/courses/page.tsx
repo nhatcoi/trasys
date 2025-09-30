@@ -63,6 +63,20 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
+import {
+  COURSE_PRIORITIES,
+  COURSE_STATUSES,
+  CoursePriority,
+  CourseStatus,
+  WorkflowStage,
+  getCourseTypeLabel,
+  getPriorityColor,
+  getPriorityLabel,
+  getStatusColor,
+  getStatusLabel,
+  getWorkflowStageLabel,
+  normalizeCoursePriority,
+} from '@/constants/courses';
 
 interface Course {
   id: number;
@@ -73,6 +87,7 @@ interface Course {
   type: string;
   status: string;
   workflow_stage: string;
+  workflow_priority?: string;
   created_at: string;
   updated_at: string;
   submitted_at?: string;
@@ -88,9 +103,9 @@ export default function CoursesPage() {
   const [faculties, setFaculties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<CourseStatus | 'all'>('all');
   const [selectedFaculty, setSelectedFaculty] = useState<string>('all');
-  const [selectedPriority, setSelectedPriority] = useState<string>('all');
+  const [selectedPriority, setSelectedPriority] = useState<CoursePriority | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -157,58 +172,6 @@ export default function CoursesPage() {
     fetchCourses();
   }, [page, selectedStatus, selectedFaculty, searchTerm]);
 
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return 'default';
-      case 'SUBMITTED': return 'primary';
-      case 'REVIEWING': return 'warning';
-      case 'APPROVED': return 'success';
-      case 'REJECTED': return 'error';
-      case 'PUBLISHED': return 'info';
-      default: return 'default';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return 'Nháp';
-      case 'SUBMITTED': return 'Đã gửi';
-      case 'REVIEWING': return 'Đang xem xét';
-      case 'APPROVED': return 'Đã phê duyệt';
-      case 'REJECTED': return 'Từ chối';
-      case 'PUBLISHED': return 'Đã xuất bản';
-      default: return status;
-    }
-  };
-
-  const getStageLabel = (stage: string) => {
-    switch (stage) {
-      case 'FACULTY': return 'Khoa';
-      case 'ACADEMIC_OFFICE': return 'Văn phòng đào tạo';
-      case 'ACADEMIC_BOARD': return 'Hội đồng khoa học';
-      default: return stage;
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'HIGH': return 'error';
-      case 'MEDIUM': return 'warning';
-      case 'LOW': return 'success';
-      default: return 'default';
-    }
-  };
-
-  const getPriorityLabel = (priority: string) => {
-    switch (priority) {
-      case 'HIGH': return 'Cao';
-      case 'MEDIUM': return 'Trung bình';
-      case 'LOW': return 'Thấp';
-      default: return priority;
-    }
-  };
-
   // Filter courses (now handled by API)
   const filteredCourses = courses;
 
@@ -270,7 +233,7 @@ export default function CoursesPage() {
       </Button>
     );
 
-    if (subject.status === 'SUBMITTED') {
+    if (subject.status === CourseStatus.SUBMITTED) {
       buttons.push(
         <Button
           key="review"
@@ -284,8 +247,8 @@ export default function CoursesPage() {
       );
     }
 
-    if (subject.status === 'REVIEWING') {
-      if (subject.workflowStage === 'ACADEMIC_OFFICE') {
+    if (subject.status === CourseStatus.REVIEWING) {
+      if (subject.workflowStage === WorkflowStage.ACADEMIC_OFFICE) {
         buttons.push(
           <Button
             key="approve"
@@ -312,7 +275,7 @@ export default function CoursesPage() {
       }
     }
 
-    if (subject.status === 'APPROVED') {
+    if (subject.status === CourseStatus.APPROVED) {
       buttons.push(
         <Button
           key="publish"
@@ -379,16 +342,15 @@ export default function CoursesPage() {
             <InputLabel>Trạng thái</InputLabel>
             <Select
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              onChange={(e) => setSelectedStatus(e.target.value as CourseStatus | 'all')}
               label="Trạng thái"
             >
               <MenuItem value="all">Tất cả</MenuItem>
-              <MenuItem value="DRAFT">Nháp</MenuItem>
-              <MenuItem value="SUBMITTED">Đã gửi</MenuItem>
-              <MenuItem value="REVIEWING">Đang xem xét</MenuItem>
-              <MenuItem value="APPROVED">Đã phê duyệt</MenuItem>
-              <MenuItem value="REJECTED">Từ chối</MenuItem>
-              <MenuItem value="PUBLISHED">Đã xuất bản</MenuItem>
+              {COURSE_STATUSES.map((status) => (
+                <MenuItem key={status} value={status}>
+                  {getStatusLabel(status)}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
@@ -419,13 +381,15 @@ export default function CoursesPage() {
             <InputLabel>Độ ưu tiên</InputLabel>
             <Select
               value={selectedPriority}
-              onChange={(e) => setSelectedPriority(e.target.value)}
+              onChange={(e) => setSelectedPriority(e.target.value as CoursePriority | 'all')}
               label="Độ ưu tiên"
             >
               <MenuItem value="all">Tất cả</MenuItem>
-              <MenuItem value="HIGH">Cao</MenuItem>
-              <MenuItem value="MEDIUM">Trung bình</MenuItem>
-              <MenuItem value="LOW">Thấp</MenuItem>
+              {COURSE_PRIORITIES.map((priority) => (
+                <MenuItem key={priority} value={priority}>
+                  {getPriorityLabel(priority)}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
@@ -460,7 +424,6 @@ export default function CoursesPage() {
                 <TableCell>Khoa</TableCell>
                 <TableCell>Danh mục</TableCell>
                 <TableCell align="center">Trạng thái</TableCell>
-                <TableCell align="center">Giai đoạn</TableCell>
                 <TableCell align="center">Độ ưu tiên</TableCell>
                 <TableCell>Người gửi</TableCell>
                 <TableCell>Ngày gửi</TableCell>
@@ -471,7 +434,7 @@ export default function CoursesPage() {
             <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={11} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                     <CircularProgress size={24} />
                     <Typography>Đang tải...</Typography>
@@ -480,21 +443,28 @@ export default function CoursesPage() {
               </TableRow>
             ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={11} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                     <Alert severity="error">{error}</Alert>
                   </TableCell>
                 </TableRow>
               ) : filteredCourses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                     <Typography color="text.secondary">Không có học phần nào</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredCourses.map((course) => (
-                <TableRow 
-                  key={course.id} 
-                  hover
+                filteredCourses.map((course) => {
+                  const normalizedPriority = normalizeCoursePriority(
+                    course.workflow_priority || (course as any).priority
+                  );
+                  const priorityLabel = getPriorityLabel(normalizedPriority);
+                  const priorityColor = getPriorityColor(normalizedPriority);
+                  const courseTypeLabel = getCourseTypeLabel(course.type);
+                  return (
+                  <TableRow 
+                    key={course.id} 
+                    hover
                   sx={{ cursor: 'pointer' }}
                   onClick={() => router.push(`/tms/courses/${course.id}`)}
                 >
@@ -530,7 +500,7 @@ export default function CoursesPage() {
                       {course.name_vi}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {course.credits} tín chỉ • {course.type}
+                      {course.credits} tín chỉ • {courseTypeLabel}
                     </Typography>
                   </TableCell>
                   <TableCell>{course.OrgUnit?.name || 'N/A'}</TableCell>
@@ -546,15 +516,8 @@ export default function CoursesPage() {
                   </TableCell>
                   <TableCell align="center">
                     <Chip
-                      label={getStageLabel(course.workflow_stage)}
-                      variant="outlined"
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Chip
-                      label="Trung bình"
-                      color="warning"
+                      label={priorityLabel}
+                      color={priorityColor as any}
                       size="small"
                     />
                   </TableCell>
@@ -602,7 +565,8 @@ export default function CoursesPage() {
                     </Stack>
                   </TableCell>
                 </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -659,7 +623,7 @@ export default function CoursesPage() {
                   </Box>
                   <Box>
                     <Typography variant="body2" color="text.secondary">Loại:</Typography>
-                    <Typography variant="body1">{selectedCourse.type}</Typography>
+                    <Typography variant="body1">{getCourseTypeLabel(selectedCourse.type)}</Typography>
                   </Box>
                   <Box>
                     <Typography variant="body2" color="text.secondary">Trạng thái:</Typography>
@@ -671,12 +635,12 @@ export default function CoursesPage() {
                   </Box>
                   <Box>
                     <Typography variant="body2" color="text.secondary">Giai đoạn:</Typography>
-                    <Typography variant="body1">{getStageLabel(selectedCourse.workflow_stage)}</Typography>
+                    <Typography variant="body1">{getWorkflowStageLabel(selectedCourse.workflow_stage)}</Typography>
                   </Box>
                 </Box>
               </Box>
 
-              {selectedCourse.status === 'REJECTED' && (
+              {selectedCourse.status === CourseStatus.REJECTED && (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   <Typography variant="subtitle2">Lý do từ chối:</Typography>
                   <Typography variant="body2">N/A</Typography>
@@ -705,7 +669,7 @@ export default function CoursesPage() {
                     </ListItemIcon>
                     <ListItemText
                       primary="Đang chờ duyệt"
-                      secondary={`Tại ${getStageLabel(selectedCourse.workflow_stage)}`}
+                      secondary={`Tại ${getWorkflowStageLabel(selectedCourse.workflow_stage)}`}
                     />
                   </ListItem>
                 </List>

@@ -1,264 +1,348 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
+  Avatar,
   Box,
-  Container,
-  Typography,
-  Paper,
-  Card,
-  CardContent,
-  CardHeader,
-  CardActions,
   Button,
   Chip,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  FormControl,
+  Grid,
+  IconButton,
+  InputAdornment,
+  InputLabel,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  MenuItem,
+  Paper,
+  Select,
+  Snackbar,
+  Stack,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   TextField,
-  InputAdornment,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Avatar,
-  Badge,
-  Alert,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
+  Tooltip,
+  Typography,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
-  FilterList as FilterIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  Edit as EditIcon,
-  Visibility as VisibilityIcon,
-  Send as SendIcon,
-  Reply as ReplyIcon,
-  ExpandMore as ExpandMoreIcon,
-  Person as PersonIcon,
-  AccessTime as AccessTimeIcon,
-  Comment as CommentIcon,
-  School as SchoolIcon,
   Assessment as AssessmentIcon,
-  History as HistoryIcon
+  CheckCircle as CheckCircleIcon,
+  Comment as CommentIcon,
+  FilterList as FilterIcon,
+  Replay as ReplayIcon,
+  Reply as ReplyIcon,
+  Search as SearchIcon,
+  Visibility as VisibilityIcon,
+  Cancel as CancelIcon,
+  Publish as PublishIcon,
 } from '@mui/icons-material';
+import {
+  DEFAULT_PROGRAM_PAGE_SIZE,
+  PROGRAM_PRIORITIES,
+  PROGRAM_STATUSES,
+  ProgramPriority,
+  ProgramStatus,
+  getProgramPriorityColor,
+  getProgramPriorityLabel,
+  getProgramStatusColor,
+  getProgramStatusLabel,
+} from '@/constants/programs';
+import {
+  OrgUnitApiItem,
+  OrgUnitOption,
+  ProgramApiResponseItem,
+  ProgramDetail,
+  ProgramDetailApiResponse,
+  ProgramListApiResponse,
+  ProgramListItem,
+  mapOrgUnitOptions,
+  mapProgramDetail,
+  mapProgramResponse,
+} from '../program-utils';
 
-export default function ProgramsReviewPage() {
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [selectedPriority, setSelectedPriority] = useState<string>('all');
+interface ProgramStatsSummary {
+  total: number;
+  draft: number;
+  submitted: number;
+  reviewing: number;
+  approved: number;
+  rejected: number;
+  published: number;
+  archived: number;
+}
+
+interface ProgramStatsApiResponse {
+  success: boolean;
+  data?: {
+    summary?: ProgramStatsSummary;
+  };
+  error?: string;
+}
+
+const INITIAL_STATS: ProgramStatsSummary = {
+  total: 0,
+  draft: 0,
+  submitted: 0,
+  reviewing: 0,
+  approved: 0,
+  rejected: 0,
+  published: 0,
+  archived: 0,
+};
+
+export default function ProgramsReviewPage(): JSX.Element {
+  const [programs, setPrograms] = useState<ProgramListItem[]>([]);
+  const [orgUnits, setOrgUnits] = useState<OrgUnitOption[]>([]);
+  const [selectedProgram, setSelectedProgram] = useState<ProgramDetail | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<ProgramStatus | 'all'>('all');
+  const [selectedPriority, setSelectedPriority] = useState<ProgramPriority | 'all'>('all');
+  const [selectedOrgUnit, setSelectedOrgUnit] = useState<string>('all');
+  const [searchValue, setSearchValue] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [openDialog, setOpenDialog] = useState(false);
-  const [selectedProgram, setSelectedProgram] = useState<any>(null);
-
-  const programs = [
-    {
-      id: 1,
-      code: 'CNTT',
-      name: 'Công nghệ thông tin',
-      orgUnit: 'Khoa Công nghệ thông tin',
-      status: 'SUBMITTED',
-      priority: 'HIGH',
-      submittedBy: 'Nguyễn Văn A',
-      submittedAt: '2024-01-15',
-      currentReviewer: 'Trần Thị B',
-      duration: 4,
-      credits: 140,
-      degree: 'Cử nhân'
-    },
-    {
-      id: 2,
-      code: 'KTPM',
-      name: 'Kỹ thuật phần mềm',
-      orgUnit: 'Khoa Kỹ thuật phần mềm',
-      status: 'REVIEWING',
-      priority: 'MEDIUM',
-      submittedBy: 'Lê Văn C',
-      submittedAt: '2024-01-14',
-      currentReviewer: 'Phạm Thị D',
-      duration: 4,
-      credits: 135,
-      degree: 'Cử nhân'
-    },
-    {
-      id: 3,
-      code: 'KHDL',
-      name: 'Khoa học dữ liệu',
-      orgUnit: 'Khoa Khoa học dữ liệu',
-      status: 'APPROVED',
-      priority: 'HIGH',
-      submittedBy: 'Hoàng Văn E',
-      submittedAt: '2024-01-10',
-      currentReviewer: null,
-      duration: 4,
-      credits: 130,
-      degree: 'Cử nhân'
-    }
-  ];
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return 'default';
-      case 'SUBMITTED': return 'primary';
-      case 'REVIEWING': return 'warning';
-      case 'APPROVED': return 'success';
-      case 'REJECTED': return 'error';
-      case 'PUBLISHED': return 'info';
-      default: return 'default';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return 'Nháp';
-      case 'SUBMITTED': return 'Đã gửi';
-      case 'REVIEWING': return 'Đang xem xét';
-      case 'APPROVED': return 'Đã phê duyệt';
-      case 'REJECTED': return 'Từ chối';
-      case 'PUBLISHED': return 'Đã xuất bản';
-      default: return status;
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'HIGH': return 'error';
-      case 'MEDIUM': return 'warning';
-      case 'LOW': return 'success';
-      default: return 'default';
-    }
-  };
-
-  const getPriorityLabel = (priority: string) => {
-    switch (priority) {
-      case 'HIGH': return 'Cao';
-      case 'MEDIUM': return 'Trung bình';
-      case 'LOW': return 'Thấp';
-      default: return priority;
-    }
-  };
-
-  const filteredPrograms = programs.filter(program => {
-    const matchesStatus = selectedStatus === 'all' || program.status === selectedStatus;
-    const matchesPriority = selectedPriority === 'all' || program.priority === selectedPriority;
-    const matchesSearch = searchTerm === '' || 
-      program.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      program.code.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesStatus && matchesPriority && matchesSearch;
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<ProgramStatsSummary>(INITIAL_STATS);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
   });
 
-  const handleViewDetails = (program: any) => {
-    setSelectedProgram(program);
-    setOpenDialog(true);
+  const fetchOrgUnits = useCallback(async () => {
+    try {
+      const response = await fetch('/api/tms/faculties?limit=200');
+      const result = (await response.json()) as {
+        data?: { items?: OrgUnitApiItem[] };
+      };
+      if (response.ok && result?.data?.items) {
+        setOrgUnits(mapOrgUnitOptions(result.data.items));
+      }
+    } catch (err) {
+      console.error('Failed to load faculties', err);
+    }
+  }, []);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const response = await fetch('/api/tms/programs/stats');
+      const result = (await response.json()) as ProgramStatsApiResponse;
+      if (response.ok && result?.success) {
+        setStats(result.data?.summary ?? INITIAL_STATS);
+      }
+    } catch (err) {
+      console.error('Failed to load program stats', err);
+    }
+  }, []);
+
+  const fetchPrograms = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        page: '1',
+        limit: String(DEFAULT_PROGRAM_PAGE_SIZE * 3),
+      });
+
+      if (selectedStatus !== 'all') {
+        params.set('status', selectedStatus);
+      }
+
+      if (selectedOrgUnit !== 'all') {
+        params.set('orgUnitId', selectedOrgUnit);
+      }
+
+      if (searchTerm) {
+        params.set('search', searchTerm);
+      }
+
+      const response = await fetch(`/api/tms/programs?${params.toString()}`);
+      const result = (await response.json()) as ProgramListApiResponse;
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Không thể tải danh sách chương trình');
+      }
+
+      const items: ProgramApiResponseItem[] = result.data?.items ?? [];
+      setPrograms(items.map(mapProgramResponse));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, selectedOrgUnit, selectedStatus]);
+
+  const fetchProgramDetail = useCallback(async (programId: string) => {
+    try {
+      const response = await fetch(`/api/tms/programs/${programId}`);
+      const result = (await response.json()) as {
+        success: boolean;
+        data: ProgramDetailApiResponse;
+        error?: string;
+      };
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Không thể tải chi tiết chương trình');
+      }
+
+      const detail = mapProgramDetail(result.data);
+      setSelectedProgram(detail);
+      setDialogOpen(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể tải chi tiết chương trình';
+      setSnackbar({ open: true, message, severity: 'error' });
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOrgUnits();
+    fetchStats();
+  }, [fetchOrgUnits, fetchStats]);
+
+  useEffect(() => {
+    fetchPrograms();
+  }, [fetchPrograms]);
+
+  const applySearch = () => {
+    setSearchTerm(searchValue.trim());
   };
 
-  const handleReviewAction = (action: string, programId: number) => {
-    console.log(`Performing ${action} on program ${programId}`);
-    setOpenDialog(false);
+  const resetFilters = () => {
+    setSelectedStatus('all');
+    setSelectedPriority('all');
+    setSelectedOrgUnit('all');
+    setSearchValue('');
+    setSearchTerm('');
   };
 
-  const getActionButtons = (program: any) => {
-    const buttons = [];
-    
-    buttons.push(
-      <Button
-        key="view"
-        size="small"
-        startIcon={<VisibilityIcon />}
-        onClick={() => handleViewDetails(program)}
-      >
-        Xem
-      </Button>
-    );
+  const filteredPrograms = useMemo(() => {
+    return programs.filter((program) => {
+      if (selectedPriority !== 'all' && program.priority !== selectedPriority) {
+        return false;
+      }
+      return true;
+    });
+  }, [programs, selectedPriority]);
 
-    if (program.status === 'SUBMITTED') {
-      buttons.push(
-        <Button
-          key="review"
-          size="small"
-          variant="contained"
-          startIcon={<CheckCircleIcon />}
-          onClick={() => handleReviewAction('review', program.id)}
-        >
-          Xem xét
-        </Button>
-      );
+  const handleReviewAction = async (action: 'review' | 'approve' | 'reject' | 'return' | 'publish', program: ProgramListItem) => {
+    const statusMap: Record<typeof action, ProgramStatus> = {
+      review: ProgramStatus.REVIEWING,
+      approve: ProgramStatus.APPROVED,
+      reject: ProgramStatus.REJECTED,
+      return: ProgramStatus.SUBMITTED,
+      publish: ProgramStatus.PUBLISHED,
+    };
+
+    try {
+      const response = await fetch(`/api/tms/programs/${program.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: statusMap[action] }),
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Không thể cập nhật trạng thái chương trình');
+      }
+
+      setSnackbar({ open: true, message: 'Đã cập nhật trạng thái chương trình', severity: 'success' });
+      setDialogOpen(false);
+      fetchPrograms();
+      fetchStats();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái chương trình';
+      setSnackbar({ open: true, message, severity: 'error' });
     }
-
-    if (program.status === 'REVIEWING') {
-      buttons.push(
-        <Button
-          key="approve"
-          size="small"
-          variant="contained"
-          color="success"
-          startIcon={<CheckCircleIcon />}
-          onClick={() => handleReviewAction('approve', program.id)}
-        >
-          Phê duyệt
-        </Button>
-      );
-      buttons.push(
-        <Button
-          key="reject"
-          size="small"
-          color="error"
-          startIcon={<CancelIcon />}
-          onClick={() => handleReviewAction('reject', program.id)}
-        >
-          Từ chối
-        </Button>
-      );
-      buttons.push(
-        <Button
-          key="return"
-          size="small"
-          startIcon={<ReplyIcon />}
-          onClick={() => handleReviewAction('return', program.id)}
-        >
-          Trả về
-        </Button>
-      );
-    }
-
-    return buttons;
   };
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          <AssessmentIcon sx={{ mr: 2, verticalAlign: 'middle' }} />
-          Xem xét chương trình đào tạo
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Xem xét và phê duyệt các chương trình đào tạo
-        </Typography>
-      </Box>
+      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2} sx={{ mb: 4 }}>
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom>
+            <AssessmentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+            Xem xét chương trình đào tạo
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Quản lý quy trình phê duyệt chương trình đào tạo và theo dõi tiến độ xử lý
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={1}>
+          <Button variant="outlined" startIcon={<FilterIcon />} onClick={resetFilters}>
+            Đặt lại bộ lọc
+          </Button>
+        </Stack>
+      </Stack>
 
-      {/* Filters */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Đang chờ xử lý
+            </Typography>
+            <Typography variant="h5" sx={{ mt: 1 }}>
+              {stats.submitted}
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Đang xem xét
+            </Typography>
+            <Typography variant="h5" sx={{ mt: 1 }}>
+              {stats.reviewing}
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Đã phê duyệt
+            </Typography>
+            <Typography variant="h5" sx={{ mt: 1 }}>
+              {stats.approved}
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Tổng số chương trình
+            </Typography>
+            <Typography variant="h5" sx={{ mt: 1 }}>
+              {stats.total}
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+
       <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} alignItems={{ xs: 'stretch', lg: 'center' }}>
           <TextField
             placeholder="Tìm kiếm chương trình..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                applySearch();
+              }
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -266,79 +350,98 @@ export default function ProgramsReviewPage() {
                 </InputAdornment>
               ),
             }}
-            sx={{ minWidth: 300 }}
+            sx={{ flexGrow: 1, minWidth: 220 }}
           />
-          
-          <FormControl sx={{ minWidth: 150 }}>
+
+          <FormControl sx={{ minWidth: 160 }}>
             <InputLabel>Trạng thái</InputLabel>
-            <Select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              label="Trạng thái"
-            >
+            <Select value={selectedStatus} label="Trạng thái" onChange={(event) => setSelectedStatus(event.target.value as ProgramStatus | 'all')}>
               <MenuItem value="all">Tất cả</MenuItem>
-              <MenuItem value="DRAFT">Nháp</MenuItem>
-              <MenuItem value="SUBMITTED">Đã gửi</MenuItem>
-              <MenuItem value="REVIEWING">Đang xem xét</MenuItem>
-              <MenuItem value="APPROVED">Đã phê duyệt</MenuItem>
-              <MenuItem value="REJECTED">Từ chối</MenuItem>
-              <MenuItem value="PUBLISHED">Đã xuất bản</MenuItem>
+              {PROGRAM_STATUSES.filter((status) => status !== ProgramStatus.DRAFT && status !== ProgramStatus.ARCHIVED).map((status) => (
+                <MenuItem key={status} value={status}>
+                  {getProgramStatusLabel(status)}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
-          <FormControl sx={{ minWidth: 150 }}>
+          <FormControl sx={{ minWidth: 160 }}>
             <InputLabel>Độ ưu tiên</InputLabel>
-            <Select
-              value={selectedPriority}
-              onChange={(e) => setSelectedPriority(e.target.value)}
-              label="Độ ưu tiên"
-            >
+            <Select value={selectedPriority} label="Độ ưu tiên" onChange={(event) => setSelectedPriority(event.target.value as ProgramPriority | 'all')}>
               <MenuItem value="all">Tất cả</MenuItem>
-              <MenuItem value="HIGH">Cao</MenuItem>
-              <MenuItem value="MEDIUM">Trung bình</MenuItem>
-              <MenuItem value="LOW">Thấp</MenuItem>
+              {PROGRAM_PRIORITIES.map((priority) => (
+                <MenuItem key={priority} value={priority}>
+                  {getProgramPriorityLabel(priority)}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
-          <Button
-            variant="outlined"
-            startIcon={<FilterIcon />}
-            onClick={() => {
-              setSelectedStatus('all');
-              setSelectedPriority('all');
-              setSearchTerm('');
-            }}
-          >
-            Xóa bộ lọc
-          </Button>
-        </Box>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Đơn vị</InputLabel>
+            <Select value={selectedOrgUnit} label="Đơn vị" onChange={(event) => setSelectedOrgUnit(event.target.value)}>
+              <MenuItem value="all">Tất cả đơn vị</MenuItem>
+              {orgUnits.map((unit) => (
+                <MenuItem key={unit.id} value={unit.id}>
+                  {unit.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" onClick={applySearch}>
+              Tìm kiếm
+            </Button>
+            <Button variant="text" onClick={resetFilters}>
+              Xóa bộ lọc
+            </Button>
+          </Stack>
+        </Stack>
       </Paper>
 
-      {/* Programs Table */}
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Danh sách chương trình đào tạo ({filteredPrograms.length})
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-        
+      <Paper>
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Mã chương trình</TableCell>
+                <TableCell>Mã</TableCell>
                 <TableCell>Tên chương trình</TableCell>
                 <TableCell>Đơn vị</TableCell>
                 <TableCell align="center">Trạng thái</TableCell>
-                <TableCell align="center">Độ ưu tiên</TableCell>
-                <TableCell>Thông tin cơ bản</TableCell>
-                <TableCell>Người gửi</TableCell>
-                <TableCell>Ngày gửi</TableCell>
-                <TableCell>Người xem xét</TableCell>
+                <TableCell align="center">Ưu tiên</TableCell>
+                <TableCell>Thống kê</TableCell>
                 <TableCell align="center">Thao tác</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredPrograms.map((program) => (
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                    Đang tải dữ liệu...
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {error && !loading && (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <Alert severity="error" action={<Button color="inherit" size="small" onClick={fetchPrograms}>Thử lại</Button>}>
+                      {error}
+                    </Alert>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {!loading && !error && filteredPrograms.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <Alert severity="info">Không có chương trình nào.</Alert>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {!loading && !error && filteredPrograms.map((program) => (
                 <TableRow key={program.id} hover>
                   <TableCell>
                     <Typography variant="subtitle2" fontWeight="bold">
@@ -346,59 +449,90 @@ export default function ProgramsReviewPage() {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">
-                      {program.name}
+                    <Typography variant="body1" fontWeight="medium">
+                      {program.nameVi}
                     </Typography>
-                  </TableCell>
-                  <TableCell>{program.orgUnit}</TableCell>
-                  <TableCell align="center">
-                    <Chip
-                      label={getStatusLabel(program.status)}
-                      color={getStatusColor(program.status) as any}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Chip
-                      label={getPriorityLabel(program.priority)}
-                      color={getPriorityColor(program.priority) as any}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
                     <Typography variant="body2" color="text.secondary">
-                      {program.degree} • {program.duration} năm • {program.credits} tín chỉ
+                      Phiên bản {program.version || 'Mặc định'}
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Avatar sx={{ width: 24, height: 24, mr: 1 }}>
-                        {program.submittedBy.charAt(0)}
-                      </Avatar>
-                      <Typography variant="body2">{program.submittedBy}</Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{program.submittedAt}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    {program.currentReviewer ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Avatar sx={{ width: 24, height: 24, mr: 1 }}>
-                          {program.currentReviewer.charAt(0)}
-                        </Avatar>
-                        <Typography variant="body2">{program.currentReviewer}</Typography>
-                      </Box>
+                    {program.orgUnit ? (
+                      <>
+                        <Typography variant="body2" fontWeight="medium">
+                          {program.orgUnit.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {program.orgUnit.code}
+                        </Typography>
+                      </>
                     ) : (
                       <Typography variant="body2" color="text.secondary">
-                        Chưa phân công
+                        Chưa cập nhật
                       </Typography>
                     )}
                   </TableCell>
                   <TableCell align="center">
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      {getActionButtons(program)}
-                    </Box>
+                    <Chip
+                      label={getProgramStatusLabel(program.status)}
+                      color={getProgramStatusColor(program.status)}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell align="center">
+                    <Chip
+                      label={getProgramPriorityLabel(program.priority)}
+                      color={getProgramPriorityColor(program.priority)}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {program.stats.courseCount} học phần • {program.stats.studentCount} sinh viên
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Stack direction="row" spacing={1} justifyContent="center">
+                      <Tooltip title="Xem chi tiết">
+                        <IconButton size="small" color="primary" onClick={() => fetchProgramDetail(program.id)}>
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      {program.status === ProgramStatus.SUBMITTED && (
+                        <Tooltip title="Đánh giá">
+                          <IconButton size="small" color="inherit" onClick={() => handleReviewAction('review', program)}>
+                            <CommentIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {program.status === ProgramStatus.REVIEWING && (
+                        <>
+                          <Tooltip title="Phê duyệt">
+                            <IconButton size="small" color="success" onClick={() => handleReviewAction('approve', program)}>
+                              <CheckCircleIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Từ chối">
+                            <IconButton size="small" color="error" onClick={() => handleReviewAction('reject', program)}>
+                              <CancelIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Trả lại chỉnh sửa">
+                            <IconButton size="small" color="warning" onClick={() => handleReviewAction('return', program)}>
+                              <ReplyIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
+                      {program.status === ProgramStatus.APPROVED && (
+                        <Tooltip title="Xuất bản">
+                          <IconButton size="small" color="primary" onClick={() => handleReviewAction('publish', program)}>
+                            <PublishIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Stack>
                   </TableCell>
                 </TableRow>
               ))}
@@ -407,122 +541,117 @@ export default function ProgramsReviewPage() {
         </TableContainer>
       </Paper>
 
-      {/* Program Details Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
-          Chi tiết chương trình: {selectedProgram?.code} - {selectedProgram?.name}
+          Chi tiết chương trình
         </DialogTitle>
-        <DialogContent>
-          {selectedProgram && (
-            <Box>
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Thông tin cơ bản
-                </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Mã chương trình:</Typography>
-                    <Typography variant="body1">{selectedProgram.code}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Tên chương trình:</Typography>
-                    <Typography variant="body1">{selectedProgram.name}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Đơn vị:</Typography>
-                    <Typography variant="body1">{selectedProgram.orgUnit}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Bằng cấp:</Typography>
-                    <Typography variant="body1">{selectedProgram.degree}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Thời gian đào tạo:</Typography>
-                    <Typography variant="body1">{selectedProgram.duration} năm</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Tổng tín chỉ:</Typography>
-                    <Typography variant="body1">{selectedProgram.credits}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Trạng thái:</Typography>
-                    <Chip
-                      label={getStatusLabel(selectedProgram.status)}
-                      color={getStatusColor(selectedProgram.status) as any}
-                      size="small"
-                    />
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Độ ưu tiên:</Typography>
-                    <Chip
-                      label={getPriorityLabel(selectedProgram.priority)}
-                      color={getPriorityColor(selectedProgram.priority) as any}
-                      size="small"
-                    />
-                  </Box>
-                </Box>
-              </Box>
-
-              <Divider sx={{ my: 2 }} />
-
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Lịch sử xem xét
-                </Typography>
-                <List>
-                  <ListItem>
-                    <ListItemIcon>
-                      <PersonIcon />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary="Tạo mới"
-                      secondary={`Bởi ${selectedProgram.submittedBy} vào ${selectedProgram.submittedAt}`}
-                    />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemIcon>
-                      <AccessTimeIcon />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary="Đang chờ xem xét"
-                      secondary="Chờ Hội đồng khoa học xem xét"
-                    />
-                  </ListItem>
-                </List>
-              </Box>
-
-              <Divider sx={{ my: 2 }} />
-
+        <DialogContent dividers>
+          {selectedProgram ? (
+            <Stack spacing={3}>
               <Box>
-                <Typography variant="h6" gutterBottom>
-                  Ghi chú và bình luận
-                </Typography>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  placeholder="Thêm ghi chú..."
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <Button startIcon={<CommentIcon />} size="small">
-                          Thêm
-                        </Button>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
+                <Typography variant="h6">Thông tin cơ bản</Typography>
+                <Divider sx={{ my: 1 }} />
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      Mã chương trình
+                    </Typography>
+                    <Typography variant="body1">{selectedProgram.code}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      Trạng thái
+                    </Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={getProgramStatusLabel(selectedProgram.status)}
+                        color={getProgramStatusColor(selectedProgram.status)}
+                        size="small"
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary">
+                      Tên chương trình
+                    </Typography>
+                    <Typography variant="body1">{selectedProgram.nameVi}</Typography>
+                  </Grid>
+                  {selectedProgram.description && (
+                    <Grid item xs={12}>
+                      <Typography variant="caption" color="text.secondary">
+                        Mô tả
+                      </Typography>
+                      <Typography variant="body2">{selectedProgram.description}</Typography>
+                    </Grid>
+                  )}
+                </Grid>
               </Box>
-            </Box>
+
+              {selectedProgram.blocks.length > 0 && (
+                <Box>
+                  <Typography variant="h6">Cấu trúc chương trình</Typography>
+                  <Divider sx={{ my: 1 }} />
+                  <List dense>
+                    {selectedProgram.blocks.map((block) => (
+                      <React.Fragment key={block.id}>
+                        <ListItem>
+                          <ListItemAvatar>
+                            <Avatar>
+                              <ReplayIcon />
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={`${block.code} - ${block.title}`}
+                            secondary={`${block.courses.length} học phần`}
+                          />
+                        </ListItem>
+                        {block.courses.map((course) => (
+                          <ListItem key={course.id} sx={{ pl: 8 }}>
+                            <ListItemText
+                              primary={`${course.code} - ${course.name}`}
+                              secondary={`${course.credits} tín chỉ • ${course.required ? 'Bắt buộc' : 'Tự chọn'}`}
+                            />
+                          </ListItem>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </List>
+                </Box>
+              )}
+            </Stack>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Đang tải thông tin chương trình...
+            </Typography>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Đóng</Button>
-          <Button variant="contained" onClick={() => setOpenDialog(false)}>
-            Thực hiện thao tác
-          </Button>
+          <Button onClick={() => setDialogOpen(false)}>Đóng</Button>
+          {selectedProgram && (
+            <Button
+              variant="contained"
+              startIcon={<CheckCircleIcon />}
+              onClick={() => handleReviewAction('approve', selectedProgram)}
+            >
+              Phê duyệt
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }

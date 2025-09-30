@@ -1,701 +1,848 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Box,
-  Container,
-  Typography,
-  Paper,
-  Card,
-  CardContent,
-  CardHeader,
-  CardActions,
-  Button,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormControlLabel,
-  Switch,
-  Chip,
-  Autocomplete,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Alert,
-  InputAdornment
+  Autocomplete,
+  Box,
+  Button,
+  Chip,
+  Container,
+  Divider,
+  Grid,
+  IconButton,
+  MenuItem,
+  Paper,
+  Select,
+  SelectChangeEvent,
+  Stack,
+  TextField,
+  Typography,
 } from '@mui/material';
 import {
-  ArrowBack as ArrowBackIcon,
   Add as AddIcon,
+  ArrowBack as ArrowBackIcon,
   Delete as DeleteIcon,
-  Edit as EditIcon,
   Save as SaveIcon,
-  Send as SendIcon,
-  CheckCircle as CheckCircleIcon,
-  ExpandMore as ExpandMoreIcon,
-  School as SchoolIcon,
-  Assessment as AssessmentIcon,
-  Person as PersonIcon,
-  Schedule as ScheduleIcon,
-  LibraryBooks as LibraryBooksIcon
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 
-interface FormData {
-  basicInfo: {
-    code: string;
-    nameVi: string;
-    nameEn: string;
-    degree: string;
-    duration: number;
-    credits: number;
-    orgUnitId: string;
-    description: string;
-  };
-  objectives: Array<{
-    id: string;
-    objective: string;
-    type: 'general' | 'specific';
-  }>;
-  structure: Array<{
-    id: string;
-    name: string;
-    credits: number;
-    required: boolean;
-    courses: string[];
-  }>;
-  requirements: {
-    admissionRequirements: string[];
-    graduationRequirements: string[];
-    languageRequirements: string;
-  };
-  workflow: {
-    priority: string;
-    notes: string;
-    attachments: string[];
-  };
+interface CourseOption {
+  id: string;
+  code: string;
+  name: string;
+  credits: number;
+  label: string;
 }
+import {
+  PROGRAM_STATUSES,
+  ProgramStatus,
+  getProgramStatusColor,
+  getProgramStatusLabel,
+} from '@/constants/programs';
+import {
+  OrgUnitApiItem,
+  OrgUnitOption,
+  ProgramBlockFormItem,
+  ProgramCourseFormItem,
+  ProgramFormState,
+  ProgramOutcomeFormItem,
+  buildProgramPayloadFromForm,
+  createDefaultProgramForm,
+  createEmptyBlock,
+  createEmptyCourse,
+  createEmptyOutcome,
+  mapOrgUnitOptions,
+} from '../program-utils';
 
-const steps = [
-  'Thông tin cơ bản',
-  'Mục tiêu chương trình',
-  'Cấu trúc chương trình',
-  'Yêu cầu tốt nghiệp',
-  'Xác nhận'
-];
-
-const degreeTypes = [
-  { value: 'bachelor', label: 'Cử nhân' },
-  { value: 'master', label: 'Thạc sĩ' },
-  { value: 'phd', label: 'Tiến sĩ' },
-  { value: 'diploma', label: 'Cao đẳng' }
-];
-
-const orgUnits = [
-  { id: '1', name: 'Khoa Công nghệ thông tin' },
-  { id: '2', name: 'Khoa Kỹ thuật phần mềm' },
-  { id: '3', name: 'Khoa Khoa học dữ liệu' },
-  { id: '4', name: 'Khoa An toàn thông tin' }
-];
-
-export default function CreateProgramPage() {
+export default function CreateProgramPage(): JSX.Element {
   const router = useRouter();
-  const [activeStep, setActiveStep] = useState(0);
-  const [formData, setFormData] = useState<FormData>({
-    basicInfo: {
-      code: '',
-      nameVi: '',
-      nameEn: '',
-      degree: 'bachelor',
-      duration: 4,
-      credits: 0,
-      orgUnitId: '',
-      description: ''
-    },
-    objectives: [] as Array<{
-      id: string;
-      objective: string;
-      type: 'general' | 'specific';
-    }>,
-    structure: [] as Array<{
-      id: string;
-      name: string;
-      credits: number;
-      required: boolean;
-      courses: string[];
-    }>,
-    requirements: {
-      admissionRequirements: [] as string[],
-      graduationRequirements: [] as string[],
-      languageRequirements: ''
-    },
-    workflow: {
-      priority: 'medium',
-      notes: '',
-      attachments: [] as string[]
+  const [form, setForm] = useState<ProgramFormState>(createDefaultProgramForm());
+  const [orgUnits, setOrgUnits] = useState<OrgUnitOption[]>([]);
+  const [courseOptions, setCourseOptions] = useState<CourseOption[]>([]);
+  const [blockCourseSelections, setBlockCourseSelections] = useState<Record<string, CourseOption | null>>({});
+  const [standaloneCourseSelection, setStandaloneCourseSelection] = useState<CourseOption | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const fetchOrgUnits = useCallback(async () => {
+    try {
+      const response = await fetch('/api/tms/faculties?limit=200');
+      const result = (await response.json()) as {
+        data?: { items?: OrgUnitApiItem[] };
+      };
+
+      if (response.ok && result?.data?.items) {
+        setOrgUnits(mapOrgUnitOptions(result.data.items));
+      }
+    } catch (err) {
+      console.error('Failed to fetch org units', err);
     }
-  });
+  }, []);
 
-  const [openDialog, setOpenDialog] = useState(false);
-  const [dialogType, setDialogType] = useState('');
+  const fetchCourseOptions = useCallback(async () => {
+    try {
+      const response = await fetch('/api/tms/courses?list=true&limit=200');
+      const result = (await response.json()) as {
+        success: boolean;
+        data?: { items?: Array<{ id: string | number; code: string; name_vi?: string | null; credits?: number | string | null }> };
+      };
 
-  const handleNext = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+      if (response.ok && result?.success && Array.isArray(result.data?.items)) {
+        const mapped: CourseOption[] = result.data.items.map((item) => {
+          const id = item.id != null ? item.id.toString() : '';
+          const name = item.name_vi ?? '';
+          const credits = Number(item.credits ?? 0);
+          return {
+            id,
+            code: item.code,
+            name,
+            credits: Number.isFinite(credits) ? credits : 0,
+            label: `${item.code} - ${name}`.trim(),
+          };
+        });
+        setCourseOptions(mapped);
+      }
+    } catch (err) {
+      console.error('Failed to fetch courses', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOrgUnits();
+    fetchCourseOptions();
+  }, [fetchOrgUnits, fetchCourseOptions]);
+
+  const updateForm = <K extends keyof ProgramFormState>(key: K, value: ProgramFormState[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleBack = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
+  const courseExistsInState = (state: ProgramFormState, courseId: string): boolean =>
+    state.blocks.some((block) => block.courses.some((course) => course.courseId === courseId)) ||
+    state.standaloneCourses.some((course) => course.courseId === courseId);
+
+  const updateBlocks = (
+    updater: (blocks: ProgramBlockFormItem[]) => ProgramBlockFormItem[],
+  ) => {
+    setForm((prev) => {
+      const updatedBlocks = updater(prev.blocks).map((block, blockIndex) => ({
+        ...block,
+        displayOrder: block.displayOrder || blockIndex + 1,
+        courses: block.courses.map((course, courseIndex) => ({
+          ...course,
+          displayOrder: course.displayOrder || courseIndex + 1,
+        })),
+      }));
+      return { ...prev, blocks: updatedBlocks };
+    });
   };
 
-  const handleSave = () => {
-    console.log('Saving program:', formData);
-    router.push('/tms/programs');
-  };
-
-  const handleSubmit = () => {
-    console.log('Submitting program for approval:', formData);
-    router.push('/tms/programs');
-  };
-
-  const updateFormData = (section: keyof FormData, data: any) => {
-    setFormData(prev => ({
+  const updateStandaloneCourses = (
+    updater: (courses: ProgramCourseFormItem[]) => ProgramCourseFormItem[],
+  ) => {
+    setForm((prev) => ({
       ...prev,
-      [section]: { ...prev[section], ...data }
+      standaloneCourses: updater(prev.standaloneCourses).map((course, index) => ({
+        ...course,
+        displayOrder: course.displayOrder || index + 1,
+      })),
     }));
   };
 
-  const addObjective = () => {
-    const newObjective = {
-      id: Date.now().toString(),
-      objective: '',
-      type: 'general' as const
-    };
-    setFormData(prev => ({
-      ...prev,
-      objectives: [...prev.objectives, newObjective]
-    }));
-  };
-
-  const updateObjective = (id: string, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      objectives: prev.objectives.map(obj =>
-        obj.id === id ? { ...obj, [field]: value } : obj
-      )
-    }));
-  };
-
-  const removeObjective = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      objectives: prev.objectives.filter(obj => obj.id !== id)
-    }));
-  };
-
-  const addStructureBlock = () => {
+  const handleAddBlock = () => {
     const newBlock = {
-      id: Date.now().toString(),
-      name: '',
-      credits: 0,
-      required: true,
-      courses: [] as string[]
+      ...createEmptyBlock(),
+      displayOrder: form.blocks.length + 1,
     };
-    setFormData(prev => ({
+    updateBlocks((blocks) => [...blocks, newBlock]);
+    setBlockCourseSelections((prev) => ({ ...prev, [newBlock.id]: null }));
+  };
+
+  const handleBlockFieldChange = (
+    blockId: string,
+    key: keyof ProgramBlockFormItem,
+    value: string | number,
+  ) => {
+    updateBlocks((blocks) =>
+      blocks.map((block) =>
+        block.id === blockId
+          ? {
+              ...block,
+              [key]:
+                key === 'displayOrder'
+                  ? Number(value) || 1
+                  : key === 'blockType'
+                  ? (value as ProgramBlockFormItem['blockType'])
+                  : value,
+            }
+          : block,
+      ),
+    );
+  };
+
+  const handleRemoveBlock = (blockId: string) => {
+    updateBlocks((blocks) => blocks.filter((block) => block.id !== blockId));
+    setBlockCourseSelections((prev) => {
+      const clone = { ...prev };
+      delete clone[blockId];
+      return clone;
+    });
+  };
+
+  const handleAddCourseToBlock = (blockId: string) => {
+    const selection = blockCourseSelections[blockId];
+    if (!selection) return;
+
+    setForm((prev) => {
+      if (courseExistsInState(prev, selection.id)) {
+        setError('Học phần đã được thêm vào chương trình.');
+        return prev;
+      }
+
+      const updatedBlocks = prev.blocks.map((block) => {
+        if (block.id !== blockId) return block;
+        const newCourse: ProgramCourseFormItem = {
+          id: createEmptyCourse().id,
+          courseId: selection.id,
+          courseCode: selection.code,
+          courseName: selection.name,
+          credits: selection.credits,
+          required: true,
+          displayOrder: block.courses.length + 1,
+        };
+        return {
+          ...block,
+          courses: [...block.courses, newCourse],
+        };
+      });
+
+      return {
+        ...prev,
+        blocks: updatedBlocks,
+      };
+    });
+
+    setBlockCourseSelections((prevSelections) => ({
+      ...prevSelections,
+      [blockId]: null,
+    }));
+    setError(null);
+  };
+
+  const handleBlockCourseChange = (
+    blockId: string,
+    courseId: string,
+    key: keyof ProgramCourseFormItem,
+    value: string | number | boolean,
+  ) => {
+    updateBlocks((blocks) =>
+      blocks.map((block) => {
+        if (block.id !== blockId) return block;
+        return {
+          ...block,
+          courses: block.courses.map((course) =>
+            course.id === courseId
+              ? {
+                  ...course,
+                  [key]: key === 'displayOrder' ? Number(value) || 1 : value,
+                }
+              : course,
+          ),
+        };
+      }),
+    );
+  };
+
+  const handleRemoveCourseFromBlock = (blockId: string, courseId: string) => {
+    updateBlocks((blocks) =>
+      blocks.map((block) =>
+        block.id === blockId
+          ? {
+              ...block,
+              courses: block.courses.filter((course) => course.id !== courseId),
+            }
+          : block,
+      ),
+    );
+  };
+
+  const handleAddStandaloneCourse = () => {
+    if (!standaloneCourseSelection) return;
+
+    setForm((prev) => {
+      if (courseExistsInState(prev, standaloneCourseSelection.id)) {
+        setError('Học phần đã được thêm vào chương trình.');
+        return prev;
+      }
+
+      const newCourse: ProgramCourseFormItem = {
+        id: createEmptyCourse().id,
+        courseId: standaloneCourseSelection.id,
+        courseCode: standaloneCourseSelection.code,
+        courseName: standaloneCourseSelection.name,
+        credits: standaloneCourseSelection.credits,
+        required: true,
+        displayOrder: prev.standaloneCourses.length + 1,
+      };
+
+      return {
+        ...prev,
+        standaloneCourses: [...prev.standaloneCourses, newCourse],
+      };
+    });
+
+    setStandaloneCourseSelection(null);
+    setError(null);
+  };
+
+  const handleStandaloneCourseChange = (
+    courseId: string,
+    key: keyof ProgramCourseFormItem,
+    value: string | number | boolean,
+  ) => {
+    updateStandaloneCourses((courses) =>
+      courses.map((course) =>
+        course.id === courseId
+          ? {
+              ...course,
+              [key]: key === 'displayOrder' ? Number(value) || 1 : value,
+            }
+          : course,
+      ),
+    );
+  };
+
+  const handleRemoveStandaloneCourse = (courseId: string) => {
+    updateStandaloneCourses((courses) => courses.filter((course) => course.id !== courseId));
+  };
+
+  const handleAddOutcome = () => {
+    setForm((prev) => ({ ...prev, outcomes: [...prev.outcomes, createEmptyOutcome()] }));
+  };
+
+  const handleOutcomeChange = (id: string, key: keyof ProgramOutcomeFormItem, value: string) => {
+    setForm((prev) => ({
       ...prev,
-      structure: [...prev.structure, newBlock]
+      outcomes: prev.outcomes.map((outcome) =>
+        outcome.id === id ? { ...outcome, [key]: value } : outcome,
+      ),
     }));
   };
 
-  const updateStructureBlock = (id: string, field: string, value: any) => {
-    setFormData(prev => ({
+  const handleOutcomeRemove = (id: string) => {
+    setForm((prev) => ({
       ...prev,
-      structure: prev.structure.map(block =>
-        block.id === id ? { ...block, [field]: value } : block
-      )
+      outcomes: prev.outcomes.filter((outcome) => outcome.id !== id),
     }));
   };
 
-  const removeStructureBlock = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      structure: prev.structure.filter(block => block.id !== id)
-    }));
-  };
+  const isValid = useMemo(() => {
+    return Boolean(form.code.trim() && form.nameVi.trim());
+  }, [form.code, form.nameVi]);
 
-  const getStepContent = (step: number) => {
-    switch (step) {
-      case 0:
-        return (
-          <Box sx={{ p: 3 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 3 }}>
-              <TextField
-                fullWidth
-                label="Mã chương trình *"
-                value={formData.basicInfo.code}
-                onChange={(e) => updateFormData('basicInfo', { code: e.target.value })}
-                placeholder="VD: CNTT"
-              />
-              <FormControl fullWidth>
-                <InputLabel>Đơn vị tổ chức *</InputLabel>
-                <Select
-                  value={formData.basicInfo.orgUnitId}
-                  onChange={(e) => updateFormData('basicInfo', { orgUnitId: e.target.value })}
-                  label="Đơn vị tổ chức *"
-                >
-                  {orgUnits.map((unit) => (
-                    <MenuItem key={unit.id} value={unit.id}>
-                      {unit.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
-                fullWidth
-                label="Tên chương trình (Tiếng Việt) *"
-                value={formData.basicInfo.nameVi}
-                onChange={(e) => updateFormData('basicInfo', { nameVi: e.target.value })}
-                sx={{ gridColumn: '1 / -1' }}
-              />
-              <TextField
-                fullWidth
-                label="Tên chương trình (Tiếng Anh)"
-                value={formData.basicInfo.nameEn}
-                onChange={(e) => updateFormData('basicInfo', { nameEn: e.target.value })}
-                sx={{ gridColumn: '1 / -1' }}
-              />
-              <FormControl fullWidth>
-                <InputLabel>Bằng cấp *</InputLabel>
-                <Select
-                  value={formData.basicInfo.degree}
-                  onChange={(e) => updateFormData('basicInfo', { degree: e.target.value })}
-                  label="Bằng cấp *"
-                >
-                  {degreeTypes.map((type) => (
-                    <MenuItem key={type.value} value={type.value}>
-                      {type.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
-                fullWidth
-                label="Thời gian đào tạo (năm)"
-                type="number"
-                value={formData.basicInfo.duration}
-                onChange={(e) => updateFormData('basicInfo', { duration: parseInt(e.target.value) || 0 })}
-                inputProps={{ min: 1, max: 8 }}
-              />
-              <TextField
-                fullWidth
-                label="Tổng số tín chỉ"
-                type="number"
-                value={formData.basicInfo.credits}
-                onChange={(e) => updateFormData('basicInfo', { credits: parseInt(e.target.value) || 0 })}
-                inputProps={{ min: 0 }}
-              />
-              <TextField
-                fullWidth
-                label="Mô tả chương trình"
-                multiline
-                rows={4}
-                value={formData.basicInfo.description}
-                onChange={(e) => updateFormData('basicInfo', { description: e.target.value })}
-                placeholder="Mô tả tổng quan về chương trình đào tạo..."
-                sx={{ gridColumn: '1 / -1' }}
-              />
-            </Box>
-          </Box>
-        );
+  const totalBlockCourses = useMemo(
+    () => form.blocks.reduce((sum, block) => sum + block.courses.length, 0),
+    [form.blocks],
+  );
 
-      case 1:
-        return (
-          <Box sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">
-                Mục tiêu chương trình
-              </Typography>
-              <Button startIcon={<AddIcon />} onClick={addObjective}>
-                Thêm mục tiêu
-              </Button>
-            </Box>
-            
-            {formData.objectives.map((objective, index) => (
-              <Card key={objective.id} sx={{ mb: 2 }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                    <TextField
-                      fullWidth
-                      label={`Mục tiêu ${index + 1}`}
-                      value={objective.objective}
-                      onChange={(e) => updateObjective(objective.id, 'objective', e.target.value)}
-                      multiline
-                      rows={2}
-                    />
-                    <FormControl sx={{ minWidth: 120 }}>
-                      <InputLabel>Loại</InputLabel>
-                      <Select
-                        value={objective.type}
-                        onChange={(e) => updateObjective(objective.id, 'type', e.target.value)}
-                        label="Loại"
-                      >
-                        <MenuItem value="general">Tổng quát</MenuItem>
-                        <MenuItem value="specific">Cụ thể</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <IconButton
-                      color="error"
-                      onClick={() => removeObjective(objective.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                </CardContent>
-              </Card>
-            ))}
-            
-            {formData.objectives.length === 0 && (
-              <Alert severity="info">
-                Chưa có mục tiêu nào. Nhấn "Thêm mục tiêu" để bắt đầu.
-              </Alert>
-            )}
-          </Box>
-        );
+  const totalStandaloneCourses = form.standaloneCourses.length;
+  const totalCourses = totalBlockCourses + totalStandaloneCourses;
 
-      case 2:
-        return (
-          <Box sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">
-                Cấu trúc chương trình
-              </Typography>
-              <Button startIcon={<AddIcon />} onClick={addStructureBlock}>
-                Thêm khối kiến thức
-              </Button>
-            </Box>
-            
-            {formData.structure.map((block, index) => (
-              <Accordion key={block.id} sx={{ mb: 1 }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                    <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
-                      {block.name || `Khối ${index + 1}`}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mr: 2 }}>
-                      <Chip
-                        label={`${block.credits} tín chỉ`}
-                        variant="outlined"
-                        size="small"
-                      />
-                      <Chip
-                        label={block.required ? 'Bắt buộc' : 'Tự chọn'}
-                        color={block.required ? 'primary' : 'default'}
-                        size="small"
-                      />
-                    </Box>
-                  </Box>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <TextField
-                      fullWidth
-                      label="Tên khối kiến thức"
-                      value={block.name}
-                      onChange={(e) => updateStructureBlock(block.id, 'name', e.target.value)}
-                    />
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
-                      <TextField
-                        fullWidth
-                        label="Số tín chỉ"
-                        type="number"
-                        value={block.credits}
-                        onChange={(e) => updateStructureBlock(block.id, 'credits', parseInt(e.target.value) || 0)}
-                      />
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={block.required}
-                            onChange={(e) => updateStructureBlock(block.id, 'required', e.target.checked)}
-                          />
-                        }
-                        label="Bắt buộc"
-                      />
-                    </Box>
-                    <Autocomplete
-                      multiple
-                      freeSolo
-                      options={['CS101', 'CS102', 'CS103', 'MATH101', 'PHYS101']}
-                      value={block.courses}
-                      onChange={(_, newValue) => updateStructureBlock(block.id, 'courses', newValue)}
-                      renderTags={(value, getTagProps) =>
-                        value.map((option, index) => (
-                          <Chip variant="outlined" label={option} {...getTagProps({ index })} />
-                        ))
-                      }
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Môn học trong khối"
-                          placeholder="Nhập mã môn học hoặc chọn từ danh sách"
-                        />
-                      )}
-                    />
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <IconButton
-                        color="error"
-                        onClick={() => removeStructureBlock(block.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
-                  </Box>
-                </AccordionDetails>
-              </Accordion>
-            ))}
-            
-            {formData.structure.length === 0 && (
-              <Alert severity="info">
-                Chưa có khối kiến thức nào. Nhấn "Thêm khối kiến thức" để bắt đầu.
-              </Alert>
-            )}
-          </Box>
-        );
+  const handleSubmit = async () => {
+    if (!isValid) {
+      setError('Vui lòng điền đầy đủ Mã chương trình và Tên chương trình.');
+      return;
+    }
 
-      case 3:
-        return (
-          <Box sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Yêu cầu tốt nghiệp
-            </Typography>
-            
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Card>
-                <CardHeader title="Điều kiện tuyển sinh" />
-                <CardContent>
-                  <Autocomplete
-                    multiple
-                    freeSolo
-                    options={['Tốt nghiệp THPT', 'Điểm thi đại học', 'Phỏng vấn', 'Bài kiểm tra năng lực']}
-                    value={formData.requirements.admissionRequirements}
-                    onChange={(_, newValue) => updateFormData('requirements', { admissionRequirements: newValue })}
-                    renderTags={(value, getTagProps) =>
-                      value.map((option, index) => (
-                        <Chip variant="outlined" label={option} {...getTagProps({ index })} />
-                      ))
-                    }
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Điều kiện tuyển sinh"
-                        placeholder="Nhập điều kiện tuyển sinh"
-                      />
-                    )}
-                  />
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader title="Điều kiện tốt nghiệp" />
-                <CardContent>
-                  <Autocomplete
-                    multiple
-                    freeSolo
-                    options={['Hoàn thành tất cả môn học', 'Điểm trung bình >= 5.0', 'Khóa luận tốt nghiệp', 'Chứng chỉ tiếng Anh']}
-                    value={formData.requirements.graduationRequirements}
-                    onChange={(_, newValue) => updateFormData('requirements', { graduationRequirements: newValue })}
-                    renderTags={(value, getTagProps) =>
-                      value.map((option, index) => (
-                        <Chip variant="outlined" label={option} {...getTagProps({ index })} />
-                      ))
-                    }
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Điều kiện tốt nghiệp"
-                        placeholder="Nhập điều kiện tốt nghiệp"
-                      />
-                    )}
-                  />
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader title="Yêu cầu ngoại ngữ" />
-                <CardContent>
-                  <TextField
-                    fullWidth
-                    label="Yêu cầu ngoại ngữ"
-                    multiline
-                    rows={3}
-                    value={formData.requirements.languageRequirements}
-                    onChange={(e) => updateFormData('requirements', { languageRequirements: e.target.value })}
-                    placeholder="Mô tả yêu cầu về ngoại ngữ..."
-                  />
-                </CardContent>
-              </Card>
-            </Box>
-          </Box>
-        );
+    setLoading(true);
+    setError(null);
 
-      case 4:
-        return (
-          <Box sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Xác nhận thông tin
-            </Typography>
-            
-            <Alert severity="success" sx={{ mb: 3 }}>
-              <CheckCircleIcon sx={{ mr: 1 }} />
-              Thông tin chương trình đã được điền đầy đủ. Vui lòng kiểm tra lại trước khi lưu hoặc gửi duyệt.
-            </Alert>
-            
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 3 }}>
-              <FormControl fullWidth>
-                <InputLabel>Độ ưu tiên</InputLabel>
-                <Select
-                  value={formData.workflow.priority}
-                  onChange={(e) => updateFormData('workflow', { priority: e.target.value })}
-                  label="Độ ưu tiên"
-                >
-                  <MenuItem value="low">Thấp</MenuItem>
-                  <MenuItem value="medium">Trung bình</MenuItem>
-                  <MenuItem value="high">Cao</MenuItem>
-                </Select>
-              </FormControl>
-              <TextField
-                fullWidth
-                label="Ghi chú (nếu có)"
-                multiline
-                rows={3}
-                value={formData.workflow.notes}
-                onChange={(e) => updateFormData('workflow', { notes: e.target.value })}
-                placeholder="Thêm ghi chú cho người xem xét..."
-                sx={{ gridColumn: { xs: '1 / -1', sm: '2 / -1' } }}
-              />
-            </Box>
-            
-            <Divider sx={{ my: 3 }} />
-            
-            <Typography variant="h6" gutterBottom>
-              Tóm tắt thông tin
-            </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
-              <Box>
-                <Typography variant="body2" color="text.secondary">Mã chương trình:</Typography>
-                <Typography variant="body1">{formData.basicInfo.code || 'Chưa điền'}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="body2" color="text.secondary">Tên chương trình:</Typography>
-                <Typography variant="body1">{formData.basicInfo.nameVi || 'Chưa điền'}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="body2" color="text.secondary">Thời gian đào tạo:</Typography>
-                <Typography variant="body1">{formData.basicInfo.duration || 0} năm</Typography>
-              </Box>
-              <Box>
-                <Typography variant="body2" color="text.secondary">Tổng tín chỉ:</Typography>
-                <Typography variant="body1">{formData.basicInfo.credits || 0}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="body2" color="text.secondary">Mục tiêu chương trình:</Typography>
-                <Typography variant="body1">{formData.objectives.length}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="body2" color="text.secondary">Khối kiến thức:</Typography>
-                <Typography variant="body1">{formData.structure.length}</Typography>
-              </Box>
-            </Box>
-          </Box>
-        );
+    try {
+      const payload = buildProgramPayloadFromForm(form);
 
-      default:
-        return 'Unknown step';
+      const response = await fetch('/api/tms/programs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Không thể tạo chương trình');
+      }
+
+      setSuccessMessage('Đã tạo chương trình đào tạo thành công.');
+      setTimeout(() => router.push('/tms/programs'), 800);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể tạo chương trình';
+      setError(message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => router.back()}
-          sx={{ mb: 2 }}
-        >
+      <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => router.back()}>
           Quay lại
         </Button>
-        
-        <Typography variant="h4" component="h1" gutterBottom>
-          <LibraryBooksIcon sx={{ mr: 2, verticalAlign: 'middle' }} />
-          {activeStep === 0 ? 'Tạo chương trình đào tạo mới' : 'Chỉnh sửa chương trình đào tạo'}
+        <Typography variant="h4" component="h1">
+          Tạo chương trình đào tạo mới
         </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Điền đầy đủ thông tin để tạo chương trình đào tạo mới
-        </Typography>
-      </Box>
+      </Stack>
 
-      <Paper sx={{ p: 3 }}>
-        <Stepper activeStep={activeStep} orientation="horizontal" sx={{ mb: 4 }}>
-          {steps.map((label, index) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-        <Box sx={{ minHeight: 400 }}>
-          {getStepContent(activeStep)}
-        </Box>
+      {successMessage && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {successMessage}
+        </Alert>
+      )}
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-          <Button
-            disabled={activeStep === 0}
-            onClick={handleBack}
-            startIcon={<ArrowBackIcon />}
-          >
-            Quay lại
-          </Button>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Thông tin cơ bản
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Mã chương trình *"
+                  value={form.code}
+                  onChange={(event) => updateForm('code', event.target.value.toUpperCase())}
+                  required
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Phiên bản"
+                  value={form.version}
+                  onChange={(event) => updateForm('version', event.target.value)}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="Tên chương trình (Tiếng Việt) *"
+                  value={form.nameVi}
+                  onChange={(event) => updateForm('nameVi', event.target.value)}
+                  required
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="Tên chương trình (Tiếng Anh)"
+                  value={form.nameEn}
+                  onChange={(event) => updateForm('nameEn', event.target.value)}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="Mô tả"
+                  value={form.description}
+                  onChange={(event) => updateForm('description', event.target.value)}
+                  fullWidth
+                  multiline
+                  minRows={3}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Tổng số tín chỉ"
+                  type="number"
+                  inputProps={{ min: 0 }}
+                  value={form.totalCredits}
+                  onChange={(event) => updateForm('totalCredits', Number(event.target.value) || 0)}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Select
+                  value={form.orgUnitId}
+                  onChange={(event) => updateForm('orgUnitId', event.target.value)}
+                  displayEmpty
+                  fullWidth
+                  renderValue={(value) => {
+                    if (!value) {
+                      return <span style={{ color: '#9e9e9e' }}>Chọn đơn vị quản lý</span>;
+                    }
+                    const unit = orgUnits.find((item) => item.id === value);
+                    return unit?.label ?? value;
+                  }}
+                >
+                  <MenuItem value="">
+                    <em>Chọn đơn vị quản lý</em>
+                  </MenuItem>
+                  {orgUnits.map((unit) => (
+                    <MenuItem key={unit.id} value={unit.id}>
+                      {unit.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Mã ngành (tuỳ chọn)"
+                  value={form.majorId}
+                  onChange={(event) => updateForm('majorId', event.target.value)}
+                  helperText="Nhập ID ngành đào tạo nếu có"
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+          </Paper>
 
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            {activeStep < steps.length - 1 ? (
-              <Button variant="contained" onClick={handleNext}>
-                Tiếp theo
+          <Paper sx={{ p: 3, mt: 3 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+              <Typography variant="h6">Chuẩn đầu ra chương trình</Typography>
+              <Button startIcon={<AddIcon />} onClick={handleAddOutcome}>
+                Thêm chuẩn đầu ra
               </Button>
+            </Stack>
+            {form.outcomes.length === 0 && (
+              <Alert severity="info">Chưa có chuẩn đầu ra nào. Thêm mới để mô tả PLO.</Alert>
+            )}
+            <Stack spacing={2}>
+              {form.outcomes.map((outcome) => (
+                <Paper key={outcome.id} variant="outlined" sx={{ p: 2 }}>
+                  <Stack spacing={1}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                      <Select
+                        value={outcome.category}
+                        onChange={(event) => handleOutcomeChange(outcome.id, 'category', event.target.value)}
+                        sx={{ minWidth: 160 }}
+                      >
+                        <MenuItem value="general">Chuẩn chung</MenuItem>
+                        <MenuItem value="specific">Chuẩn cụ thể</MenuItem>
+                      </Select>
+                      <Box sx={{ flexGrow: 1 }}>
+                        <TextField
+                          value={outcome.label}
+                          onChange={(event) => handleOutcomeChange(outcome.id, 'label', event.target.value)}
+                          placeholder="Mô tả chuẩn đầu ra"
+                          fullWidth
+                        />
+                      </Box>
+                      <IconButton color="error" onClick={() => handleOutcomeRemove(outcome.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Stack>
+                  </Stack>
+                </Paper>
+              ))}
+            </Stack>
+          </Paper>
+
+          <Paper sx={{ p: 3, mt: 3 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+              <Typography variant="h6">Khối học phần</Typography>
+              <Button startIcon={<AddIcon />} onClick={handleAddBlock}>
+                Thêm khối học phần
+              </Button>
+            </Stack>
+            {form.blocks.length === 0 ? (
+              <Alert severity="info">Chưa có khối học phần nào.</Alert>
             ) : (
-              <>
+              <Stack spacing={2}>
+                {form.blocks.map((block) => (
+                  <Paper key={block.id} variant="outlined" sx={{ p: 2 }}>
+                    <Stack spacing={2}>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                        <TextField
+                          label="Mã khối"
+                          value={block.code}
+                          onChange={(event) => handleBlockFieldChange(block.id, 'code', event.target.value)}
+                          sx={{ minWidth: 160 }}
+                        />
+                        <TextField
+                          label="Tên khối"
+                          value={block.title}
+                          onChange={(event) => handleBlockFieldChange(block.id, 'title', event.target.value)}
+                          fullWidth
+                        />
+                        <TextField
+                          label="Loại khối"
+                          value={block.blockType}
+                          onChange={(event) => handleBlockFieldChange(block.id, 'blockType', event.target.value)}
+                          sx={{ minWidth: 160 }}
+                        />
+                        <TextField
+                          label="Thứ tự"
+                          type="number"
+                          value={block.displayOrder}
+                          onChange={(event) => handleBlockFieldChange(block.id, 'displayOrder', Number(event.target.value) || 1)}
+                          sx={{ width: 120 }}
+                          inputProps={{ min: 1 }}
+                        />
+                        <IconButton color="error" onClick={() => handleRemoveBlock(block.id)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </Stack>
+
+                      {block.courses.length === 0 ? (
+                        <Alert severity="info">Khối này chưa có học phần nào.</Alert>
+                      ) : (
+                        <Stack spacing={1.5}>
+                          {block.courses.map((course) => (
+                            <Paper key={course.id} variant="outlined" sx={{ p: 1.5 }}>
+                              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography variant="subtitle2">{course.courseCode} — {course.courseName}</Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {course.credits} tín chỉ
+                                  </Typography>
+                                </Box>
+                                <Select
+                                  value={course.required ? 'required' : 'optional'}
+                                  onChange={(event: SelectChangeEvent<string>) =>
+                                    handleBlockCourseChange(block.id, course.id, 'required', event.target.value === 'required')
+                                  }
+                                  sx={{ minWidth: 140 }}
+                                >
+                                  <MenuItem value="required">Bắt buộc</MenuItem>
+                                  <MenuItem value="optional">Tự chọn</MenuItem>
+                                </Select>
+                                <TextField
+                                  label="Thứ tự"
+                                  type="number"
+                                  value={course.displayOrder}
+                                  onChange={(event) =>
+                                    handleBlockCourseChange(block.id, course.id, 'displayOrder', Number(event.target.value) || 1)
+                                  }
+                                  sx={{ width: 120 }}
+                                  inputProps={{ min: 1 }}
+                                />
+                                <IconButton color="error" onClick={() => handleRemoveCourseFromBlock(block.id, course.id)}>
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Stack>
+                            </Paper>
+                          ))}
+                        </Stack>
+                      )}
+
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                        <Autocomplete
+                          value={blockCourseSelections[block.id] ?? null}
+                          onChange={(_, option) => setBlockCourseSelections((prev) => ({ ...prev, [block.id]: option }))}
+                          options={courseOptions}
+                          getOptionLabel={(option) => option.label}
+                          isOptionEqualToValue={(option, value) => option.id === value.id}
+                          renderInput={(params) => <TextField {...params} label="Thêm học phần" placeholder="Chọn học phần" />}
+                          sx={{ flexGrow: 1, minWidth: 240 }}
+                        />
+                        <Button
+                          variant="outlined"
+                          onClick={() => handleAddCourseToBlock(block.id)}
+                          disabled={!blockCourseSelections[block.id] || courseOptions.length === 0}
+                        >
+                          Thêm học phần
+                        </Button>
+                      </Stack>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            )}
+          </Paper>
+
+          <Paper sx={{ p: 3, mt: 3 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+              <Typography variant="h6">Học phần độc lập</Typography>
+              <Button startIcon={<AddIcon />} onClick={handleAddStandaloneCourse}>
+                Thêm học phần
+              </Button>
+            </Stack>
+            <Stack spacing={2}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                <Autocomplete
+                  value={standaloneCourseSelection}
+                  onChange={(_, option) => setStandaloneCourseSelection(option)}
+                  options={courseOptions}
+                  getOptionLabel={(option) => option.label}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  renderInput={(params) => <TextField {...params} label="Chọn học phần" placeholder="Học phần" />}
+                  sx={{ flexGrow: 1, minWidth: 240 }}
+                />
                 <Button
                   variant="outlined"
-                  onClick={handleSave}
-                  startIcon={<SaveIcon />}
+                  onClick={handleAddStandaloneCourse}
+                  disabled={!standaloneCourseSelection || courseOptions.length === 0}
                 >
-                  Lưu nháp
+                  Thêm
                 </Button>
-                <Button
-                  variant="contained"
-                  onClick={handleSubmit}
-                  startIcon={<CheckCircleIcon />}
-                >
-                  Gửi duyệt
-                </Button>
-              </>
-            )}
-          </Box>
-        </Box>
-      </Paper>
+              </Stack>
+
+              {form.standaloneCourses.length === 0 ? (
+                <Alert severity="info">Chưa có học phần độc lập nào.</Alert>
+              ) : (
+                <Stack spacing={1.5}>
+                  {form.standaloneCourses.map((course) => (
+                    <Paper key={course.id} variant="outlined" sx={{ p: 1.5 }}>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                        <Box sx={{ flexGrow: 1 }}>
+                          <Typography variant="subtitle2">{course.courseCode} — {course.courseName}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {course.credits} tín chỉ
+                          </Typography>
+                        </Box>
+                        <Select
+                          value={course.required ? 'required' : 'optional'}
+                          onChange={(event: SelectChangeEvent<string>) =>
+                            handleStandaloneCourseChange(course.id, 'required', event.target.value === 'required')
+                          }
+                          sx={{ minWidth: 140 }}
+                        >
+                          <MenuItem value="required">Bắt buộc</MenuItem>
+                          <MenuItem value="optional">Tự chọn</MenuItem>
+                        </Select>
+                        <TextField
+                          label="Thứ tự"
+                          type="number"
+                          value={course.displayOrder}
+                          onChange={(event) =>
+                            handleStandaloneCourseChange(course.id, 'displayOrder', Number(event.target.value) || 1)
+                          }
+                          sx={{ width: 120 }}
+                          inputProps={{ min: 1 }}
+                        />
+                        <IconButton color="error" onClick={() => handleRemoveStandaloneCourse(course.id)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </Stack>
+                    </Paper>
+                  ))}
+                </Stack>
+              )}
+            </Stack>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Thiết lập phê duyệt
+            </Typography>
+            <Stack spacing={2}>
+              <Select
+                value={form.status}
+                onChange={(event) => updateForm('status', event.target.value as ProgramStatus)}
+                fullWidth
+              >
+                {PROGRAM_STATUSES.map((status) => (
+                  <MenuItem key={status} value={status}>
+                    {getProgramStatusLabel(status)}
+                  </MenuItem>
+                ))}
+              </Select>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Typography variant="body2" color="text.secondary">
+                  Trạng thái hiện tại:
+                </Typography>
+                <Chip
+                  label={getProgramStatusLabel(form.status)}
+                  color={getProgramStatusColor(form.status)}
+                  size="small"
+                />
+              </Stack>
+              <TextField
+                label="Hiệu lực từ"
+                type="date"
+                value={form.effectiveFrom}
+                onChange={(event) => updateForm('effectiveFrom', event.target.value)}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label="Hiệu lực đến"
+                type="date"
+                value={form.effectiveTo}
+                onChange={(event) => updateForm('effectiveTo', event.target.value)}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+            </Stack>
+          </Paper>
+
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Tóm tắt
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <Stack spacing={1.5}>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  Mã chương trình
+                </Typography>
+                <Typography variant="body2" fontWeight="medium">
+                  {form.code || '—'}
+                </Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  Tên chương trình
+                </Typography>
+                <Typography variant="body2" fontWeight="medium" sx={{ maxWidth: '55%', textAlign: 'right' }}>
+                  {form.nameVi || '—'}
+                </Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  Tổng tín chỉ
+                </Typography>
+                <Typography variant="body2" fontWeight="medium">
+                  {form.totalCredits}
+                </Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  Chuẩn đầu ra
+                </Typography>
+                <Typography variant="body2" fontWeight="medium">
+                  {form.outcomes.length}
+                </Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  Số khối học phần
+                </Typography>
+                <Typography variant="body2" fontWeight="medium">
+                  {form.blocks.length}
+                </Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  Tổng số học phần
+                </Typography>
+                <Typography variant="body2" fontWeight="medium">
+                  {totalCourses}
+                </Typography>
+              </Stack>
+            </Stack>
+            <Divider sx={{ my: 2 }} />
+            <Button
+              fullWidth
+              variant="contained"
+              startIcon={<SaveIcon />}
+              onClick={handleSubmit}
+              disabled={!isValid || loading}
+            >
+              {loading ? 'Đang lưu...' : 'Lưu chương trình'}
+            </Button>
+          </Paper>
+        </Grid>
+      </Grid>
     </Container>
   );
 }
