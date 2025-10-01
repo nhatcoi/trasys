@@ -215,6 +215,18 @@ export default function TmsLayout({
           permissions: ['tms.program.read'],
         },
         {
+          key: '/tms/programs/block-groups',
+          icon: <AccountTreeIcon />,
+          label: 'Quản lý nhóm khối học phần',
+          permissions: ['tms.program.read'],
+        },
+        {
+          key: '/tms/programs/framework',
+          icon: <StorageIcon />,
+          label: 'Khung chương trình đào tạo',
+          permissions: ['tms.program.read'],
+        },
+        {
           key: '/tms/programs/review',
           icon: <VisibilityIcon />,
           label: 'Xem xét chương trình',

@@ -27,6 +27,9 @@ export enum ProgramBlockType {
   OTHER = 'other',
 }
 
+export const PROGRAM_BLOCK_GROUP_TYPES = ['required', 'elective', 'core', 'other'] as const;
+export type ProgramBlockGroupType = (typeof PROGRAM_BLOCK_GROUP_TYPES)[number];
+
 export enum ProgramDegreeLevel {
   BACHELOR = 'bachelor',
   MASTER = 'master',
@@ -196,6 +199,32 @@ export function normalizeProgramBlockType(type?: string | null): ProgramBlockTyp
     return value as ProgramBlockType;
   }
   return ProgramBlockType.CORE;
+}
+
+export function getProgramBlockGroupBaseType(type?: string | null): ProgramBlockGroupType {
+  const value = (type || '').toLowerCase();
+  if (value.startsWith('elective')) return 'elective';
+  if (value.startsWith('required')) return 'required';
+  if (value.startsWith('core')) return 'core';
+  return 'other';
+}
+
+export function getProgramBlockGroupTypeLabel(type: ProgramBlockGroupType | string): string {
+  const base = getProgramBlockGroupBaseType(type);
+  switch (base) {
+    case 'required':
+      return 'Các học phần bắt buộc';
+    case 'elective':
+      return 'Các học phần tự chọn';
+    case 'core':
+      return 'Các học phần chính';
+    default:
+      return 'Nhóm học phần khác';
+  }
+}
+
+export function normalizeProgramBlockGroupType(type?: string | null): string {
+  return (type ?? 'OTHER').toString().trim().toUpperCase();
 }
 
 export const DEFAULT_PROGRAM_PAGE_SIZE = 10;

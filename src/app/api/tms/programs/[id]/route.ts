@@ -45,6 +45,7 @@ const selectProgramDetail = {
           course_id: true,
           is_required: true,
           display_order: true,
+          group_id: true,
           Course: {
             select: {
               id: true,
@@ -52,6 +53,26 @@ const selectProgramDetail = {
               name_vi: true,
               credits: true,
             },
+          },
+        },
+        orderBy: { display_order: 'asc' },
+      },
+      ProgramBlockGroup: {
+        select: {
+          id: true,
+          code: true,
+          title: true,
+          group_type: true,
+          display_order: true,
+          ProgramBlockGroupRule: {
+            select: {
+              id: true,
+              min_credits: true,
+              max_credits: true,
+              min_courses: true,
+              max_courses: true,
+            },
+            orderBy: { id: 'asc' },
           },
         },
         orderBy: { display_order: 'asc' },
@@ -66,6 +87,7 @@ const selectProgramDetail = {
       course_id: true,
       is_required: true,
       display_order: true,
+      group_id: true,
       Course: {
         select: {
           id: true,

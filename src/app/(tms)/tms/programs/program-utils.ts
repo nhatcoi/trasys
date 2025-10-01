@@ -1,7 +1,9 @@
 import {
+  ProgramBlockGroupType,
   ProgramBlockType,
   ProgramPriority,
   ProgramStatus,
+  getProgramBlockGroupBaseType,
   normalizeProgramBlockType,
 } from '@/constants/programs';
 
@@ -78,12 +80,30 @@ export interface ProgramCourseMapApiItem {
   course_id?: string | number | null;
   is_required?: boolean | null;
   display_order?: number | null;
+  group_id?: string | number | null;
   Course?: {
     id?: string | number | null;
     code?: string | null;
     name_vi?: string | null;
     credits?: number | null;
   };
+}
+
+export interface ProgramBlockGroupRuleApiRaw {
+  id?: string | number | null;
+  min_credits?: number | string | null;
+  max_credits?: number | string | null;
+  min_courses?: number | null;
+  max_courses?: number | null;
+}
+
+export interface ProgramBlockGroupApiRaw {
+  id?: string | number | null;
+  code: string;
+  title: string;
+  group_type: string;
+  display_order?: number | null;
+  ProgramBlockGroupRule?: ProgramBlockGroupRuleApiRaw[];
 }
 
 export interface ProgramBlockApiItem {
@@ -93,6 +113,7 @@ export interface ProgramBlockApiItem {
   block_type: ProgramBlockType | string;
   display_order?: number | null;
   ProgramCourseMap?: ProgramCourseMapApiItem[];
+  ProgramBlockGroup?: ProgramBlockGroupApiRaw[];
 }
 
 export interface ProgramListItem {
@@ -136,6 +157,7 @@ export interface ProgramCourseItem {
   required: boolean;
   displayOrder: number;
   courseId: string;
+  groupId: string | null;
 }
 
 export interface ProgramBlockItem {
@@ -145,12 +167,31 @@ export interface ProgramBlockItem {
   blockType: ProgramBlockType;
   displayOrder: number;
   courses: ProgramCourseItem[];
+  groups: ProgramBlockGroupItem[];
 }
 
 export interface ProgramDetail extends ProgramListItem {
   plo?: unknown;
   blocks: ProgramBlockItem[];
   standaloneCourses: ProgramCourseItem[];
+}
+
+export interface ProgramBlockGroupRuleItem {
+  id: string;
+  minCredits: number | null;
+  maxCredits: number | null;
+  minCourses: number | null;
+  maxCourses: number | null;
+}
+
+export interface ProgramBlockGroupItem {
+  id: string;
+  code: string;
+  title: string;
+  groupType: ProgramBlockGroupType;
+  rawGroupType: string;
+  displayOrder: number;
+  rules: ProgramBlockGroupRuleItem[];
 }
 
 export interface ProgramOutcomeFormItem {
@@ -167,6 +208,7 @@ export interface ProgramCourseFormItem {
   credits: number;
   required: boolean;
   displayOrder: number;
+  groupId?: string | null;
 }
 
 export interface ProgramBlockFormItem {
@@ -176,6 +218,7 @@ export interface ProgramBlockFormItem {
   blockType: ProgramBlockType;
   displayOrder: number;
   courses: ProgramCourseFormItem[];
+  groups: ProgramBlockGroupItem[];
 }
 
 export interface ProgramFormState {
@@ -227,6 +270,7 @@ export const createEmptyBlock = (): ProgramBlockFormItem => ({
   blockType: ProgramBlockType.CORE,
   displayOrder: 1,
   courses: [],
+  groups: [],
 });
 
 export const createEmptyCourse = (): ProgramCourseFormItem => ({
@@ -237,6 +281,7 @@ export const createEmptyCourse = (): ProgramCourseFormItem => ({
   credits: 0,
   required: true,
   displayOrder: 1,
+  groupId: null,
 });
 
 export const createDefaultProgramForm = (): ProgramFormState => ({
@@ -336,6 +381,7 @@ export const mapProgramDetail = (data: ProgramApiResponseItem): ProgramDetail =>
   const blockItems = Array.isArray(data.ProgramBlock) ? data.ProgramBlock : [];
   const blocks: ProgramBlockItem[] = blockItems.map((block, blockIndex) => {
     const courseItems = Array.isArray(block.ProgramCourseMap) ? block.ProgramCourseMap : [];
+    const groupItems = Array.isArray(block.ProgramBlockGroup) ? block.ProgramBlockGroup : [];
     return {
       id: safeId(block.id, 'block'),
       code: block.code,
@@ -356,7 +402,30 @@ export const mapProgramDetail = (data: ProgramApiResponseItem): ProgramDetail =>
             : courseMap.Course?.id != null
             ? courseMap.Course.id.toString()
             : '',
+        groupId:
+          courseMap.group_id != null
+            ? courseMap.group_id.toString()
+            : null,
       })),
+      groups: groupItems.map((group, groupIndex) => {
+        const baseType = getProgramBlockGroupBaseType(group.group_type);
+        const rules = Array.isArray(group.ProgramBlockGroupRule) ? group.ProgramBlockGroupRule : [];
+        return {
+          id: safeId(group.id, 'group'),
+          code: group.code,
+          title: group.title,
+          groupType: baseType,
+          rawGroupType: (group.group_type ?? '').toString(),
+          displayOrder: group.display_order ?? groupIndex + 1,
+          rules: rules.map((rule) => ({
+            id: safeId(rule.id, 'rule'),
+            minCredits: rule.min_credits != null ? Number(rule.min_credits) : null,
+            maxCredits: rule.max_credits != null ? Number(rule.max_credits) : null,
+            minCourses: rule.min_courses ?? null,
+            maxCourses: rule.max_courses ?? null,
+          })),
+        };
+      }),
     };
   });
 
@@ -412,7 +481,9 @@ export const mapProgramDetailToForm = (detail: ProgramDetail): ProgramFormState 
       credits: course.credits,
       required: course.required,
       displayOrder: course.displayOrder ?? courseIndex + 1,
+      groupId: course.groupId ?? null,
     })),
+    groups: block.groups,
   })),
   standaloneCourses: detail.standaloneCourses.map((course, index) => ({
     id: course.id || safeId(null, `standalone-${index}`),
@@ -463,5 +534,6 @@ export const buildProgramPayloadFromForm = (form: ProgramFormState) => ({
       course_id: Number(course.courseId),
       is_required: course.required,
       display_order: Math.max(1, course.displayOrder || index + 1),
+      group_id: course.groupId ? Number(course.groupId) : undefined,
     })),
 });
