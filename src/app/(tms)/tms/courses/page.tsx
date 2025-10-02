@@ -64,18 +64,13 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import {
-  COURSE_PRIORITIES,
   COURSE_STATUSES,
-  CoursePriority,
   CourseStatus,
   WorkflowStage,
   getCourseTypeLabel,
-  getPriorityColor,
-  getPriorityLabel,
   getStatusColor,
   getStatusLabel,
   getWorkflowStageLabel,
-  normalizeCoursePriority,
 } from '@/constants/courses';
 
 interface Course {
@@ -84,6 +79,8 @@ interface Course {
   name_vi: string;
   name_en?: string;
   credits: number;
+  theory_credit?: number;
+  practical_credit?: number;
   type: string;
   status: string;
   workflow_stage: string;
@@ -97,6 +94,29 @@ interface Course {
   };
 }
 
+// Helper function to format decimal values
+const formatCredit = (value: any): string => {
+  if (value === null || value === undefined) return '0';
+  
+  // Handle Decimal objects from Prisma
+  if (typeof value === 'object' && value.toNumber) {
+    return value.toNumber().toString();
+  }
+  
+  // Handle string numbers
+  if (typeof value === 'string') {
+    const num = parseFloat(value);
+    return isNaN(num) ? '0' : num.toString();
+  }
+  
+  // Handle regular numbers
+  if (typeof value === 'number') {
+    return value.toString();
+  }
+  
+  return '0';
+};
+
 export default function CoursesPage() {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
@@ -105,7 +125,6 @@ export default function CoursesPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<CourseStatus | 'all'>('all');
   const [selectedFaculty, setSelectedFaculty] = useState<string>('all');
-  const [selectedPriority, setSelectedPriority] = useState<CoursePriority | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -113,6 +132,7 @@ export default function CoursesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showSnackbar, setShowSnackbar] = useState(false);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
   // Fetch faculties from API
   const fetchFaculties = async () => {
@@ -136,10 +156,10 @@ export default function CoursesPage() {
       
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '10',
+        limit: '50',
         ...(selectedStatus !== 'all' && { status: selectedStatus }),
         ...(selectedFaculty !== 'all' && { orgUnitId: selectedFaculty }),
-        ...(searchTerm && { search: searchTerm })
+        ...(debouncedSearchTerm && { search: debouncedSearchTerm })
       });
 
       const response = await fetch(`/api/tms/courses?${params}`);
@@ -163,14 +183,22 @@ export default function CoursesPage() {
     }
   };
 
-  // Load courses on component mount and when filters change
   useEffect(() => {
     fetchFaculties();
   }, []);
 
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   useEffect(() => {
     fetchCourses();
-  }, [page, selectedStatus, selectedFaculty, searchTerm]);
+  }, [page, selectedStatus, selectedFaculty, debouncedSearchTerm]);
 
   // Filter courses (now handled by API)
   const filteredCourses = courses;
@@ -377,21 +405,6 @@ export default function CoursesPage() {
             </Select>
           </FormControl>
 
-          <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel>Độ ưu tiên</InputLabel>
-            <Select
-              value={selectedPriority}
-              onChange={(e) => setSelectedPriority(e.target.value as CoursePriority | 'all')}
-              label="Độ ưu tiên"
-            >
-              <MenuItem value="all">Tất cả</MenuItem>
-              {COURSE_PRIORITIES.map((priority) => (
-                <MenuItem key={priority} value={priority}>
-                  {getPriorityLabel(priority)}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
 
           <Button
             variant="outlined"
@@ -399,8 +412,8 @@ export default function CoursesPage() {
             onClick={() => {
               setSelectedStatus('all');
               setSelectedFaculty('all');
-              setSelectedPriority('all');
               setSearchTerm('');
+              setDebouncedSearchTerm('');
             }}
           >
             Xóa bộ lọc
@@ -422,19 +435,17 @@ export default function CoursesPage() {
                 <TableCell>Mã môn</TableCell>
                 <TableCell>Tên học phần</TableCell>
                 <TableCell>Khoa</TableCell>
+                <TableCell>Tín chỉ</TableCell>
                 <TableCell>Danh mục</TableCell>
                 <TableCell align="center">Trạng thái</TableCell>
-                <TableCell align="center">Độ ưu tiên</TableCell>
-                <TableCell>Người gửi</TableCell>
                 <TableCell>Ngày gửi</TableCell>
-                <TableCell>Người xem xét</TableCell>
                 <TableCell align="center">Thao tác</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                     <CircularProgress size={24} />
                     <Typography>Đang tải...</Typography>
@@ -443,23 +454,18 @@ export default function CoursesPage() {
               </TableRow>
             ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                     <Alert severity="error">{error}</Alert>
                   </TableCell>
                 </TableRow>
               ) : filteredCourses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                     <Typography color="text.secondary">Không có học phần nào</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredCourses.map((course) => {
-                  const normalizedPriority = normalizeCoursePriority(
-                    course.workflow_priority || (course as any).priority
-                  );
-                  const priorityLabel = getPriorityLabel(normalizedPriority);
-                  const priorityColor = getPriorityColor(normalizedPriority);
                   const courseTypeLabel = getCourseTypeLabel(course.type);
                   return (
                   <TableRow 
@@ -500,10 +506,33 @@ export default function CoursesPage() {
                       {course.name_vi}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {course.credits} tín chỉ • {courseTypeLabel}
+                      {courseTypeLabel}
                     </Typography>
                   </TableCell>
                   <TableCell>{course.OrgUnit?.name || 'N/A'}</TableCell>
+                  <TableCell>
+                    <Stack spacing={0.5}>
+                      <Typography variant="body2" fontWeight="medium" color="primary">
+                        Tổng: {course.credits} tín chỉ
+                      </Typography>
+                      <Stack direction="row" spacing={1}>
+                        <Chip 
+                          label={`LT: ${formatCredit(course.theory_credit)}`} 
+                          size="small" 
+                          variant="outlined" 
+                          color="info"
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                        <Chip 
+                          label={`TH: ${formatCredit(course.practical_credit)}`} 
+                          size="small" 
+                          variant="outlined" 
+                          color="secondary"
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      </Stack>
+                    </Stack>
+                  </TableCell>
                   <TableCell>
                     <Chip label="Kiến thức chuyên ngành" size="small" variant="outlined" />
                   </TableCell>
@@ -514,22 +543,9 @@ export default function CoursesPage() {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell align="center">
-                    <Chip
-                      label={priorityLabel}
-                      color={priorityColor as any}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>N/A</TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {course.submitted_at ? new Date(course.submitted_at).toLocaleDateString() : '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      Chưa phân công
+                      {course.created_at ? new Date(course.created_at).toLocaleDateString() : '-'}
                     </Typography>
                   </TableCell>
                   <TableCell align="center">
@@ -660,7 +676,7 @@ export default function CoursesPage() {
                     </ListItemIcon>
                     <ListItemText
                       primary="Tạo mới"
-                      secondary={`Bởi N/A vào ${selectedCourse.submitted_at ? new Date(selectedCourse.submitted_at).toLocaleDateString() : 'N/A'}`}
+                      secondary={`Bởi N/A vào ${selectedCourse.created_at ? new Date(selectedCourse.created_at).toLocaleDateString() : 'N/A'}`}
                     />
                   </ListItem>
                   <ListItem>

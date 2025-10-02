@@ -74,11 +74,13 @@ interface FormData {
     nameVi: string;
     nameEn: string;
     credits: number;
+    theory_credit?: number;
+    practical_credit?: number;
     orgUnitId: string;
     type: CourseType;
     description: string;
   };
-  prerequisites: string[];
+  prerequisites: (string | {id: string, code: string, name_vi: string, name_en: string, credits: number, status: string, label: string, value: string})[];
   learningObjectives: Array<{
     id: string;
     objective: string;
@@ -164,11 +166,13 @@ export default function CreateCoursePage() {
       nameVi: '',
       nameEn: '',
       credits: 0,
+      theory_credit: undefined,
+      practical_credit: undefined,
       orgUnitId: '',
       type: CourseType.THEORY,
       description: ''
     },
-    prerequisites: [] as string[],
+    prerequisites: [] as (string | {id: string, code: string, name_vi: string, name_en: string, credits: number, status: string, label: string, value: string})[],
     learningObjectives: [] as Array<{
       id: string;
       objective: string;
@@ -214,6 +218,8 @@ export default function CreateCoursePage() {
         name_vi: formData.basicInfo.nameVi,
         name_en: formData.basicInfo.nameEn,
         credits: formData.basicInfo.credits,
+        theory_credit: formData.basicInfo.theory_credit,
+        practical_credit: formData.basicInfo.practical_credit,
         org_unit_id: parseInt(formData.basicInfo.orgUnitId),
         type: formData.basicInfo.type,
         description: formData.basicInfo.description,
@@ -280,6 +286,8 @@ export default function CreateCoursePage() {
         name_vi: formData.basicInfo.nameVi,
         name_en: formData.basicInfo.nameEn,
         credits: formData.basicInfo.credits,
+        theory_credit: formData.basicInfo.theory_credit,
+        practical_credit: formData.basicInfo.practical_credit,
         org_unit_id: parseInt(formData.basicInfo.orgUnitId),
         type: formData.basicInfo.type,
         description: formData.basicInfo.description,
@@ -420,6 +428,21 @@ export default function CreateCoursePage() {
       ...prev,
       [section]: { ...prev[section], ...data }
     }));
+  };
+
+  // Validation helper for credits
+  const validateCredits = (theory: number | undefined, practical: number | undefined, total: number) => {
+    const theoryNum = theory || 0;
+    const practicalNum = practical || 0;
+    return theoryNum + practicalNum <= total;
+  };
+
+  const getCreditsValidationError = () => {
+    const { theory_credit, practical_credit, credits } = formData.basicInfo;
+    if (!validateCredits(theory_credit, practical_credit, credits)) {
+      return `Tổng tín chỉ lý thuyết (${theory_credit || 0}) + thực hành (${practical_credit || 0}) = ${(theory_credit || 0) + (practical_credit || 0)} vượt quá tổng tín chỉ (${credits})`;
+    }
+    return null;
   };
 
   const addLearningObjective = () => {
@@ -582,6 +605,31 @@ export default function CreateCoursePage() {
                 onChange={(e) => updateFormData('basicInfo', { credits: parseFloat(e.target.value) || 0 })}
                 inputProps={{ min: 0, max: 10, step: 0.5 }}
               />
+              <TextField
+                fullWidth
+                label="Tín chỉ lý thuyết"
+                type="number"
+                value={formData.basicInfo.theory_credit || ''}
+                onChange={(e) => updateFormData('basicInfo', { theory_credit: parseFloat(e.target.value) || undefined })}
+                inputProps={{ min: 0, max: formData.basicInfo.credits, step: 0.5 }}
+                helperText={`Tối đa ${formData.basicInfo.credits} tín chỉ`}
+                error={!!getCreditsValidationError()}
+              />
+              <TextField
+                fullWidth
+                label="Tín chỉ thực hành"
+                type="number"
+                value={formData.basicInfo.practical_credit || ''}
+                onChange={(e) => updateFormData('basicInfo', { practical_credit: parseFloat(e.target.value) || undefined })}
+                inputProps={{ min: 0, max: formData.basicInfo.credits, step: 0.5 }}
+                helperText={`Tối đa ${formData.basicInfo.credits} tín chỉ`}
+                error={!!getCreditsValidationError()}
+              />
+              {getCreditsValidationError() && (
+                <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>
+                  {getCreditsValidationError()}
+                </Alert>
+              )}
               <FormControl fullWidth>
                 <InputLabel>Loại môn học *</InputLabel>
                 <Select
@@ -637,7 +685,7 @@ export default function CreateCoursePage() {
               }}
               getOptionLabel={(option) => {
                 if (typeof option === 'string') return option;
-                return option.label || option;
+                return option.label || `${option.code} - ${option.name_vi}`;
               }}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
@@ -657,30 +705,34 @@ export default function CreateCoursePage() {
               )}
               renderOption={(props, option) => (
                 <Box component="li" {...props}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                    <Typography variant="body1">
-                      {option.code} - {option.name_vi}
-                    </Typography>
-                    {option.name_en && (
-                      <Typography variant="caption" color="text.secondary">
-                        {option.name_en}
+                  {typeof option === 'string' ? (
+                    <Typography variant="body1">{option}</Typography>
+                  ) : (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                      <Typography variant="body1">
+                        {option.code} - {option.name_vi}
                       </Typography>
-                    )}
-                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                      <Chip 
-                        label={`${option.credits} tín chỉ`} 
-                        size="small" 
-                        variant="outlined"
-                        color="primary"
-                      />
-                      <Chip 
-                        label={getStatusLabel(option.status || '')} 
-                        size="small" 
-                        variant="outlined"
-                        color={getStatusColor(option.status || '') as any}
-                      />
+                      {option.name_en && (
+                        <Typography variant="caption" color="text.secondary">
+                          {option.name_en}
+                        </Typography>
+                      )}
+                      <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                        <Chip 
+                          label={`${option.credits} tín chỉ`} 
+                          size="small" 
+                          variant="outlined"
+                          color="primary"
+                        />
+                        <Chip 
+                          label={getStatusLabel(option.status || '')} 
+                          size="small" 
+                          variant="outlined"
+                          color={getStatusColor(option.status || '') as any}
+                        />
+                      </Box>
                     </Box>
-                  </Box>
+                  )}
                 </Box>
               )}
               ListboxProps={{

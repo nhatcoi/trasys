@@ -85,12 +85,37 @@ import {
   normalizeCoursePriority,
 } from '@/constants/courses';
 
+// Helper function to format decimal values
+const formatCredit = (value: any): string => {
+  if (value === null || value === undefined) return '0';
+  
+  // Handle Decimal objects from Prisma
+  if (typeof value === 'object' && value.toNumber) {
+    return value.toNumber().toString();
+  }
+  
+  // Handle string numbers
+  if (typeof value === 'string') {
+    const num = parseFloat(value);
+    return isNaN(num) ? '0' : num.toString();
+  }
+  
+  // Handle regular numbers
+  if (typeof value === 'number') {
+    return value.toString();
+  }
+  
+  return '0';
+};
+
 interface CourseDetail {
   id: string;
   code: string;
   name_vi: string;
   name_en?: string;
   credits: number;
+  theory_credit?: number;
+  practical_credit?: number;
   type: CourseType | string;
   status: CourseStatus | string;
   org_unit_id: string;
@@ -217,6 +242,8 @@ export default function CourseDetailPage() {
         name_en: courseDetail.name_en || '',
         code: courseDetail.code || '',
         credits: courseDetail.credits || 0,
+        theory_credit: courseDetail.theory_credit || null,
+        practical_credit: courseDetail.practical_credit || null,
         description: courseDetail.description || '',
         status: courseDetail.status || CourseStatus.DRAFT,
         org_unit_id: courseDetail.org_unit_id || '',
@@ -246,6 +273,8 @@ export default function CourseDetailPage() {
     name_en: '',
     code: '',
     credits: 0,
+    theory_credit: null as number | null,
+    practical_credit: null as number | null,
     description: '',
     status: '',
     org_unit_id: '',
@@ -283,6 +312,8 @@ export default function CourseDetailPage() {
       name_en: courseDetail.name_en || '',
       code: courseDetail.code || '',
       credits: courseDetail.credits || 0,
+      theory_credit: courseDetail.theory_credit || null,
+      practical_credit: courseDetail.practical_credit || null,
       description: courseDetail.description || '',
       status: courseDetail.status || '',
       org_unit_id: courseDetail.org_unit_id || '',
@@ -929,6 +960,20 @@ export default function CourseDetailPage() {
             <Typography variant="h6" color="text.secondary">
               {courseDetail.code} - {courseDetail.credits} tín chỉ
             </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <Chip 
+                label={`LT: ${formatCredit(courseDetail.theory_credit)}`} 
+                size="small" 
+                variant="outlined" 
+                color="info"
+              />
+              <Chip 
+                label={`TH: ${formatCredit(courseDetail.practical_credit)}`} 
+                size="small" 
+                variant="outlined" 
+                color="secondary"
+              />
+            </Box>
           {userRoles.length > 0 && (
             <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               {userRoles.map((r) => (
@@ -1071,9 +1116,23 @@ export default function CourseDetailPage() {
                     <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>
                       Số tín chỉ
                     </Typography>
-                    <Typography variant="body1" sx={{ mt: 0.5 }}>
-                      {courseDetail.credits}
+                    <Typography variant="body1" sx={{ mt: 0.5, mb: 1 }}>
+                      Tổng: {courseDetail.credits} tín chỉ
                     </Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Chip 
+                        label={`Lý thuyết: ${formatCredit(courseDetail.theory_credit)}`} 
+                        size="small" 
+                        variant="outlined" 
+                        color="info"
+                      />
+                      <Chip 
+                        label={`Thực hành: ${formatCredit(courseDetail.practical_credit)}`} 
+                        size="small" 
+                        variant="outlined" 
+                        color="secondary"
+                      />
+                    </Box>
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>
@@ -2068,6 +2127,26 @@ export default function CourseDetailPage() {
               onChange={(e) => handleInputChange('credits', parseInt(e.target.value) || 0)}
               variant="outlined"
             />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                fullWidth
+                label="Tín chỉ lý thuyết"
+                type="number"
+                value={editData.theory_credit || ''}
+                onChange={(e) => handleInputChange('theory_credit', parseFloat(e.target.value) || null)}
+                variant="outlined"
+                inputProps={{ step: 0.5, min: 0 }}
+              />
+              <TextField
+                fullWidth
+                label="Tín chỉ thực hành"
+                type="number"
+                value={editData.practical_credit || ''}
+                onChange={(e) => handleInputChange('practical_credit', parseFloat(e.target.value) || null)}
+                variant="outlined"
+                inputProps={{ step: 0.5, min: 0 }}
+              />
+            </Box>
             <FormControl fullWidth>
               <InputLabel>Trạng thái</InputLabel>
               <Select

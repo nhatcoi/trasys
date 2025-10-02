@@ -5,6 +5,8 @@ export interface CreateCourseInput {
   name_vi: string;
   name_en?: string;
   credits: number;
+  theory_credit?: number;
+  practical_credit?: number;
   org_unit_id: number;
   type: 'theory' | 'practice' | 'theory_practice' | 'mixed' | 'thesis' | 'internship';
   description?: string;

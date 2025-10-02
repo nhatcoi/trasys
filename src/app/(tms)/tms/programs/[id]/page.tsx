@@ -9,23 +9,12 @@ import {
   CircularProgress,
   Container,
   Divider,
-  Grid,
   Paper,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Typography,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
-  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -33,17 +22,21 @@ import {
   getProgramPriorityLabel,
   getProgramStatusColor,
   getProgramStatusLabel,
+  getProgramBlockTypeLabel,
+  getProgramBlockGroupTypeLabel,
+  ProgramBlockGroupType,
 } from '@/constants/programs';
 import {
   ProgramDetail,
-  ProgramDetailApiResponse,
+  ProgramApiResponseItem,
+  ProgramBlockGroupItem,
   mapPloToOutcomeItems,
   mapProgramDetail,
 } from '../program-utils';
 
 interface ProgramDetailApiWrapper {
   success: boolean;
-  data?: ProgramDetailApiResponse;
+  data?: ProgramApiResponseItem;
   error?: string;
 }
 
@@ -52,6 +45,242 @@ const formatDate = (value?: string | null): string => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString('vi-VN');
+};
+
+function summarizeCourses(courses: ProgramDetail['blocks'][number]['courses']) {
+  return courses.reduce(
+    (acc, course) => {
+      const credits = course.credits ?? 0;
+      acc.totalCredits += credits;
+      if (course.required) {
+        acc.requiredCredits += credits;
+        acc.requiredCount += 1;
+      } else {
+        acc.optionalCredits += credits;
+        acc.optionalCount += 1;
+      }
+      return acc;
+    },
+    { totalCredits: 0, requiredCredits: 0, optionalCredits: 0, requiredCount: 0, optionalCount: 0 },
+  );
+}
+
+function RulesList({
+  rules,
+}: {
+  rules: Array<{ id: string; minCredits: number | null; maxCredits: number | null; minCourses: number | null; maxCourses: number | null }>;
+}): JSX.Element | null {
+  if (!rules || rules.length === 0) return null;
+
+  return (
+    <Stack spacing={1} sx={{ mt: 1 }}>
+      <Typography variant="caption" color="text.secondary">
+        Quy tắc áp dụng:
+      </Typography>
+      {rules.map((rule) => {
+        const parts: string[] = [];
+
+        if (rule.minCredits != null || rule.maxCredits != null) {
+          const creditRange = [rule.minCredits, rule.maxCredits]
+            .map((value) => (value != null ? `${value}` : '—'))
+            .join(' - ');
+          parts.push(`Tín chỉ: ${creditRange}`);
+        }
+
+        if (rule.minCourses != null || rule.maxCourses != null) {
+          const courseRange = [rule.minCourses, rule.maxCourses]
+            .map((value) => (value != null ? `${value}` : '—'))
+            .join(' - ');
+          parts.push(`Số học phần: ${courseRange}`);
+        }
+
+        return (
+          <Typography key={rule.id} variant="caption" color="text.secondary">
+            • {parts.join(' • ')}
+          </Typography>
+        );
+      })}
+    </Stack>
+  );
+}
+
+const renderBlock = (block: ProgramDetail['blocks'][number]) => {
+  const groups = Array.isArray(block.groups) ? block.groups : [];
+  const blockSummary = summarizeCourses(block.courses);
+
+  const coursesByGroup = groups.reduce<Record<string, typeof block.courses>>((acc, group) => {
+    acc[group.id] = block.courses.filter((course) => course.groupId === group.id);
+    return acc;
+  }, {});
+
+  // Sort groups by display order
+  const sortedGroups = [...groups].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
+  const groupedCourseIds = new Set<string>();
+
+  const renderGroupCard = (group: ProgramBlockGroupItem, courses: ProgramDetail['blocks'][number]['courses']) => {
+    courses.forEach((course) => groupedCourseIds.add(course.mapId));
+    const summary = summarizeCourses(courses);
+    const rawTypeLabel = group.rawGroupType && !group.rawGroupType.toLowerCase().startsWith(group.groupType)
+      ? group.rawGroupType
+      : null;
+
+    return (
+      <Paper key={group.id} variant="outlined" sx={{ p: 1.5 }}>
+        <Stack spacing={1}>
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+            <Box>
+              <Typography fontWeight={600}>{group.code} — {group.title}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {getProgramBlockGroupTypeLabel(group.groupType)}
+                {rawTypeLabel ? ` • ${rawTypeLabel}` : ''}
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Chip label={`${courses.length} học phần`} size="small" variant="outlined" />
+              <Chip label={`${summary.totalCredits} tín chỉ`} size="small" variant="outlined" />
+            </Stack>
+          </Stack>
+          <RulesList rules={group.rules} />
+          {courses.length > 0 ? (
+            <Stack spacing={1} sx={{ mt: 1 }}>
+              <Typography variant="caption" color="text.secondary">
+                {summary.requiredCount} học phần bắt buộc • {summary.optionalCount} học phần tự chọn
+              </Typography>
+              {courses.map((course) => (
+                <Paper key={course.mapId} variant="outlined" sx={{ p: 1.5 }}>
+                  <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>
+                        {course.code} — {course.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {course.credits} tín chỉ • Thứ tự: {course.displayOrder}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={course.required ? 'Bắt buộc' : 'Tự chọn'}
+                      color={course.required ? 'success' : 'default'}
+                      size="small"
+                    />
+                  </Stack>
+                </Paper>
+              ))}
+            </Stack>
+          ) : (
+            <Typography variant="caption" color="text.secondary">
+              Chưa có học phần trong nhóm.
+            </Typography>
+          )}
+        </Stack>
+      </Paper>
+    );
+  };
+
+  return (
+    <Paper key={block.id} variant="outlined" sx={{ p: 3, mb: 2 }}>
+      <Stack spacing={2}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', md: 'center' }} justifyContent="space-between">
+          <Box>
+            <Typography variant="h6" component="span">
+              {block.code} — {block.title}
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+              <Chip label={getProgramBlockTypeLabel(block.blockType)} size="small" color="primary" variant="outlined" />
+            </Stack>
+          </Box>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip label={`${block.courses.length} học phần`} size="small" variant="outlined" />
+            <Chip label={`${blockSummary.totalCredits} tín chỉ`} size="small" variant="outlined" />
+            <Chip label={`${groups.length} nhóm`} size="small" variant="outlined" />
+            <Chip label={`${blockSummary.requiredCount} bắt buộc`} size="small" variant="outlined" color="success" />
+            <Chip label={`${blockSummary.optionalCount} tự chọn`} size="small" variant="outlined" />
+          </Stack>
+        </Stack>
+
+        {sortedGroups.length > 0 && (
+          <Stack spacing={2}>
+            <Typography variant="subtitle2">Nhóm khối học phần</Typography>
+            <Stack spacing={2}>
+              {sortedGroups.map((group) => renderGroupCard(group, coursesByGroup[group.id] ?? []))}
+            </Stack>
+          </Stack>
+        )}
+
+        {(() => {
+          const ungroupedCourses = block.courses.filter((course) => !groupedCourseIds.has(course.mapId));
+          if (ungroupedCourses.length === 0) return null;
+          const summary = summarizeCourses(ungroupedCourses);
+          return (
+            <Stack spacing={1.5}>
+              <Divider sx={{ my: 1 }} />
+              <Typography variant="subtitle2">Học phần không thuộc nhóm</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {summary.totalCredits} tín chỉ • {summary.requiredCount} bắt buộc • {summary.optionalCount} tự chọn
+              </Typography>
+              <Stack spacing={1}>
+                {ungroupedCourses.map((course) => (
+                  <Paper key={course.mapId} variant="outlined" sx={{ p: 1.5 }}>
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', md: 'center' }}>
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="body1" fontWeight={600}>
+                          {course.code} — {course.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {course.credits} tín chỉ • Thứ tự: {course.displayOrder}
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={course.required ? 'Bắt buộc' : 'Tự chọn'}
+                        color={course.required ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            </Stack>
+          );
+        })()}
+      </Stack>
+    </Paper>
+  );
+};
+
+const renderStandaloneCourses = (program: ProgramDetail) => {
+  if (!program || program.standaloneCourses.length === 0) return null;
+
+  return (
+    <Paper sx={{ p: 3 }}>
+      <Stack spacing={2}>
+        <Typography variant="h6">Học phần độc lập</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {program.standaloneCourses.length} học phần nằm ngoài các khối
+        </Typography>
+        <Stack spacing={1.5}>
+          {program.standaloneCourses.map((course) => (
+            <Paper key={course.mapId} variant="outlined" sx={{ p: 1.5 }}>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', md: 'center' }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="body1" fontWeight={600}>
+                    {course.code} — {course.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {course.credits} tín chỉ • Thứ tự: {course.displayOrder}
+                  </Typography>
+                </Box>
+                <Chip
+                  label={course.required ? 'Bắt buộc' : 'Tự chọn'}
+                  color={course.required ? 'success' : 'default'}
+                  size="small"
+                />
+              </Stack>
+            </Paper>
+          ))}
+        </Stack>
+      </Stack>
+    </Paper>
+  );
 };
 
 export default function ProgramDetailPage(): JSX.Element {
@@ -177,8 +406,8 @@ export default function ProgramDetailPage(): JSX.Element {
             )}
           </Paper>
 
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+            <Box sx={{ flex: 1 }}>
               <Paper sx={{ p: 3, height: '100%' }}>
                 <Typography variant="h6" gutterBottom>
                   Thông tin chung
@@ -205,23 +434,23 @@ export default function ProgramDetailPage(): JSX.Element {
                   </Stack>
                 </Stack>
               </Paper>
-            </Grid>
-            <Grid item xs={12} md={6}>
+            </Box>
+            <Box sx={{ flex: 1 }}>
               <Paper sx={{ p: 3, height: '100%' }}>
                 <Typography variant="h6" gutterBottom>
                   Thống kê
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap' }}>
+                  <Box sx={{ flex: '1 1 45%', minWidth: '150px' }}>
                     <Paper variant="outlined" sx={{ p: 2 }}>
                       <Typography variant="caption" color="text.secondary">
                         Số khối kiến thức
                       </Typography>
                       <Typography variant="h5">{program.blocks.length}</Typography>
                     </Paper>
-                  </Grid>
-                  <Grid item xs={6}>
+                  </Box>
+                  <Box sx={{ flex: '1 1 45%', minWidth: '150px' }}>
                     <Paper variant="outlined" sx={{ p: 2 }}>
                       <Typography variant="caption" color="text.secondary">
                         Học phần thuộc khối
@@ -230,27 +459,27 @@ export default function ProgramDetailPage(): JSX.Element {
                         {program.blocks.reduce((acc, block) => acc + block.courses.length, 0)}
                       </Typography>
                     </Paper>
-                  </Grid>
-                  <Grid item xs={6}>
+                  </Box>
+                  <Box sx={{ flex: '1 1 45%', minWidth: '150px' }}>
                     <Paper variant="outlined" sx={{ p: 2 }}>
                       <Typography variant="caption" color="text.secondary">
                         Học phần độc lập
                       </Typography>
                       <Typography variant="h5">{program.standaloneCourses.length}</Typography>
                     </Paper>
-                  </Grid>
-                  <Grid item xs={6}>
+                  </Box>
+                  <Box sx={{ flex: '1 1 45%', minWidth: '150px' }}>
                     <Paper variant="outlined" sx={{ p: 2 }}>
                       <Typography variant="caption" color="text.secondary">
                         Sinh viên đang học
                       </Typography>
                       <Typography variant="h5">{program.stats.studentCount}</Typography>
                     </Paper>
-                  </Grid>
-                </Grid>
+                  </Box>
+                </Stack>
               </Paper>
-            </Grid>
-          </Grid>
+            </Box>
+          </Stack>
 
           {ploItems.length > 0 && (
             <Paper sx={{ p: 3 }}>
@@ -277,117 +506,35 @@ export default function ProgramDetailPage(): JSX.Element {
 
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
-              Cấu trúc chương trình
+              Khung chương trình đào tạo 
             </Typography>
             <Divider sx={{ mb: 2 }} />
             {program.blocks.length === 0 ? (
               <Alert severity="info">Chưa có khối kiến thức nào được cấu hình.</Alert>
             ) : (
-              program.blocks.map((block) => (
-                <Accordion key={block.id} defaultExpanded sx={{ mb: 1, '&:last-of-type': { mb: 0 } }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                      <Typography fontWeight="medium">
-                        {block.code} - {block.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {block.courses.length} học phần • Loại: {block.blockType}
-                      </Typography>
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    {block.courses.length === 0 ? (
-                      <Alert severity="info">Khối kiến thức này chưa có học phần nào.</Alert>
-                    ) : (
-                      <TableContainer>
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow>
-                              <TableCell>Mã học phần</TableCell>
-                              <TableCell>Tên học phần</TableCell>
-                              <TableCell align="center">Tín chỉ</TableCell>
-                              <TableCell align="center">Bắt buộc</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {block.courses.map((course) => (
-                              <TableRow key={course.id}>
-                                <TableCell>{course.code}</TableCell>
-                                <TableCell>{course.name}</TableCell>
-                                <TableCell align="center">{course.credits}</TableCell>
-                                <TableCell align="center">
-                                  <Chip
-                                    label={course.required ? 'Có' : 'Không'}
-                                    color={course.required ? 'success' : 'default'}
-                                    size="small"
-                                  />
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    )}
-                  </AccordionDetails>
-                </Accordion>
-              ))
+              <Stack spacing={3}>
+                {program.blocks.map((block) => renderBlock(block))}
+              </Stack>
             )}
           </Paper>
 
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Học phần độc lập
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            {program.standaloneCourses.length === 0 ? (
-              <Alert severity="info">Chưa có học phần độc lập nào.</Alert>
-            ) : (
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Mã học phần</TableCell>
-                      <TableCell>Tên học phần</TableCell>
-                      <TableCell align="center">Tín chỉ</TableCell>
-                      <TableCell align="center">Bắt buộc</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {program.standaloneCourses.map((course) => (
-                      <TableRow key={course.id}>
-                        <TableCell>{course.code}</TableCell>
-                        <TableCell>{course.name}</TableCell>
-                        <TableCell align="center">{course.credits}</TableCell>
-                        <TableCell align="center">
-                          <Chip
-                            label={course.required ? 'Có' : 'Không'}
-                            color={course.required ? 'success' : 'default'}
-                            size="small"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </Paper>
+          {renderStandaloneCourses(program)}
 
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Thông tin cập nhật
             </Typography>
             <Divider sx={{ mb: 2 }} />
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+              <Box sx={{ flex: 1 }}>
                 <Typography color="text.secondary">Ngày tạo</Typography>
                 <Typography fontWeight="medium">{formatDate(program.createdAt)}</Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
+              </Box>
+              <Box sx={{ flex: 1 }}>
                 <Typography color="text.secondary">Lần cập nhật gần nhất</Typography>
                 <Typography fontWeight="medium">{formatDate(program.updatedAt)}</Typography>
-              </Grid>
-            </Grid>
+              </Box>
+            </Stack>
           </Paper>
         </Stack>
       )}

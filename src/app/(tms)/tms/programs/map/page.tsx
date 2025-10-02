@@ -242,8 +242,8 @@ export default function ProgramCourseMapPage(): JSX.Element {
   const selectedProgram = useMemo(() => programs.find((p) => p.id === selectedProgramId) ?? null, [programs, selectedProgramId]);
 
   const selectedBlockFilter = useMemo(
-    () => (selectedBlockId === 'all' ? null : programBlocks.find((block) => block.id === selectedBlockId) ?? null),
-    [programBlocks, selectedBlockId],
+      () => (selectedBlockId === 'all' ? null : programBlocks.find((block) => block.id === selectedBlockId) ?? null),
+      [programBlocks, selectedBlockId],
   );
 
   const fetchPrograms = useCallback(async () => {
@@ -348,7 +348,7 @@ export default function ProgramCourseMapPage(): JSX.Element {
         isRequired: item.isRequired ?? true,
         displayOrder: item.displayOrder ?? 1,
         course: item.course
-          ? {
+            ? {
               id: item.course.id?.toString() ?? '',
               code: item.course.code ?? '—',
               nameVi: item.course.nameVi ?? item.course.nameEn ?? '',
@@ -356,14 +356,14 @@ export default function ProgramCourseMapPage(): JSX.Element {
               credits: item.course.credits,
               type: item.course.type,
             }
-          : null,
+            : null,
         block: item.block
-          ? {
+            ? {
               id: item.block.id?.toString() ?? '',
               code: item.block.code ?? '—',
               title: item.block.title ?? 'Không xác định',
             }
-          : null,
+            : null,
       }));
 
       setMappings(mappedItems);
@@ -503,8 +503,8 @@ export default function ProgramCourseMapPage(): JSX.Element {
   };
 
   const selectedCourse = useMemo(
-    () => availableCourses.find((course) => course.id === formState.courseId) ?? null,
-    [availableCourses, formState.courseId],
+      () => availableCourses.find((course) => course.id === formState.courseId) ?? null,
+      [availableCourses, formState.courseId],
   );
 
   const mappedCourseIds = useMemo(() => new Set(mappings.map((item) => item.courseId)), [mappings]);
@@ -588,330 +588,330 @@ export default function ProgramCourseMapPage(): JSX.Element {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Bản đồ học phần chương trình
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Quản lý các học phần thuộc chương trình, phân loại theo khối và trạng thái bắt buộc/tự chọn.
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={1}>
-          <Tooltip title="Làm mới">
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+          <Box>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Bản đồ học phần chương trình
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Quản lý các học phần thuộc chương trình, phân loại theo khối và trạng thái bắt buộc/tự chọn.
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1}>
+            <Tooltip title="Làm mới">
             <span>
               <IconButton onClick={fetchMappings} disabled={loading}>
                 <RefreshIcon />
               </IconButton>
             </span>
-          </Tooltip>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog} disabled={!selectedProgramId}>
-            Thêm học phần
-          </Button>
-        </Stack>
-      </Stack>
-
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Stack spacing={2}>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }}>
-            <Autocomplete
-              options={programs}
-              value={selectedProgram}
-              onChange={handleProgramChange}
-              getOptionLabel={(option) => option.label}
-              renderInput={(params) => <TextField {...params} label="Chương trình" placeholder="Chọn chương trình" />}
-              sx={{ minWidth: { sm: 260 } }}
-            />
-
-            <FormControl sx={{ minWidth: { sm: 200 } }} disabled={!selectedProgramId || programBlocks.length === 0}>
-              <InputLabel id="block-filter-label">Khối học phần</InputLabel>
-              <Select
-                labelId="block-filter-label"
-                label="Khối học phần"
-                value={selectedBlockId}
-                onChange={handleBlockFilterChange}
-              >
-                <MenuItem value="all">Tất cả</MenuItem>
-                <MenuItem value="null">Không thuộc khối</MenuItem>
-                {programBlocks.map((block) => (
-                  <MenuItem key={block.id} value={block.id}>
-                    {block.code} — {block.title}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <FormControl sx={{ minWidth: { sm: 180 } }}>
-              <InputLabel id="required-filter-label">Trạng thái</InputLabel>
-              <Select
-                labelId="required-filter-label"
-                label="Trạng thái"
-                value={selectedRequired}
-                onChange={handleRequiredFilterChange}
-              >
-                {REQUIRED_OPTIONS.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <Box sx={{ flexGrow: 1 }}>
-              <TextField
-                fullWidth
-                label="Tìm kiếm học phần"
-                placeholder="Nhập mã hoặc tên học phần"
-                value={searchValue}
-                onChange={(event) => setSearchValue(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') handleSearchSubmit();
-                }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={handleSearchSubmit}>
-                        <SearchIcon />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Box>
-
-            <Button variant="outlined" onClick={handleResetFilters}>
-              Đặt lại
+            </Tooltip>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog} disabled={!selectedProgramId}>
+              Thêm học phần
             </Button>
           </Stack>
-
-          {selectedProgram && (
-            <Alert severity="info" variant="outlined">
-              <Typography variant="body2">
-                Đang quản lý chương trình: <strong>{selectedProgram.code}</strong> — {selectedProgram.name}
-              </Typography>
-              {selectedBlockFilter && (
-                <Typography variant="caption" display="block" color="text.secondary">
-                  Lọc theo khối: {selectedBlockFilter.code} — {selectedBlockFilter.title}
-                </Typography>
-              )}
-            </Alert>
-          )}
-
-          {error && <Alert severity="error">{error}</Alert>}
         </Stack>
-      </Paper>
 
-      <Paper>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Học phần</TableCell>
-                <TableCell align="center">Tín chỉ</TableCell>
-                <TableCell>Khối học phần</TableCell>
-                <TableCell align="center">Thứ tự</TableCell>
-                <TableCell align="center">Trạng thái</TableCell>
-                <TableCell align="right">Thao tác</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    <Box sx={{ py: 6 }}>
-                      <CircularProgress size={32} />
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ) : mappings.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    <Box sx={{ py: 6 }}>
-                      <Typography>Chưa có học phần nào được gán cho chương trình.</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Hãy nhấn &quot;Thêm học phần&quot; để bắt đầu xây dựng bản đồ học phần.
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                mappings.map((mapping) => (
-                  <TableRow key={mapping.id} hover>
-                    <TableCell>
-                      <Stack spacing={0.5}>
-                        <Typography fontWeight={600}>{mapping.course?.code ?? '—'}</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {mapping.course?.nameVi || mapping.course?.nameEn || 'Không xác định'}
-                        </Typography>
-                      </Stack>
-                    </TableCell>
-                    <TableCell align="center">{mapping.course?.credits ?? '—'}</TableCell>
-                    <TableCell>
-                      {mapping.block ? (
-                        <Stack spacing={0.5}>
-                          <Typography>{mapping.block.code}</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {mapping.block.title}
-                          </Typography>
-                        </Stack>
-                      ) : (
-                        <Typography color="text.secondary">Không thuộc khối</Typography>
-                      )}
-                    </TableCell>
-                    <TableCell align="center">{mapping.displayOrder}</TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        label={REQUIRED_LABEL[String(mapping.isRequired)] || (mapping.isRequired ? 'Bắt buộc' : 'Tự chọn')}
-                        color={mapping.isRequired ? 'success' : 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Chỉnh sửa">
-                        <IconButton onClick={() => openEditDialog(mapping)}>
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Xóa">
-                        <IconButton onClick={() => handleDelete(mapping)}>
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Stack spacing={2}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }}>
+              <Autocomplete
+                  options={programs}
+                  value={selectedProgram}
+                  onChange={handleProgramChange}
+                  getOptionLabel={(option) => option.label}
+                  renderInput={(params) => <TextField {...params} label="Chương trình" placeholder="Chọn chương trình" />}
+                  sx={{ minWidth: { sm: 260 } }}
+              />
 
-        <Stack direction="row" justifyContent="flex-end" sx={{ px: 3, py: 2 }}>
-          <Pagination page={pagination.page} count={pagination.totalPages} onChange={handlePageChange} shape="rounded" color="primary" />
-        </Stack>
-      </Paper>
+              <FormControl sx={{ minWidth: { sm: 200 } }} disabled={!selectedProgramId || programBlocks.length === 0}>
+                <InputLabel id="block-filter-label">Khối học phần</InputLabel>
+                <Select
+                    labelId="block-filter-label"
+                    label="Khối học phần"
+                    value={selectedBlockId}
+                    onChange={handleBlockFilterChange}
+                >
+                  <MenuItem value="all">Tất cả</MenuItem>
+                  <MenuItem value="null">Không thuộc khối</MenuItem>
+                  {programBlocks.map((block) => (
+                      <MenuItem key={block.id} value={block.id}>
+                        {block.code} — {block.title}
+                      </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-      <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
-        <DialogTitle>{dialogMode === 'edit' ? 'Cập nhật bản đồ học phần' : 'Thêm học phần vào chương trình'}</DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <Autocomplete
-              options={programs}
-              value={programs.find((p) => p.id === formState.programId) ?? null}
-              onChange={(_event, option) => {
-                const newProgramId = option?.id ?? '';
-                setFormState((prev) => ({
-                  ...prev,
-                  programId: newProgramId,
-                  blockId: null,
-                }));
-                if (newProgramId) {
-                  fetchProgramBlocks(newProgramId);
-                }
-              }}
-              getOptionLabel={(option) => option.label}
-              renderInput={(params) => <TextField {...params} label="Chương trình" required />}
-              disabled={dialogMode === 'edit'}
-            />
+              <FormControl sx={{ minWidth: { sm: 180 } }}>
+                <InputLabel id="required-filter-label">Trạng thái</InputLabel>
+                <Select
+                    labelId="required-filter-label"
+                    label="Trạng thái"
+                    value={selectedRequired}
+                    onChange={handleRequiredFilterChange}
+                >
+                  {REQUIRED_OPTIONS.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-            <Autocomplete
-              options={courseOptionsForForm}
-              loading={loadingCourses}
-              value={selectedCourse}
-              getOptionLabel={(option) => `${option.code} — ${option.name}`}
-              onOpen={() => {
-                if (availableCourses.length === 0) {
-                  fetchCourses();
-                }
-              }}
-              onChange={(_event, option) => {
-                setFormState((prev) => ({ ...prev, courseId: option?.id ?? '' }));
-              }}
-              renderInput={(params) => (
+              <Box sx={{ flexGrow: 1 }}>
                 <TextField
-                  {...params}
-                  label="Học phần"
-                  required
-                  InputProps={{
-                    ...params.InputProps,
-                    endAdornment: (
-                      <>
-                        {loadingCourses ? <CircularProgress color="inherit" size={18} /> : null}
-                        {params.InputProps.endAdornment}
-                      </>
-                    ),
-                  }}
+                    fullWidth
+                    label="Tìm kiếm học phần"
+                    placeholder="Nhập mã hoặc tên học phần"
+                    value={searchValue}
+                    onChange={(event) => setSearchValue(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') handleSearchSubmit();
+                    }}
+                    InputProps={{
+                      endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton onClick={handleSearchSubmit}>
+                              <SearchIcon />
+                            </IconButton>
+                          </InputAdornment>
+                      ),
+                    }}
                 />
-              )}
-              disabled={dialogMode === 'edit'}
-            />
+              </Box>
 
-            <FormControl>
-              <InputLabel id="mapping-block-label">Gán vào khối</InputLabel>
-              <Select
-                labelId="mapping-block-label"
-                label="Gán vào khối"
-                value={formState.blockId ?? 'null'}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setFormState((prev) => ({ ...prev, blockId: value === 'null' ? null : value }));
-                }}
-                disabled={programBlocks.length === 0}
-              >
-                <MenuItem value="null">Không thuộc khối</MenuItem>
-                {programBlocks.map((block) => (
-                  <MenuItem key={block.id} value={block.id}>
-                    {block.code} — {block.title} ({getProgramBlockTypeLabel(block.blockType)})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+              <Button variant="outlined" onClick={handleResetFilters}>
+                Đặt lại
+              </Button>
+            </Stack>
 
-            <FormControl component="fieldset">
-              <RadioGroup
-                row
-                value={formState.isRequired ? 'true' : 'false'}
-                onChange={(event) => setFormState((prev) => ({ ...prev, isRequired: event.target.value === 'true' }))}
-              >
-                <FormControlLabel value="true" control={<Radio />} label="Bắt buộc" />
-                <FormControlLabel value="false" control={<Radio />} label="Tự chọn" />
-              </RadioGroup>
-            </FormControl>
+            {selectedProgram && (
+                <Alert severity="info" variant="outlined">
+                  <Typography variant="body2">
+                    Đang quản lý chương trình: <strong>{selectedProgram.code}</strong> — {selectedProgram.name}
+                  </Typography>
+                  {selectedBlockFilter && (
+                      <Typography variant="caption" display="block" color="text.secondary">
+                        Lọc theo khối: {selectedBlockFilter.code} — {selectedBlockFilter.title}
+                      </Typography>
+                  )}
+                </Alert>
+            )}
 
-            <TextField
-              label="Thứ tự hiển thị"
-              type="number"
-              value={formState.displayOrder}
-              onChange={(event) => {
-                const value = event.target.value;
-                setFormState((prev) => ({ ...prev, displayOrder: value === '' ? '' : Number(value) }));
-              }}
-              inputProps={{ min: 1 }}
-            />
-
-            {formError && <Alert severity="error">{formError}</Alert>}
+            {error && <Alert severity="error">{error}</Alert>}
           </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeDialog} disabled={formSubmitting}>
-            Hủy
-          </Button>
-          <Button onClick={handleSubmitForm} variant="contained" disabled={formSubmitting || !isFormValid}>
-            {formSubmitting ? 'Đang lưu...' : 'Lưu'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Paper>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))} sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Container>
+        <Paper>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Học phần</TableCell>
+                  <TableCell align="center">Tín chỉ</TableCell>
+                  <TableCell>Khối học phần</TableCell>
+                  <TableCell align="center">Thứ tự</TableCell>
+                  <TableCell align="center">Trạng thái</TableCell>
+                  <TableCell align="right">Thao tác</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        <Box sx={{ py: 6 }}>
+                          <CircularProgress size={32} />
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                ) : mappings.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        <Box sx={{ py: 6 }}>
+                          <Typography>Chưa có học phần nào được gán cho chương trình.</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Hãy nhấn &quot;Thêm học phần&quot; để bắt đầu xây dựng bản đồ học phần.
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                ) : (
+                    mappings.map((mapping) => (
+                        <TableRow key={mapping.id} hover>
+                          <TableCell>
+                            <Stack spacing={0.5}>
+                              <Typography fontWeight={600}>{mapping.course?.code ?? '—'}</Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {mapping.course?.nameVi || mapping.course?.nameEn || 'Không xác định'}
+                              </Typography>
+                            </Stack>
+                          </TableCell>
+                          <TableCell align="center">{mapping.course?.credits ?? '—'}</TableCell>
+                          <TableCell>
+                            {mapping.block ? (
+                                <Stack spacing={0.5}>
+                                  <Typography>{mapping.block.code}</Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {mapping.block.title}
+                                  </Typography>
+                                </Stack>
+                            ) : (
+                                <Typography color="text.secondary">Không thuộc khối</Typography>
+                            )}
+                          </TableCell>
+                          <TableCell align="center">{mapping.displayOrder}</TableCell>
+                          <TableCell align="center">
+                            <Chip
+                                label={REQUIRED_LABEL[String(mapping.isRequired)] || (mapping.isRequired ? 'Bắt buộc' : 'Tự chọn')}
+                                color={mapping.isRequired ? 'success' : 'default'}
+                                size="small"
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Tooltip title="Chỉnh sửa">
+                              <IconButton onClick={() => openEditDialog(mapping)}>
+                                <EditIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Xóa">
+                              <IconButton onClick={() => handleDelete(mapping)}>
+                                <DeleteIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Stack direction="row" justifyContent="flex-end" sx={{ px: 3, py: 2 }}>
+            <Pagination page={pagination.page} count={pagination.totalPages} onChange={handlePageChange} shape="rounded" color="primary" />
+          </Stack>
+        </Paper>
+
+        <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
+          <DialogTitle>{dialogMode === 'edit' ? 'Cập nhật bản đồ học phần' : 'Thêm học phần vào chương trình'}</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <Autocomplete
+                  options={programs}
+                  value={programs.find((p) => p.id === formState.programId) ?? null}
+                  onChange={(_event, option) => {
+                    const newProgramId = option?.id ?? '';
+                    setFormState((prev) => ({
+                      ...prev,
+                      programId: newProgramId,
+                      blockId: null,
+                    }));
+                    if (newProgramId) {
+                      fetchProgramBlocks(newProgramId);
+                    }
+                  }}
+                  getOptionLabel={(option) => option.label}
+                  renderInput={(params) => <TextField {...params} label="Chương trình" required />}
+                  disabled={dialogMode === 'edit'}
+              />
+
+              <Autocomplete
+                  options={courseOptionsForForm}
+                  loading={loadingCourses}
+                  value={selectedCourse}
+                  getOptionLabel={(option) => `${option.code} — ${option.name}`}
+                  onOpen={() => {
+                    if (availableCourses.length === 0) {
+                      fetchCourses();
+                    }
+                  }}
+                  onChange={(_event, option) => {
+                    setFormState((prev) => ({ ...prev, courseId: option?.id ?? '' }));
+                  }}
+                  renderInput={(params) => (
+                      <TextField
+                          {...params}
+                          label="Học phần"
+                          required
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                                <>
+                                  {loadingCourses ? <CircularProgress color="inherit" size={18} /> : null}
+                                  {params.InputProps.endAdornment}
+                                </>
+                            ),
+                          }}
+                      />
+                  )}
+                  disabled={dialogMode === 'edit'}
+              />
+
+              <FormControl>
+                <InputLabel id="mapping-block-label">Gán vào khối</InputLabel>
+                <Select
+                    labelId="mapping-block-label"
+                    label="Gán vào khối"
+                    value={formState.blockId ?? 'null'}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setFormState((prev) => ({ ...prev, blockId: value === 'null' ? null : value }));
+                    }}
+                    disabled={programBlocks.length === 0}
+                >
+                  <MenuItem value="null">Không thuộc khối</MenuItem>
+                  {programBlocks.map((block) => (
+                      <MenuItem key={block.id} value={block.id}>
+                        {block.code} — {block.title} ({getProgramBlockTypeLabel(block.blockType)})
+                      </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl component="fieldset">
+                <RadioGroup
+                    row
+                    value={formState.isRequired ? 'true' : 'false'}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, isRequired: event.target.value === 'true' }))}
+                >
+                  <FormControlLabel value="true" control={<Radio />} label="Bắt buộc" />
+                  <FormControlLabel value="false" control={<Radio />} label="Tự chọn" />
+                </RadioGroup>
+              </FormControl>
+
+              <TextField
+                  label="Thứ tự hiển thị"
+                  type="number"
+                  value={formState.displayOrder}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setFormState((prev) => ({ ...prev, displayOrder: value === '' ? '' : Number(value) }));
+                  }}
+                  inputProps={{ min: 1 }}
+              />
+
+              {formError && <Alert severity="error">{formError}</Alert>}
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeDialog} disabled={formSubmitting}>
+              Hủy
+            </Button>
+            <Button onClick={handleSubmitForm} variant="contained" disabled={formSubmitting || !isFormValid}>
+              {formSubmitting ? 'Đang lưu...' : 'Lưu'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Snackbar
+            open={snackbar.open}
+            autoHideDuration={4000}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        >
+          <Alert severity={snackbar.severity} onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))} sx={{ width: '100%' }}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Container>
   );
 }

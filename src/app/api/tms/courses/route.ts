@@ -59,25 +59,17 @@ export const GET = withErrorHandling(
         db.course.count({ where }),
         db.course.findMany({
         where,
-        select: listMode ? {
-            id: true,
-            code: true,
-            name_vi: true,
-            name_en: true,
-            credits: true,
-            type: true
-        } : undefined,
-        include: listMode ? undefined : {
+        include: {
             OrgUnit: {
             select: { name: true }
             },
             workflows: {
             select: { status: true, workflow_stage: true, priority: true }
             },
-            contents: {
+            contents: listMode ? undefined : {
             select: { prerequisites: true, passing_grade: true }
             },
-            audits: {
+            audits: listMode ? undefined : {
             select: { created_by: true, created_at: true }
             }
         },
@@ -89,8 +81,15 @@ export const GET = withErrorHandling(
 
     
 
+    // Transform Decimal fields to numbers for JSON serialization
+    const transformedCourses = courses.map(course => ({
+        ...course,
+        theory_credit: course.theory_credit ? Number(course.theory_credit) : null,
+        practical_credit: course.practical_credit ? Number(course.practical_credit) : null,
+    }));
+
     return {
-        items: courses,
+        items: transformedCourses,
         pagination: {
         page,
         limit,

@@ -41,7 +41,8 @@ import {
   Stepper,
   Step,
   StepLabel,
-  StepContent
+  StepContent,
+  Stack
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -78,6 +79,29 @@ import {
   getWorkflowStageLabel,
   normalizeCoursePriority,
 } from '@/constants/courses';
+
+// Helper function to format decimal values
+const formatCredit = (value: any): string => {
+  if (value === null || value === undefined) return '0';
+  
+  // Handle Decimal objects from Prisma
+  if (typeof value === 'object' && value.toNumber) {
+    return value.toNumber().toString();
+  }
+  
+  // Handle string numbers
+  if (typeof value === 'string') {
+    const num = parseFloat(value);
+    return isNaN(num) ? '0' : num.toString();
+  }
+  
+  // Handle regular numbers
+  if (typeof value === 'number') {
+    return value.toString();
+  }
+  
+  return '0';
+};
 
 export default function SubjectApprovalPage() {
   const router = useRouter();
@@ -142,7 +166,8 @@ export default function SubjectApprovalPage() {
     try {
       const params = new URLSearchParams({
         page: '1',
-        limit: '50'
+        limit: '50',
+        list: 'true'
       });
           
       const response = await fetch(`/api/tms/courses?${params}`);
@@ -151,8 +176,8 @@ export default function SubjectApprovalPage() {
       if (result.success && result.data?.items) {
         const transformedSubjects = result.data.items.map((course: any) => {
           const status = (course.status || CourseStatus.DRAFT) as CourseStatus;
-          const workflowStage = (course.workflow_stage || WorkflowStage.FACULTY) as WorkflowStage;
-          const priority = normalizeCoursePriority(course.workflow_priority || course.priority);
+          const workflowStage = (course.workflows?.[0]?.workflow_stage || WorkflowStage.FACULTY) as WorkflowStage;
+          const priority = normalizeCoursePriority(course.workflows?.[0]?.priority || course.priority);
 
           return {
             id: course.id,
@@ -166,6 +191,8 @@ export default function SubjectApprovalPage() {
             submittedAt: new Date(course.created_at).toISOString().split('T')[0],
             currentReviewer: null, // TODO: Get from workflow data
             credits: course.credits,
+            theory_credit: course.theory_credit || 0,
+            practical_credit: course.practical_credit || 0,
             type: getCourseTypeLabel(course.type),
             category: 'Kiến thức chuyên ngành', // Default category
           };
@@ -646,6 +673,7 @@ useEffect(() => {
                 <TableCell>Mã môn</TableCell>
                 <TableCell>Tên học phần</TableCell>
                 <TableCell>Khoa</TableCell>
+                <TableCell>Tín chỉ</TableCell>
                 <TableCell>Danh mục</TableCell>
                 <TableCell align="center">Trạng thái</TableCell>
                 <TableCell align="center">Giai đoạn</TableCell>
@@ -674,10 +702,33 @@ useEffect(() => {
                       {subject.name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {subject.credits} tín chỉ • {subject.type}
+                      {subject.type}
                     </Typography>
                   </TableCell>
                   <TableCell>{subject.faculty}</TableCell>
+                  <TableCell>
+                    <Stack spacing={0.5}>
+                      <Typography variant="body2" fontWeight="medium" color="primary">
+                        Tổng: {subject.credits} tín chỉ
+                      </Typography>
+                      <Stack direction="row" spacing={1}>
+                        <Chip 
+                          label={`LT: ${formatCredit(subject.theory_credit)}`} 
+                          size="small" 
+                          variant="outlined" 
+                          color="info"
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                        <Chip 
+                          label={`TH: ${formatCredit(subject.practical_credit)}`} 
+                          size="small" 
+                          variant="outlined" 
+                          color="secondary"
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      </Stack>
+                    </Stack>
+                  </TableCell>
                   <TableCell>
                     <Chip label={subject.category} size="small" variant="outlined" />
                   </TableCell>

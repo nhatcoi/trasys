@@ -31,6 +31,8 @@ const getCourseById = async (id: string, request: Request) => {
       name_vi: true,
       name_en: true,
       credits: true,
+      theory_credit: true,
+      practical_credit: true,
       type: true,
       status: true,
       org_unit_id: true,
@@ -130,7 +132,14 @@ const getCourseById = async (id: string, request: Request) => {
 
 
 
-  return course;
+  // Transform Decimal fields to numbers for JSON serialization
+  const transformedCourse = {
+    ...course,
+    theory_credit: course.theory_credit ? Number(course.theory_credit) : null,
+    practical_credit: course.practical_credit ? Number(course.practical_credit) : null,
+  };
+
+  return transformedCourse;
 };
 
 // PUT /api/tms/courses/[id] - Cập nhật course
@@ -201,6 +210,8 @@ const updateCourse = async (id: string, body: unknown, request: Request) => {
         name_vi: courseData.name_vi,
         name_en: courseData.name_en || null,
         credits: courseData.credits,
+        theory_credit: (courseData as any).theory_credit || null,
+        practical_credit: (courseData as any).practical_credit || null,
         ...(courseData.org_unit_id && { org_unit_id: BigInt(courseData.org_unit_id) }),
         ...(resolvedType && { type: resolvedType }),
         ...(resolvedStatus && { status: resolvedStatus }),

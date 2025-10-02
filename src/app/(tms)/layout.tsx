@@ -211,7 +211,7 @@ export default function TmsLayout({
         {
           key: '/tms/programs/map',
           icon: <ClassIcon />,
-          label: 'Bản đồ học phần chương trình',
+          label: 'Gán học phần',
           permissions: ['tms.program.read'],
         },
         {
@@ -253,12 +253,12 @@ export default function TmsLayout({
           label: 'Tạo học phần mới',
           permissions: ['tms.subject.create'],
         },
-        {
-          key: '/tms/courses/categories',
-          icon: <CategoryIcon />,
-          label: 'Phân loại học phần',
-          permissions: ['tms.subject.read'],
-        },
+        // {
+        //   key: '/tms/courses/categories',
+        //   icon: <CategoryIcon />,
+        //   label: 'Phân loại học phần',
+        //   permissions: ['tms.subject.read'],
+        // },
         {
           key: '/tms/courses/approval',
           icon: <ApprovalIcon />,

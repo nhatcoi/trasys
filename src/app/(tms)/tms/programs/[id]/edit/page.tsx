@@ -10,7 +10,6 @@ import {
   CircularProgress,
   Container,
   Divider,
-  Grid,
   IconButton,
   MenuItem,
   Paper,
@@ -29,18 +28,25 @@ import {
 import { useParams, useRouter } from 'next/navigation';
 import {
   PROGRAM_STATUSES,
+  PROGRAM_BLOCK_TYPES,
+  PROGRAM_BLOCK_GROUP_TYPES,
   ProgramStatus,
+  ProgramBlockType,
+  ProgramBlockGroupType,
   getProgramStatusColor,
   getProgramStatusLabel,
+  getProgramBlockTypeLabel,
+  getProgramBlockGroupTypeLabel,
 } from '@/constants/programs';
 import {
   OrgUnitApiItem,
   OrgUnitOption,
   ProgramBlockFormItem,
   ProgramCourseFormItem,
-  ProgramDetailApiResponse,
+  ProgramApiResponseItem,
   ProgramFormState,
   ProgramOutcomeFormItem,
+  ProgramBlockGroupItem,
   buildProgramPayloadFromForm,
   createDefaultProgramForm,
   createEmptyBlock,
@@ -61,9 +67,28 @@ interface CourseOption {
 
 interface ProgramDetailFetchResponse {
   success: boolean;
-  data?: ProgramDetailApiResponse;
+  data?: ProgramApiResponseItem;
   error?: string;
 }
+
+// Helper functions for block group management
+const createEmptyBlockGroup = (): ProgramBlockGroupItem => ({
+  id: `group-${Math.random().toString(36).slice(2)}`,
+  code: '',
+  title: '',
+  groupType: 'REQUIRED' as ProgramBlockGroupType,
+  rawGroupType: '',
+  displayOrder: 1,
+  rules: [],
+});
+
+const createEmptyGroupRule = () => ({
+  id: `rule-${Math.random().toString(36).slice(2)}`,
+  minCredits: null,
+  maxCredits: null,
+  minCourses: null,
+  maxCourses: null,
+});
 
 export default function EditProgramPage(): JSX.Element {
   const router = useRouter();
@@ -284,7 +309,7 @@ export default function EditProgramPage(): JSX.Element {
     blockId: string,
     courseId: string,
     key: keyof ProgramCourseFormItem,
-    value: string | number | boolean,
+    value: string | number | boolean | null,
   ) => {
     updateBlocks((blocks) =>
       blocks.map((block) => {
@@ -387,6 +412,142 @@ export default function EditProgramPage(): JSX.Element {
     }));
   };
 
+  // Block group management handlers
+  const handleAddGroupToBlock = (blockId: string) => {
+    const newGroup = createEmptyBlockGroup();
+    setForm((prev) => ({
+      ...prev,
+      blocks: prev.blocks.map((block) =>
+        block.id === blockId
+          ? {
+              ...block,
+              groups: [...(block.groups || []), newGroup],
+            }
+          : block,
+      ),
+    }));
+  };
+
+  const handleRemoveGroupFromBlock = (blockId: string, groupId: string) => {
+    setForm((prev) => ({
+      ...prev,
+      blocks: prev.blocks.map((block) =>
+        block.id === blockId
+          ? {
+              ...block,
+              groups: (block.groups || []).filter((group) => group.id !== groupId),
+              courses: block.courses.map((course) =>
+                course.groupId === groupId ? { ...course, groupId: null } : course,
+              ),
+            }
+          : block,
+      ),
+    }));
+  };
+
+  const handleGroupFieldChange = (
+    blockId: string,
+    groupId: string,
+    key: keyof ProgramBlockGroupItem,
+    value: string | number,
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      blocks: prev.blocks.map((block) =>
+        block.id === blockId
+          ? {
+              ...block,
+              groups: (block.groups || []).map((group) =>
+                group.id === groupId
+                  ? {
+                      ...group,
+                      [key]: key === 'displayOrder' ? Number(value) || 1 : value,
+                    }
+                  : group,
+              ),
+            }
+          : block,
+      ),
+    }));
+  };
+
+  const handleAddRuleToGroup = (blockId: string, groupId: string) => {
+    const newRule = createEmptyGroupRule();
+    setForm((prev) => ({
+      ...prev,
+      blocks: prev.blocks.map((block) =>
+        block.id === blockId
+          ? {
+              ...block,
+              groups: (block.groups || []).map((group) =>
+                group.id === groupId
+                  ? {
+                      ...group,
+                      rules: [...(group.rules || []), newRule],
+                    }
+                  : group,
+              ),
+            }
+          : block,
+      ),
+    }));
+  };
+
+  const handleRemoveRuleFromGroup = (blockId: string, groupId: string, ruleId: string) => {
+    setForm((prev) => ({
+      ...prev,
+      blocks: prev.blocks.map((block) =>
+        block.id === blockId
+          ? {
+              ...block,
+              groups: (block.groups || []).map((group) =>
+                group.id === groupId
+                  ? {
+                      ...group,
+                      rules: (group.rules || []).filter((rule) => rule.id !== ruleId),
+                    }
+                  : group,
+              ),
+            }
+          : block,
+      ),
+    }));
+  };
+
+  const handleRuleFieldChange = (
+    blockId: string,
+    groupId: string,
+    ruleId: string,
+    key: string,
+    value: number | null,
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      blocks: prev.blocks.map((block) =>
+        block.id === blockId
+          ? {
+              ...block,
+              groups: (block.groups || []).map((group) =>
+                group.id === groupId
+                  ? {
+                      ...group,
+                      rules: (group.rules || []).map((rule) =>
+                        rule.id === ruleId
+                          ? {
+                              ...rule,
+                              [key]: value,
+                            }
+                          : rule,
+                      ),
+                    }
+                  : group,
+              ),
+            }
+          : block,
+      ),
+    }));
+  };
+
   const isValid = useMemo(() => Boolean(form.code.trim() && form.nameVi.trim()), [form.code, form.nameVi]);
 
   const totalBlockCourses = useMemo(
@@ -474,8 +635,8 @@ export default function EditProgramPage(): JSX.Element {
           <CircularProgress />
         </Box>
       ) : (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={8}>
+        <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3}>
+          <Box sx={{ flex: 2 }}>
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Thông tin chương trình
@@ -593,18 +754,89 @@ export default function EditProgramPage(): JSX.Element {
 
             <Paper sx={{ p: 3, mt: 3 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                <Typography variant="h6">Khối học phần</Typography>
+                <Typography variant="h6">Khối học phần (Program Blocks)</Typography>
                 <Button startIcon={<AddIcon />} onClick={handleAddBlock}>
                   Thêm khối học phần
                 </Button>
               </Stack>
+              
+              {/* Program Overview */}
+              {form.blocks.length > 0 && (
+                <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: 'primary.50' }}>
+                  <Typography variant="subtitle1" fontWeight="bold" color="primary" gutterBottom>
+                    Tổng quan chương trình
+                  </Typography>
+                  <Stack direction="row" spacing={2} flexWrap="wrap">
+                    <Chip 
+                      label={`${form.blocks.length} Program Blocks`} 
+                      color="primary" 
+                      variant="outlined"
+                    />
+                    <Chip 
+                      label={`${form.blocks.reduce((sum, block) => sum + (block.groups || []).length, 0)} Program Block Groups`} 
+                      color="secondary" 
+                      variant="outlined"
+                    />
+                    <Chip 
+                      label={`${totalBlockCourses} học phần`} 
+                      color="info" 
+                      variant="outlined"
+                    />
+                    <Chip 
+                      label={`${form.blocks.reduce((sum, block) => sum + block.courses.reduce((courseSum, course) => courseSum + course.credits, 0), 0)} tín chỉ`} 
+                      color="success" 
+                      variant="outlined"
+                    />
+                  </Stack>
+                </Paper>
+              )}
               {form.blocks.length === 0 ? (
                 <Alert severity="info">Chưa có khối học phần nào.</Alert>
               ) : (
                 <Stack spacing={2}>
-                  {form.blocks.map((block) => (
+                  {form.blocks.map((block, blockIndex) => (
                     <Paper key={block.id} variant="outlined" sx={{ p: 2 }}>
                       <Stack spacing={2}>
+                        {/* Program Block Header */}
+                        <Box sx={{ borderBottom: '2px solid', borderColor: 'primary.main', pb: 1, mb: 2 }}>
+                          <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+                            <Box>
+                              <Typography variant="h6" color="primary" fontWeight="bold">
+                                Program Block #{blockIndex + 1}
+                              </Typography>
+                              <Typography variant="subtitle2" color="text.secondary">
+                                {block.code ? `${block.code} — ${block.title}` : 'Chưa nhập thông tin khối'}
+                              </Typography>
+                            </Box>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Chip 
+                                label={getProgramBlockTypeLabel(block.blockType)} 
+                                color="primary" 
+                                variant="outlined" 
+                                size="small"
+                              />
+                              <Chip 
+                                label={`${block.courses.length} học phần`} 
+                                color="info" 
+                                variant="outlined" 
+                                size="small"
+                              />
+                              <Chip 
+                                label={`${block.courses.reduce((sum, course) => sum + course.credits, 0)} tín chỉ`} 
+                                color="info" 
+                                variant="outlined" 
+                                size="small"
+                              />
+                              <Chip 
+                                label={`${(block.groups || []).length} nhóm`} 
+                                color="info" 
+                                variant="outlined" 
+                                size="small"
+                              />
+                            </Stack>
+                          </Stack>
+                        </Box>
+
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
                           <TextField
                             label="Mã khối"
@@ -618,12 +850,17 @@ export default function EditProgramPage(): JSX.Element {
                             onChange={(event) => handleBlockFieldChange(block.id, 'title', event.target.value)}
                             fullWidth
                           />
-                          <TextField
-                            label="Loại khối"
+                          <Select
                             value={block.blockType}
-                            onChange={(event) => handleBlockFieldChange(block.id, 'blockType', event.target.value)}
+                            onChange={(event) => handleBlockFieldChange(block.id, 'blockType', event.target.value as ProgramBlockType)}
                             sx={{ minWidth: 160 }}
-                          />
+                          >
+                            {PROGRAM_BLOCK_TYPES.map((type) => (
+                              <MenuItem key={type} value={type}>
+                                {getProgramBlockTypeLabel(type)}
+                              </MenuItem>
+                            ))}
+                          </Select>
                           <TextField
                             label="Thứ tự"
                             type="number"
@@ -637,47 +874,51 @@ export default function EditProgramPage(): JSX.Element {
                           </IconButton>
                         </Stack>
 
-                        {block.courses.length === 0 ? (
-                          <Alert severity="info">Khối này chưa có học phần nào.</Alert>
-                        ) : (
-                          <Stack spacing={1.5}>
-                            {block.courses.map((course) => (
-                              <Paper key={course.id} variant="outlined" sx={{ p: 1.5 }}>
-                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
-                                  <Box sx={{ flexGrow: 1 }}>
-                                    <Typography variant="subtitle2">{course.courseCode} — {course.courseName}</Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                      {course.credits} tín chỉ
-                                    </Typography>
-                                  </Box>
-                                  <Select
-                                    value={course.required ? 'required' : 'optional'}
-                                    onChange={(event: SelectChangeEvent<string>) =>
-                                      handleBlockCourseChange(block.id, course.id, 'required', event.target.value === 'required')
-                                    }
-                                    sx={{ minWidth: 140 }}
-                                  >
-                                    <MenuItem value="required">Bắt buộc</MenuItem>
-                                    <MenuItem value="optional">Tự chọn</MenuItem>
-                                  </Select>
-                                  <TextField
-                                    label="Thứ tự"
-                                    type="number"
-                                    value={course.displayOrder}
-                                    onChange={(event) =>
-                                      handleBlockCourseChange(block.id, course.id, 'displayOrder', Number(event.target.value) || 1)
-                                    }
-                                    sx={{ width: 120 }}
-                                    inputProps={{ min: 1 }}
-                                  />
-                                  <IconButton color="error" onClick={() => handleRemoveCourseFromBlock(block.id, course.id)}>
-                                    <DeleteIcon />
-                                  </IconButton>
-                                </Stack>
-                              </Paper>
-                            ))}
-                          </Stack>
-                        )}
+                        {(() => {
+                          const ungroupedCourses = block.courses.filter((course) => !course.groupId);
+                          return ungroupedCourses.length === 0 ? (
+                            <Alert severity="info">Tất cả học phần đã được gán vào các nhóm.</Alert>
+                          ) : (
+                            <Stack spacing={1.5}>
+                              <Typography variant="subtitle2">Học phần chưa được gán nhóm</Typography>
+                              {ungroupedCourses.map((course) => (
+                                <Paper key={course.id} variant="outlined" sx={{ p: 1.5 }}>
+                                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                                    <Box sx={{ flexGrow: 1 }}>
+                                      <Typography variant="subtitle2">{course.courseCode} — {course.courseName}</Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        {course.credits} tín chỉ
+                                      </Typography>
+                                    </Box>
+                                    <Select
+                                      value={course.required ? 'required' : 'optional'}
+                                      onChange={(event: SelectChangeEvent<string>) =>
+                                        handleBlockCourseChange(block.id, course.id, 'required', event.target.value === 'required')
+                                      }
+                                      sx={{ minWidth: 140 }}
+                                    >
+                                      <MenuItem value="required">Bắt buộc</MenuItem>
+                                      <MenuItem value="optional">Tự chọn</MenuItem>
+                                    </Select>
+                                    <TextField
+                                      label="Thứ tự"
+                                      type="number"
+                                      value={course.displayOrder}
+                                      onChange={(event) =>
+                                        handleBlockCourseChange(block.id, course.id, 'displayOrder', Number(event.target.value) || 1)
+                                      }
+                                      sx={{ width: 120 }}
+                                      inputProps={{ min: 1 }}
+                                    />
+                                    <IconButton color="error" onClick={() => handleRemoveCourseFromBlock(block.id, course.id)}>
+                                      <DeleteIcon />
+                                    </IconButton>
+                                  </Stack>
+                                </Paper>
+                              ))}
+                            </Stack>
+                          );
+                        })()}
 
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
                         <Autocomplete
@@ -696,6 +937,258 @@ export default function EditProgramPage(): JSX.Element {
                         >
                           Thêm học phần
                         </Button>
+                        </Stack>
+
+                        {/* Block Groups Management */}
+                        <Divider sx={{ my: 2 }} />
+                        <Stack spacing={2}>
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Typography variant="subtitle1" fontWeight="medium">
+                              Nhóm khối học phần (Program Block Groups)
+                            </Typography>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={<AddIcon />}
+                              onClick={() => handleAddGroupToBlock(block.id)}
+                            >
+                              Thêm nhóm
+                            </Button>
+                          </Stack>
+
+                          {(block.groups || []).length === 0 ? (
+                            <Alert severity="info">Chưa có nhóm nào trong khối này.</Alert>
+                          ) : (
+                            <Stack spacing={2}>
+                              {(block.groups || []).map((group, groupIndex) => (
+                                <Paper key={group.id} variant="outlined" sx={{ p: 2, border: '1px solid', borderColor: 'secondary.main' }}>
+                                  <Stack spacing={2}>
+                                    {/* Program Block Group Header */}
+                                    <Box sx={{ borderBottom: '1px solid', borderColor: 'secondary.main', pb: 1, mb: 2 }}>
+                                      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+                                        <Box>
+                                          <Typography variant="h6" color="secondary" fontWeight="bold">
+                                            Program Block Group #{groupIndex + 1}
+                                          </Typography>
+                                          <Typography variant="subtitle2" color="text.secondary">
+                                            {group.code ? `${group.code} — ${group.title}` : 'Chưa nhập thông tin nhóm'}
+                                          </Typography>
+                                        </Box>
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                          <Chip 
+                                            label={getProgramBlockGroupTypeLabel(group.groupType)} 
+                                            color="secondary" 
+                                            variant="outlined" 
+                                            size="small"
+                                          />
+                                          <Chip 
+                                            label={`${block.courses.filter(course => course.groupId === group.id).length} học phần`} 
+                                            color="info" 
+                                            variant="outlined" 
+                                            size="small"
+                                          />
+                                          <Chip 
+                                            label={`${block.courses.filter(course => course.groupId === group.id).reduce((sum, course) => sum + course.credits, 0)} tín chỉ`} 
+                                            color="info" 
+                                            variant="outlined" 
+                                            size="small"
+                                          />
+                                          <Chip 
+                                            label={`${(group.rules || []).length} quy tắc`} 
+                                            color="info" 
+                                            variant="outlined" 
+                                            size="small"
+                                          />
+                                        </Stack>
+                                      </Stack>
+                                    </Box>
+
+                                    {/* Group Header */}
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                                      <TextField
+                                        label="Mã nhóm"
+                                        value={group.code}
+                                        onChange={(event) => handleGroupFieldChange(block.id, group.id, 'code', event.target.value)}
+                                        sx={{ minWidth: 140 }}
+                                      />
+                                      <TextField
+                                        label="Tên nhóm"
+                                        value={group.title}
+                                        onChange={(event) => handleGroupFieldChange(block.id, group.id, 'title', event.target.value)}
+                                        fullWidth
+                                      />
+                                      <Select
+                                        value={group.groupType}
+                                        onChange={(event) => handleGroupFieldChange(block.id, group.id, 'groupType', event.target.value as ProgramBlockGroupType)}
+                                        sx={{ minWidth: 140 }}
+                                      >
+                                        {PROGRAM_BLOCK_GROUP_TYPES.map((type) => (
+                                          <MenuItem key={type} value={type}>
+                                            {getProgramBlockGroupTypeLabel(type)}
+                                          </MenuItem>
+                                        ))}
+                                      </Select>
+                                      <TextField
+                                        label="Thứ tự"
+                                        type="number"
+                                        value={group.displayOrder}
+                                        onChange={(event) => handleGroupFieldChange(block.id, group.id, 'displayOrder', Number(event.target.value) || 1)}
+                                        sx={{ width: 100 }}
+                                        inputProps={{ min: 1 }}
+                                      />
+                                      <IconButton color="error" onClick={() => handleRemoveGroupFromBlock(block.id, group.id)}>
+                                        <DeleteIcon />
+                                      </IconButton>
+                                    </Stack>
+
+                                    {/* Group Rules */}
+                                    <Stack spacing={1}>
+                                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                        <Typography variant="subtitle2">Quy tắc nhóm</Typography>
+                                        <Button
+                                          variant="outlined"
+                                          size="small"
+                                          startIcon={<AddIcon />}
+                                          onClick={() => handleAddRuleToGroup(block.id, group.id)}
+                                        >
+                                          Thêm quy tắc
+                                        </Button>
+                                      </Stack>
+
+                                      {(group.rules || []).length === 0 ? (
+                                        <Alert severity="info" sx={{ py: 1 }}>
+                                          Chưa có quy tắc nào cho nhóm này.
+                                        </Alert>
+                                      ) : (
+                                        <Stack spacing={1}>
+                                          {(group.rules || []).map((rule) => (
+                                            <Paper key={rule.id} variant="outlined" sx={{ p: 1.5 }}>
+                                              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                                                <TextField
+                                                  label="Tín chỉ tối thiểu"
+                                                  type="number"
+                                                  value={rule.minCredits || ''}
+                                                  onChange={(event) => handleRuleFieldChange(block.id, group.id, rule.id, 'minCredits', event.target.value ? Number(event.target.value) : null)}
+                                                  sx={{ width: 140 }}
+                                                  inputProps={{ min: 0 }}
+                                                />
+                                                <TextField
+                                                  label="Tín chỉ tối đa"
+                                                  type="number"
+                                                  value={rule.maxCredits || ''}
+                                                  onChange={(event) => handleRuleFieldChange(block.id, group.id, rule.id, 'maxCredits', event.target.value ? Number(event.target.value) : null)}
+                                                  sx={{ width: 140 }}
+                                                  inputProps={{ min: 0 }}
+                                                />
+                                                <TextField
+                                                  label="Số học phần tối thiểu"
+                                                  type="number"
+                                                  value={rule.minCourses || ''}
+                                                  onChange={(event) => handleRuleFieldChange(block.id, group.id, rule.id, 'minCourses', event.target.value ? Number(event.target.value) : null)}
+                                                  sx={{ width: 160 }}
+                                                  inputProps={{ min: 0 }}
+                                                />
+                                                <TextField
+                                                  label="Số học phần tối đa"
+                                                  type="number"
+                                                  value={rule.maxCourses || ''}
+                                                  onChange={(event) => handleRuleFieldChange(block.id, group.id, rule.id, 'maxCourses', event.target.value ? Number(event.target.value) : null)}
+                                                  sx={{ width: 160 }}
+                                                  inputProps={{ min: 0 }}
+                                                />
+                                                <IconButton color="error" onClick={() => handleRemoveRuleFromGroup(block.id, group.id, rule.id)}>
+                                                  <DeleteIcon />
+                                                </IconButton>
+                                              </Stack>
+                                            </Paper>
+                                          ))}
+                                        </Stack>
+                                      )}
+                                    </Stack>
+
+                                    {/* Course Assignment to Group */}
+                                    <Stack spacing={1}>
+                                      <Typography variant="subtitle2">Học phần trong nhóm</Typography>
+                                      <Stack spacing={1}>
+                                        {block.courses
+                                          .filter((course) => course.groupId === group.id)
+                                          .map((course) => (
+                                            <Paper key={course.id} variant="outlined" sx={{ p: 1.5 }}>
+                                              <Stack spacing={2}>
+                                                <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+                                                  <Box sx={{ flexGrow: 1 }}>
+                                                    <Typography variant="body2" fontWeight={600}>
+                                                      {course.courseCode} — {course.courseName}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                      {course.credits} tín chỉ
+                                                    </Typography>
+                                                  </Box>
+                                                  <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={() => handleBlockCourseChange(block.id, course.id, 'groupId', null)}
+                                                  >
+                                                    Gỡ khỏi nhóm
+                                                  </Button>
+                                                </Stack>
+                                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                                                  <Select
+                                                    value={course.required ? 'required' : 'optional'}
+                                                    onChange={(event: SelectChangeEvent<string>) =>
+                                                      handleBlockCourseChange(block.id, course.id, 'required', event.target.value === 'required')
+                                                    }
+                                                    sx={{ minWidth: 140 }}
+                                                  >
+                                                    <MenuItem value="required">Bắt buộc</MenuItem>
+                                                    <MenuItem value="optional">Tự chọn</MenuItem>
+                                                  </Select>
+                                                  <TextField
+                                                    label="Thứ tự"
+                                                    type="number"
+                                                    value={course.displayOrder}
+                                                    onChange={(event) =>
+                                                      handleBlockCourseChange(block.id, course.id, 'displayOrder', Number(event.target.value) || 1)
+                                                    }
+                                                    sx={{ width: 120 }}
+                                                    inputProps={{ min: 1 }}
+                                                  />
+                                                  <IconButton color="error" onClick={() => handleRemoveCourseFromBlock(block.id, course.id)}>
+                                                    <DeleteIcon />
+                                                  </IconButton>
+                                                </Stack>
+                                              </Stack>
+                                            </Paper>
+                                          ))}
+                                      </Stack>
+
+                                      {/* Assign ungrouped courses to this group */}
+                                      {block.courses.filter((course) => !course.groupId).length > 0 && (
+                                        <Stack spacing={1}>
+                                          <Typography variant="caption" color="text.secondary">
+                                            Gán học phần chưa thuộc nhóm:
+                                          </Typography>
+                                          {block.courses
+                                            .filter((course) => !course.groupId)
+                                            .map((course) => (
+                                              <Button
+                                                key={course.id}
+                                                size="small"
+                                                variant="outlined"
+                                                onClick={() => handleBlockCourseChange(block.id, course.id, 'groupId', group.id)}
+                                                sx={{ justifyContent: 'flex-start' }}
+                                              >
+                                                {course.courseCode} — {course.courseName}
+                                              </Button>
+                                            ))}
+                                        </Stack>
+                                      )}
+                                    </Stack>
+                                  </Stack>
+                                </Paper>
+                              ))}
+                            </Stack>
+                          )}
                         </Stack>
                       </Stack>
                     </Paper>
@@ -774,9 +1267,9 @@ export default function EditProgramPage(): JSX.Element {
                 )}
               </Stack>
             </Paper>
-          </Grid>
+          </Box>
 
-          <Grid item xs={12} md={4}>
+          <Box sx={{ flex: 1 }}>
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Thiết lập phê duyệt
@@ -878,8 +1371,8 @@ export default function EditProgramPage(): JSX.Element {
               </Stack>
             </Stack>
             </Paper>
-          </Grid>
-        </Grid>
+          </Box>
+        </Stack>
       )}
 
       <Stack direction="row" justifyContent="flex-end" spacing={2} sx={{ mt: 4 }}>
