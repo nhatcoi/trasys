@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
     const org_unit_id = searchParams.get('org_unit_id') || '';
     const sort_by = searchParams.get('sort_by') || 'created_at';
     const sort_order = searchParams.get('sort_order') || 'desc';
+    const include_rel = (searchParams.get('include_rel') || 'false') === 'true';
 
     const skip = (page - 1) * limit;
 
@@ -108,34 +109,31 @@ export async function GET(request: NextRequest) {
     const orderBy: any = {};
     orderBy[sort_by] = sort_order;
 
+    const include = include_rel
+      ? {
+          OrgUnit: { select: { id: true, name: true, code: true } },
+          Major: { select: { id: true, code: true, name_vi: true } },
+          _count: { select: { Program: true, MajorOutcome: true, MajorQuotaYear: true, MajorTuition: true } },
+        }
+      : undefined;
+
     // Get majors with pagination
     const [majors, total] = await Promise.all([
       prisma.major.findMany({
         where,
-        include: {
-          OrgUnit: {
-            select: {
-              id: true,
-              name: true,
-              code: true,
-            }
-          },
-          Major: {
-            select: {
+        select: include_rel
+          ? undefined
+          : {
               id: true,
               code: true,
               name_vi: true,
-            }
-          },
-          _count: {
-            select: {
-              Program: true,
-              MajorOutcome: true,
-              MajorQuotaYear: true,
-              MajorTuition: true,
-            }
-          }
-        },
+              short_name: true,
+              status: true,
+              degree_level: true,
+              org_unit_id: true,
+              created_at: true,
+            },
+        include,
         orderBy,
         skip,
         take: limit,
@@ -143,7 +141,6 @@ export async function GET(request: NextRequest) {
       prisma.major.count({ where })
     ]);
 
-    // Transform majors to include JSON fields and convert BigInt to Number
     const transformedMajors = transformMajorsForAPI(majors);
 
     return NextResponse.json({
@@ -172,7 +169,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createMajorSchema.parse(body);
 
-    // Check if code already exists for this org unit
     const existingMajor = await prisma.major.findFirst({
       where: {
         org_unit_id: validatedData.org_unit_id,
@@ -187,32 +183,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create major
+    // Create major with JSON fields passed natively
     const major = await prisma.major.create({
       data: {
         ...validatedData,
-        campuses: JSON.stringify(validatedData.campuses || []),
-        languages: JSON.stringify(validatedData.languages || [{ lang: 'vi', level: 'main' }]),
-        modalities: JSON.stringify(validatedData.modalities || [{ modality: 'fulltime' }]),
-        accreditations: JSON.stringify(validatedData.accreditations || []),
-        aliases: JSON.stringify(validatedData.aliases || []),
-        documents: JSON.stringify(validatedData.documents || []),
+        campuses: validatedData.campuses ?? [],
+        languages: validatedData.languages ?? [{ lang: 'vi', level: 'main' }],
+        modalities: validatedData.modalities ?? [{ modality: 'fulltime' }],
+        accreditations: validatedData.accreditations ?? [],
+        aliases: validatedData.aliases ?? [],
+        documents: validatedData.documents ?? [],
         status: validatedData.status || 'draft',
         created_at: new Date(),
         updated_at: new Date(),
       } as any,
       include: {
-        OrgUnit: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-          }
-        }
+        OrgUnit: { select: { id: true, name: true, code: true } }
       }
     });
 
-    // Transform response and convert BigInt to Number
     const transformedMajor = transformMajorForAPI(major);
 
     return NextResponse.json({
